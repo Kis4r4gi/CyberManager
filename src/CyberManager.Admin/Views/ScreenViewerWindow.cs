@@ -87,7 +87,7 @@ public sealed class ScreenViewerWindow : Window
             Padding = new Thickness(14, 7, 14, 7)
         };
         capture.Click += async (_, _) => await RequestAsync(force: true);
-        actions.Children.Add(capture);
+        actions.Children.Add(Kit.WithTip(capture, "Capturar ahora"));
 
         Grid.SetColumn(actions, 1);
         headerGrid.Children.Add(actions);

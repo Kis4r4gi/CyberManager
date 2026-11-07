@@ -61,7 +61,7 @@ public sealed class StationActionsDialog : FormDialog
                 DialogResult = true;
                 Close();
             };
-            actions.Children.Add(button);
+            actions.Children.Add(Kit.WithTip(button, label));
         }
 
         if (station.SessionId is null)

@@ -314,7 +314,7 @@ public sealed class CashView : UserControl, IRefreshable
             Padding = new Thickness(10, 10, 10, 10)
         };
         movement.Click += (_, _) => OpenMovementDialog();
-        buttons.Children.Add(movement);
+        buttons.Children.Add(Kit.WithTip(movement, "Movimiento"));
 
         var close = new Button
         {
@@ -324,7 +324,7 @@ public sealed class CashView : UserControl, IRefreshable
             Padding = new Thickness(10, 10, 10, 10)
         };
         close.Click += (_, _) => OpenCloseDialog();
-        buttons.Children.Add(close);
+        buttons.Children.Add(Kit.WithTip(close, "Cerrar caja"));
 
         _sessionPanel.Children.Add(buttons);
 
