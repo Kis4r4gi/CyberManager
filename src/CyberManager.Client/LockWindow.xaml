@@ -1,0 +1,104 @@
+<Window x:Class="CyberManager.Client.LockWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CyberManager - Equipo bloqueado"
+        WindowStyle="None" WindowState="Maximized" ResizeMode="NoResize"
+        Topmost="True" ShowInTaskbar="False" Background="#070B14"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
+
+    <Grid>
+        <Grid.Background>
+            <RadialGradientBrush Center="0.5,0.18" GradientOrigin="0.5,0.18" RadiusX="1.05" RadiusY="1.05">
+                <GradientStop Color="#112843" Offset="0" />
+                <GradientStop Color="#070B14" Offset="1" />
+            </RadialGradientBrush>
+        </Grid.Background>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ================= Video promocional sincronizado ================= -->
+        <MediaElement x:Name="PromoVideo" Grid.RowSpan="3" Stretch="UniformToFill"
+                     Visibility="Collapsed" IsHitTestVisible="False"
+                     LoadedBehavior="Manual" UnloadedBehavior="Manual" Volume="0"
+                     MediaEnded="PromoVideo_MediaEnded" MediaFailed="PromoVideo_MediaFailed" />
+
+        <!-- ================= Fondo sincronizado ================= -->
+        <Image x:Name="WallpaperImage" Grid.RowSpan="3" Stretch="UniformToFill"
+               Visibility="Collapsed" Opacity="0" IsHitTestVisible="False" />
+
+        <Border Grid.RowSpan="3" IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="#99070B14" Offset="0" />
+                    <GradientStop Color="#CC070B14" Offset="0.45" />
+                    <GradientStop Color="#F2070B14" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <!-- ================= Encabezado ================= -->
+        <Grid Grid.Row="0" Margin="44,30,44,0">
+            <StackPanel Orientation="Horizontal">
+                <Border Width="46" Height="46" CornerRadius="12" Background="{StaticResource AccentBrush}">
+                    <TextBlock Text="C" FontSize="26" FontWeight="Bold" Foreground="#04131B"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="19" FontWeight="Bold" />
+                    <TextBlock Text="Estación de trabajo" Style="{StaticResource Muted}" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock x:Name="StationText" Text="PC-01" FontSize="17" FontWeight="SemiBold"
+                           HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock x:Name="ZoneText" Text="Zona estándar" Style="{StaticResource Muted}"
+                           HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+
+        <!-- ================= Centro ================= -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Width="104" Height="104" CornerRadius="30" Background="#16233A"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="44"
+                           Foreground="{StaticResource AccentBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+
+            <TextBlock x:Name="ClockText" Text="00:00:00" FontSize="68" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,26,0,0" />
+            <TextBlock x:Name="DateText" Text="—" FontSize="14" Foreground="{StaticResource MutedBrush}"
+                       HorizontalAlignment="Center" Margin="0,2,0,0" />
+
+            <TextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="22" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,40,0,0" Foreground="{StaticResource AccentBrush}" />
+            <TextBlock x:Name="MessageText" Text="Solicite al cajero para iniciar su sesión."
+                       FontSize="15" Foreground="{StaticResource MutedBrush}"
+                       HorizontalAlignment="Center" Margin="0,10,0,0"
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="560" />
+        </StackPanel>
+
+        <!-- ================= Pie ================= -->
+        <Border Grid.Row="2" Margin="44,0,44,30" Padding="20,15" Background="#B30F172A"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Tasa del día:" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="RateText" Text="1 USD = 0,00 Bs" Margin="8,0,0,0"
+                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Style="{StaticResource Muted}" />
+
+                <TextBlock Text="Ctrl+Shift+F12 · Configuración" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" Style="{StaticResource Muted}" FontSize="11" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

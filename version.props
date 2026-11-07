@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Versión de todos los ensamblados. `scripts/build-installer.ps1` incrementa el
+    número de compilación (patch) automáticamente en cada empaquetado.
+  -->
+  <PropertyGroup>
+    <CyberManagerVersion>1.0.1</CyberManagerVersion>
+  </PropertyGroup>
+</Project>

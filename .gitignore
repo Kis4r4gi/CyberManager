@@ -1,0 +1,29 @@
+# Salidas de compilación
+bin/
+obj/
+dist/
+artifacts/
+
+# Base de datos local (se crea con datos de demostración al arrancar)
+*.db
+*.db-shm
+*.db-wal
+
+# Configuración local de las aplicaciones
+config.json
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Registros
+*.log

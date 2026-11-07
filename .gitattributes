@@ -1,0 +1,18 @@
+# Normaliza los finales de línea en el repositorio (LF) y conserva CRLF en
+# los archivos que Windows espera así.
+* text=auto
+
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sln text eol=crlf
+
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.mp4 binary
+*.m4v binary
+*.wmv binary
+*.avi binary

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>CyberManager.Client</RootNamespace>
+    <AssemblyName>CyberManager.Client</AssemblyName>
+    <ApplicationIcon>..\..\assets\CyberManager.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CyberManager.Desktop\CyberManager.Desktop.csproj" />
+    <ProjectReference Include="..\CyberManager.Shared\CyberManager.Shared.csproj" />
+  </ItemGroup>
+</Project>

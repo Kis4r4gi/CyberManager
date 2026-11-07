@@ -1,0 +1,188 @@
+<Window x:Class="CyberManager.Client.OrderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pedir productos" Width="1040" Height="680"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        Background="{StaticResource BgBrush}" ShowInTaskbar="False">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ================= Encabezado ================= -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="Pedir productos" Style="{StaticResource H1}" />
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock x:Name="StationText" Text="PC-01" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text=" · " Style="{StaticResource Muted}" />
+                    <TextBlock x:Name="SessionText" Text="Sesión activa" Style="{StaticResource Muted}" />
+                    <TextBlock Text=" · los consumos se cargan a su sesión" Style="{StaticResource Muted}" />
+                </StackPanel>
+            </StackPanel>
+
+            <Button Content="Cerrar" Style="{StaticResource GhostButton}" HorizontalAlignment="Right"
+                    VerticalAlignment="Top" Click="Close_Click" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="360" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ================= Catálogo ================= -->
+            <Grid Grid.Column="0" Margin="0,0,16,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ComboBox x:Name="CategoryBox" Width="210" SelectionChanged="Category_Changed" />
+                    <TextBox x:Name="SearchBox" Grid.Column="1" Margin="10,0,0,0"
+                             TextChanged="Search_Changed" ToolTip="Buscar producto por nombre o código" />
+                </Grid>
+
+                <Border Grid.Row="1" Style="{StaticResource Card}" Padding="12">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="ProductsList">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource BaseButton}" Width="196" Height="106"
+                                            Margin="0,0,10,10" Padding="12"
+                                            Background="{StaticResource SurfaceAltBrush}"
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                            IsEnabled="{Binding CanOrder}" Click="Product_Click">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Category}" Style="{StaticResource Muted}"
+                                                           Margin="0,3,0,0" />
+                                            </StackPanel>
+
+                                            <Grid Grid.Row="1">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding PriceUsd}" FontWeight="Bold"
+                                                               Foreground="{StaticResource AccentBrush}" />
+                                                    <TextBlock Text="{Binding PriceBs}" Style="{StaticResource Muted}"
+                                                               FontSize="11" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding StockText}" HorizontalAlignment="Right"
+                                                           VerticalAlignment="Bottom" Style="{StaticResource Muted}"
+                                                           FontSize="11" />
+                                            </Grid>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <!-- ================= Carrito ================= -->
+            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <TextBlock Text="Su pedido" Style="{StaticResource H2}" />
+                        <Button Content="Vaciar" Style="{StaticResource GhostButton}" Padding="10,5"
+                                HorizontalAlignment="Right" Click="Clear_Click" />
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="CartList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Panel}" Margin="0,0,0,8" Padding="10">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                            <TextBlock Grid.Column="1" Text="{Binding TotalUsdText}"
+                                                       FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+
+                                            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal"
+                                                        Margin="0,8,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding UnitPriceText}" Style="{StaticResource Muted}"
+                                                           VerticalAlignment="Center" />
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                                            Margin="10,0,0,0">
+                                                    <Button Content="−" Style="{StaticResource IconButton}"
+                                                            Width="28" Height="28" Click="Minus_Click" />
+                                                    <TextBox Text="{Binding QuantityText, UpdateSourceTrigger=LostFocus}"
+                                                             Width="44" TextAlignment="Center" Margin="4,0"
+                                                             LostFocus="Quantity_LostFocus" />
+                                                    <Button Content="+" Style="{StaticResource IconButton}"
+                                                            Width="28" Height="28" Click="Plus_Click" />
+                                                    <Button Content="✕" Style="{StaticResource IconButton}"
+                                                            Width="28" Height="28" Foreground="{StaticResource DangerBrush}"
+                                                            Click="Remove_Click" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                        <TextBlock x:Name="EmptyText" Text="Agregue productos del catálogo."
+                                   Style="{StaticResource Muted}" HorizontalAlignment="Center" Margin="0,0,0,8" />
+
+                        <Separator />
+
+                        <Grid Margin="0,8,0,0">
+                            <TextBlock Text="Total" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+                            <StackPanel HorizontalAlignment="Right">
+                                <TextBlock x:Name="TotalUsdText" Text="$ 0,00" FontSize="22" FontWeight="Bold"
+                                           HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock x:Name="TotalBsText" Text="Bs 0,00" HorizontalAlignment="Right"
+                                           Style="{StaticResource Muted}" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Button x:Name="SubmitButton" Content="Enviar pedido a la estación"
+                                Style="{StaticResource SuccessButton}" Margin="0,14,0,0"
+                                Padding="14,12" FontSize="14" Click="Submit_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
