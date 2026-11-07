@@ -82,7 +82,8 @@
                            Visibility="Collapsed" Margin="0,14,0,0" />
 
                 <Button x:Name="LoginButton" Content="Entrar a la consola" Style="{StaticResource PrimaryButton}"
-                        Padding="14,12" FontSize="14" Margin="0,24,0,0" Click="Login_Click" IsDefault="True" />
+                        Padding="14,12" FontSize="14" Margin="0,24,0,0" Click="Login_Click" IsDefault="True"
+                        ToolTip="Inicia sesión en la consola." />
 
                 <Border Background="#12233A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                         CornerRadius="8" Padding="12" Margin="0,22,0,0">

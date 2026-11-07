@@ -38,9 +38,11 @@
                 </StackPanel>
 
                 <Button Content="Pedir productos" Style="{StaticResource PrimaryButton}"
-                        Padding="14,9" Click="Order_Click" />
+                        Padding="14,9" Click="Order_Click"
+                        ToolTip="Abre el pedido de productos." />
                 <Button x:Name="AccountButton" Content="Mi cuenta" Style="{StaticResource GhostButton}"
-                        Padding="12,9" Margin="8,0,0,0" Click="Account_Click" />
+                        Padding="12,9" Margin="8,0,0,0" Click="Account_Click"
+                        ToolTip="Muestra el consumo de la sesión." />
             </StackPanel>
         </Border>
 

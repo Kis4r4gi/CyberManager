@@ -25,7 +25,7 @@
             </StackPanel>
 
             <Button Content="Cerrar" Style="{StaticResource GhostButton}" HorizontalAlignment="Right"
-                    VerticalAlignment="Top" Click="Close_Click" />
+                    VerticalAlignment="Top" Click="Close_Click" ToolTip="Cierra la ventana." />
         </Grid>
 
         <Grid Grid.Row="1">
@@ -67,7 +67,8 @@
                                             Background="{StaticResource SurfaceAltBrush}"
                                             BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                                            IsEnabled="{Binding CanOrder}" Click="Product_Click">
+                                            IsEnabled="{Binding CanOrder}" Click="Product_Click"
+                                            ToolTip="Agregar el producto al pedido.">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*" />
@@ -113,7 +114,8 @@
                     <Grid Grid.Row="0" Margin="0,0,0,12">
                         <TextBlock Text="Su pedido" Style="{StaticResource H2}" />
                         <Button Content="Vaciar" Style="{StaticResource GhostButton}" Padding="10,5"
-                                HorizontalAlignment="Right" Click="Clear_Click" />
+                                HorizontalAlignment="Right" Click="Clear_Click"
+                                ToolTip="Quita todos los productos del pedido." />
                     </Grid>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -143,15 +145,17 @@
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                                             Margin="10,0,0,0">
                                                     <Button Content="−" Style="{StaticResource IconButton}"
-                                                            Width="28" Height="28" Click="Minus_Click" />
+                                                            Width="28" Height="28" Click="Minus_Click"
+                                                            ToolTip="Disminuye la cantidad." />
                                                     <TextBox Text="{Binding QuantityText, UpdateSourceTrigger=LostFocus}"
                                                              Width="44" TextAlignment="Center" Margin="4,0"
                                                              LostFocus="Quantity_LostFocus" />
                                                     <Button Content="+" Style="{StaticResource IconButton}"
-                                                            Width="28" Height="28" Click="Plus_Click" />
+                                                            Width="28" Height="28" Click="Plus_Click"
+                                                            ToolTip="Aumenta la cantidad." />
                                                     <Button Content="✕" Style="{StaticResource IconButton}"
                                                             Width="28" Height="28" Foreground="{StaticResource DangerBrush}"
-                                                            Click="Remove_Click" />
+                                                            Click="Remove_Click" ToolTip="Quita el producto del pedido." />
                                                 </StackPanel>
                                             </StackPanel>
                                         </Grid>
@@ -179,7 +183,8 @@
 
                         <Button x:Name="SubmitButton" Content="Enviar pedido a la estación"
                                 Style="{StaticResource SuccessButton}" Margin="0,14,0,0"
-                                Padding="14,12" FontSize="14" Click="Submit_Click" />
+                                Padding="14,12" FontSize="14" Click="Submit_Click"
+                                ToolTip="Envía el pedido al administrador." />
                     </StackPanel>
                 </Grid>
             </Border>

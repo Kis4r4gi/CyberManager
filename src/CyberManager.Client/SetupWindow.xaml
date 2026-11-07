@@ -44,12 +44,13 @@
 
             <Grid Margin="0,22,0,0">
                 <Button x:Name="TestButton" Content="Probar conexión" Style="{StaticResource GhostButton}"
-                        HorizontalAlignment="Left" Click="Test_Click" />
+                        HorizontalAlignment="Left" Click="Test_Click"
+                        ToolTip="Comprueba la conexión con el servidor." />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Cancelar" Style="{StaticResource GhostButton}" Margin="0,0,8,0"
-                            Click="Cancel_Click" />
+                            Click="Cancel_Click" ToolTip="Cierra sin guardar cambios." />
                     <Button Content="Guardar y continuar" Style="{StaticResource PrimaryButton}"
-                            Click="Save_Click" />
+                            Click="Save_Click" ToolTip="Guarda la configuración y abre el equipo." />
                 </StackPanel>
             </Grid>
         </StackPanel>

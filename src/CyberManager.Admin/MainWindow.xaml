@@ -74,19 +74,22 @@
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="10,14,10,0">
                         <StackPanel x:Name="NavPanel">
                             <TextBlock Text="OPERACIÓN" Style="{StaticResource Label}" Margin="12,4,0,6" />
-                            <Button Style="{StaticResource NavButton}" CommandParameter="dashboard" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="dashboard" Click="Nav_Click"
+                                    ToolTip="Abre el tablero de equipos.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Tablero de equipos" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="pos" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="pos" Click="Nav_Click"
+                                    ToolTip="Abre el punto de venta.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7BF;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Punto de venta" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="cash" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="cash" Click="Nav_Click"
+                                    ToolTip="Abre la caja del turno.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Caja del turno" />
@@ -94,25 +97,29 @@
                             </Button>
 
                             <TextBlock Text="CATÁLOGO" Style="{StaticResource Label}" Margin="12,16,0,6" />
-                            <Button Style="{StaticResource NavButton}" CommandParameter="products" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="products" Click="Nav_Click"
+                                    ToolTip="Gestiona productos y tarifas.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE719;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Productos y tarifas" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="inventory" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="inventory" Click="Nav_Click"
+                                    ToolTip="Consulta el inventario y el kardex.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Inventario y kardex" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="purchases" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="purchases" Click="Nav_Click"
+                                    ToolTip="Gestiona compras y proveedores.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Compras y proveedores" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="stations" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="stations" Click="Nav_Click"
+                                    ToolTip="Administra equipos y tokens.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Equipos y tokens" />
@@ -120,13 +127,15 @@
                             </Button>
 
                             <TextBlock Text="PERSONAS" Style="{StaticResource Label}" Margin="12,16,0,6" />
-                            <Button Style="{StaticResource NavButton}" CommandParameter="customers" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="customers" Click="Nav_Click"
+                                    ToolTip="Gestiona clientes y saldos.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE716;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Clientes y saldos" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="reservations" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="reservations" Click="Nav_Click"
+                                    ToolTip="Gestiona las reservas de equipos.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Reservas" />
@@ -134,25 +143,29 @@
                             </Button>
 
                             <TextBlock Text="SISTEMA" Style="{StaticResource Label}" Margin="12,16,0,6" />
-                            <Button Style="{StaticResource NavButton}" CommandParameter="wallpapers" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="wallpapers" Click="Nav_Click"
+                                    ToolTip="Gestiona los fondos de pantalla.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE91B;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Fondos de pantalla" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="promos" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="promos" Click="Nav_Click"
+                                    ToolTip="Gestiona los videos promocionales.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE786;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Videos promocionales" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="reports" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="reports" Click="Nav_Click"
+                                    ToolTip="Consulta los reportes del negocio.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Reportes" />
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="settings" Click="Nav_Click">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="settings" Click="Nav_Click"
+                                    ToolTip="Abre la configuración del sistema.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
                                     <TextBlock Text="Configuración" />
@@ -201,10 +214,12 @@
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
                                     Margin="14,0,0,0">
                             <Button Content="Ver novedades" Style="{StaticResource PrimaryButton}"
-                                    Padding="12,7" FontSize="11.5" Click="OpenUpdate_Click" />
+                                    Padding="12,7" FontSize="11.5" Click="OpenUpdate_Click"
+                                    ToolTip="Abre la página de la nueva versión." />
                             <Button Content="Recordar luego" Style="{StaticResource GhostButton}"
                                     Padding="12,7" FontSize="11.5" Margin="8,0,0,0"
-                                    Click="DismissUpdate_Click" />
+                                    Click="DismissUpdate_Click"
+                                    ToolTip="Oculta el aviso durante 2 horas." />
                         </StackPanel>
                     </Grid>
                 </Border>
