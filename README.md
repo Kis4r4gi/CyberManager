@@ -15,8 +15,26 @@ terminales bloqueados pueden reproducir **videos promocionales** sincronizados d
 
 ---
 
+## Descarga
+
+Los instaladores listos para usar se publican en
+[**Releases**](https://github.com/Kis4r4gi/CyberManager/releases/latest). Cada versión incluye los
+dos paquetes para Windows 10/11 (x64 y x86 en un mismo instalador):
+
+| Paquete | Archivo | Contenido |
+| --- | --- | --- |
+| Servidor | `CyberManager-Servidor-<versión>.exe` | Servidor, consola de administración y lanzador |
+| Estación | `CyberManager-Estacion-<versión>.exe` | Cliente bloqueado, agente y control remoto |
+
+Ambos instaladores requieren permisos de administrador, detienen las aplicaciones en ejecución
+antes de actualizar y crean su propia entrada de desinstalación. También puedes compilar el
+proyecto desde el código fuente siguiendo la sección [Compilación](#compilación).
+
+---
+
 ## Contenido
 
+- [Descarga](#descarga)
 - [Características](#características)
 - [Arquitectura](#arquitectura)
 - [Requisitos](#requisitos)

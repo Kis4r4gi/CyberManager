@@ -498,3 +498,16 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 6. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
    consola, el servidor, las promos y la localización. El patch sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
+
+---
+
+## Publicación
+
+- Repositorio público: <https://github.com/Kis4r4gi/CyberManager> (rama `main`, licencia MIT).
+- Cuenta de GitHub: `Kis4r4gi`. La autenticación se hizo con `gh auth login` (flujo de dispositivo);
+  no se almacenan credenciales en el proyecto.
+- Instaladores publicados en *Releases*:
+  <https://github.com/Kis4r4gi/CyberManager/releases/latest>.
+- Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
+  cambio de `version.props` y ejecutar
+  `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
