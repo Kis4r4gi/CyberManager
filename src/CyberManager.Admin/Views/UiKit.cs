@@ -63,6 +63,7 @@ public static class Kit
         ["Editar"] = "Abre el registro seleccionado para editarlo.",
         ["Eliminar"] = "Elimina el registro seleccionado.",
         ["Enviar mensaje"] = "Muestra un mensaje en el equipo.",
+        ["Encender monitor"] = "Enciende el monitor del equipo.",
         ["Enviar pedido a la estación"] = "Envía el pedido al administrador.",
         ["Entrar a la consola"] = "Inicia sesión en la consola.",
         ["Exportar copia"] = "Guarda una copia de la base de datos en un archivo.",

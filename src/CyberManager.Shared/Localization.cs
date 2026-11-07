@@ -567,6 +567,7 @@ public static class L
             ["Añade el elemento a la lista."] = "Adds the item to the list.",
             ["Apaga el equipo."] = "Shuts down the station.",
             ["Apaga el monitor del equipo."] = "Turns off the station monitor.",
+            ["Enciende el monitor del equipo."] = "Turns on the station monitor.",
             ["Aplica los cambios y los guarda de inmediato."] = "Applies and saves the changes immediately.",
             ["Mueve el elemento una posición hacia abajo."] = "Moves the item one position down.",
             ["Mueve el elemento una posición hacia arriba."] = "Moves the item one position up.",
@@ -668,6 +669,9 @@ public static class L
             ["Gestiona los videos promocionales."] = "Manages promotional videos.",
             ["Consulta los reportes del negocio."] = "Views the business reports.",
             ["Abre la configuración del sistema."] = "Opens the system settings.",
+            ["Buscar producto por nombre o código"] = "Search for a product by name or code",
+            ["Número que aparece en Administración > Equipos"] =
+                "Number shown in Administration > Stations",
         };
 
         return map;
