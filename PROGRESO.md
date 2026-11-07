@@ -183,8 +183,8 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Desinstalación selectiva: `desinstalar-servicios.ps1 -Servidor` o `-Agente`. El servidor
   conserva la base de datos; la estación conserva la configuración local del cliente.
 - Instaladores generados:
-  - `artifacts/CyberManager-Servidor-1.0.2.exe` (~158,8 MB, payloads x64 + x86).
-  - `artifacts/CyberManager-Estacion-1.0.2.exe` (~140,7 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Servidor-1.0.3.exe` (~158,8 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Estacion-1.0.3.exe` (~140,7 MB, payloads x64 + x86).
 - Ambos instaladores llevan `SetupIconFile=..\assets\CyberManager.ico` y los ejecutables
   publicados en ambas arquitecturas incluyen el icono en sus recursos.
 - **Reducción de tamaño**: las publicaciones omiten PDB y XML de documentación, usan
@@ -408,6 +408,28 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   ambos con los payloads x64 y x86.
 - Release `v1.0.2` publicada con ambos instaladores; el recordatorio de 2 horas toma como
   referencia la fecha `publishedUtc` de esa release.
+
+### Corrección de contraste y ayudas emergentes (1.0.3, 2026-11-07)
+
+- **Cajas de selección**: `Dark.xaml` ahora define plantillas oscuras propias para `CheckBox`,
+  `RadioButton`, `ComboBox`, `ComboBoxItem` y `DatePickerTextBox`. El fondo usa
+  `InputBrush` (`#0B1424`) y el texto `TextBrush` (`#E8EFFA`), con un contraste medido de
+  **7,85:1**; las etiquetas ya no desaparecen sobre fondos claros. También se dibuja el foco,
+  el estado deshabilitado y la lista desplegable con la misma paleta.
+- **Ayudas emergentes**: el estilo `BaseButton` aplica `ToolTipService.InitialShowDelay=2000`
+  y `ShowDuration=15000`; el estilo `ToolTip` usa fondo oscuro, borde de acento y texto ajustado.
+  `Kit.Button` y `Kit.SmallButton` asignan la descripción desde el mapa `ButtonTips` de
+  `UiKit.cs`, y los botones creados directamente (`FormDialog`, `StationActionsDialog`,
+  `CashView`, `ScreenViewerWindow`) y los de XAML también la reciben.
+- **Cobertura**: se verificó por reflexión que los **93 botones** creados con `Kit.Button`
+  tienen descripción y que **todos los botones XAML** incluyen `ToolTip`. Las descripciones se
+  guardan en español y `L.T`/`Loc.Apply` las traducen al inglés; se comprobó que no queda
+  ninguna cadena sin traducción.
+- **Compilación**: `dotnet build CyberManager.sln` terminó con **0 errores y 0 advertencias**.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.3` y generó
+  `CyberManager-Servidor-1.0.3.exe` (~158,8 MB) y `CyberManager-Estacion-1.0.3.exe`
+  (~140,7 MB), con payloads x64 y x86.
+- Release `v1.0.3` publicada con ambos instaladores.
 
 ---
 

@@ -603,6 +603,11 @@ En *Configuración → Apariencia* puede cambiar la interfaz de la consola:
   [Idioma de la interfaz](#idioma-de-la-interfaz)).
 - **Restablecer** vuelve a los valores del tema oscuro original (incluidos los cuadros al 100 %).
 
+Las cajas de selección (casillas, botones de opción, listas desplegables y campos de fecha) usan
+siempre un fondo oscuro con texto claro, de modo que sus etiquetas se distinguen incluso sobre
+superficies claras. Al dejar el cursor **2 segundos** sobre un botón aparece una descripción breve
+de su función; las descripciones están disponibles en español e inglés.
+
 Los cambios de apariencia se guardan **automáticamente** pocos instantes después de editar un
 color o mover un control; el botón **Aplicar y guardar ahora** fuerza el guardado inmediato.
 La paleta trae bordes más luminosos que el tema original y la consola dibuja un marco de 1 píxel
