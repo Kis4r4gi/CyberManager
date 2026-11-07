@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -23,6 +24,7 @@ public partial class MainWindow : Window
     private string _current = "dashboard";
     private bool? _connected;
     private AppLanguage _language = L.Language;
+    private UpdateInfoDto? _update;
 
     public MainWindow()
     {
@@ -107,6 +109,7 @@ public partial class MainWindow : Window
         Loc.Apply(this);
         UpdateRoleText();
         ConnectionText.Text = L.T(ConnectionText.Text);
+        if (_update is not null) ApplyUpdate(_update);
         _views.Clear();
         Navigate(_current);
     }
@@ -128,6 +131,7 @@ public partial class MainWindow : Window
             App.Realtime.ConnectionChanged += OnConnectionChanged;
             App.Realtime.EventReceived += OnRealtimeEvent;
             App.Realtime.StationStateChanged += OnRealtimeStationState;
+            App.Realtime.UpdateAvailable += OnUpdateAvailable;
             OnConnectionChanged(App.Realtime.IsConnected);
         }
     }
@@ -144,6 +148,7 @@ public partial class MainWindow : Window
             App.Realtime.ConnectionChanged -= OnConnectionChanged;
             App.Realtime.EventReceived -= OnRealtimeEvent;
             App.Realtime.StationStateChanged -= OnRealtimeStationState;
+            App.Realtime.UpdateAvailable -= OnUpdateAvailable;
         }
 
         await App.DisposeRealtimeAsync();
@@ -240,6 +245,74 @@ public partial class MainWindow : Window
             ConnectionDot.Fill = (Brush)FindResource("DangerBrush");
             ConnectionText.Text = L.T("Sin conexión");
         }
+
+        _ = RefreshUpdateBannerAsync();
+    }
+
+    // ===================== Aviso de nueva versión =====================
+
+    private async Task RefreshUpdateBannerAsync()
+    {
+        try
+        {
+            ApplyUpdate(await App.Api.LatestUpdateAsync());
+        }
+        catch
+        {
+            // Un fallo del aviso no debe marcar la consola como desconectada.
+        }
+    }
+
+    private void ApplyUpdate(UpdateInfoDto info)
+    {
+        _update = info;
+
+        if (!info.IsReminderDue || string.IsNullOrWhiteSpace(info.LatestVersion))
+        {
+            UpdateBanner.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        UpdateTitle.Text = $"{L.T("Nueva versión disponible")}: {info.LatestVersion}";
+
+        var published = info.PublishedUtc?.ToLocalTime();
+        UpdateText.Text = published is DateTime date
+            ? $"{L.T("Versión publicada:")} {date:dd/MM/yyyy HH:mm} · " +
+              $"{L.T("Versión instalada:")} {info.CurrentVersion}"
+            : $"{L.T("Versión instalada:")} {info.CurrentVersion}";
+
+        UpdateBanner.Visibility = Visibility.Visible;
+    }
+
+    private void OnUpdateAvailable(UpdateInfoDto update) => Dispatcher.BeginInvoke(() =>
+    {
+        ApplyUpdate(update);
+        AddLog(L.T("Actualización disponible"),
+            $"{L.T("Versión")} {update.LatestVersion} · {L.T("Versión instalada:")} {update.CurrentVersion}",
+            "#22D3EE");
+    });
+
+    private void OpenUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        var url = _update?.ReleaseUrl;
+        if (string.IsNullOrWhiteSpace(url)) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Ui.Error(ex.Message, L.T("Actualización"));
+        }
+    }
+
+    private void DismissUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_update?.LatestVersion is not string version) return;
+
+        _ = Ui.Run(async () => ApplyUpdate(await App.Api.DismissUpdateAsync(version)),
+            L.T("No se pudo ocultar el aviso"));
     }
 
     // ===================== Bitácora de terminales =====================

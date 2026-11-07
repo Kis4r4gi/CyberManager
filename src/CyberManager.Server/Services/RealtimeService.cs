@@ -49,6 +49,10 @@ public class RealtimeService
             new RealtimeEvent("PromoVideosChanged", "Videos promocionales actualizados", playlist));
     }
 
+    /// <summary>Avisa a las consolas que hay una versión nueva lista para descargar.</summary>
+    public Task UpdateAvailableAsync(UpdateInfoDto update)
+        => _admin.Clients.All.SendAsync("UpdateAvailable", update);
+
     public Task SendAgentCommandAsync(int stationId, AgentCommandType type, string? argument = null, int? durationSeconds = null)
     {
         var cmd = new AgentCommand(Guid.NewGuid(), type, argument, durationSeconds);

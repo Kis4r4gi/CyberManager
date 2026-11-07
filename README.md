@@ -42,6 +42,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - [Compilación](#compilación)
 - [Puesta en marcha rápida](#puesta-en-marcha-rápida)
 - [Instaladores de Windows](#instaladores-de-windows)
+- [Avisos de nuevas versiones](#avisos-de-nuevas-versiones)
 - [Credenciales de demostración](#credenciales-de-demostración)
 - [Flujo operativo diario](#flujo-operativo-diario)
 - [Moneda, tasa, IVA e IGTF](#moneda-tasa-iva-e-igtf)
@@ -57,6 +58,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - [Galería de fondos de pantalla](#galería-de-fondos-de-pantalla)
 - [Videos promocionales](#videos-promocionales)
 - [Scripts incluidos](#scripts-incluidos)
+- [Sincronización automática con GitHub](#sincronización-automática-con-github)
 - [Firewall y red](#firewall-y-red)
 - [API y hubs en tiempo real](#api-y-hubs-en-tiempo-real)
 - [Base de datos](#base-de-datos)
@@ -431,6 +433,25 @@ desinstalador de cada componente en **Aplicaciones instaladas** de Windows. Cada
 > (`Servidor` y `Estacion`). El instalador unificado elige la arquitectura del equipo; si vuelve a
 > instalar sobre la misma carpeta, reemplaza los binarios de la arquitectura anterior y conserva la
 > base de datos del servidor y la configuración local de la estación.
+
+---
+
+## Avisos de nuevas versiones
+
+El servidor consulta **GitHub Releases** cada 15 minutos. Cuando detecta una versión más reciente
+que la instalada, muestra un aviso en la parte superior de la consola de administración **2 horas
+después de la publicación** (el tiempo de espera es configurable). El aviso permite abrir la página
+de la versión o posponerlo hasta la siguiente.
+
+- Se configura en **Configuración → Instalación → Actualizaciones**.
+- **Avisar cuando haya una nueva versión disponible**: activa o desactiva el recordatorio.
+- **Horas de espera después de la publicación**: 2 por defecto; puede ajustarse o ponerse en 0.
+- **Buscar actualizaciones ahora**: fuerza una consulta inmediata a GitHub.
+- **Recordar luego** oculta el aviso de esa versión concreta. Volverá a aparecer cuando se publique
+  una versión más nueva.
+
+El servidor guarda el resultado en memoria y no satura la API de GitHub. La consulta no requiere
+autenticación ni envía datos del negocio: solo lee las versiones públicas del repositorio.
 
 ---
 
@@ -823,6 +844,7 @@ video y continúa con el siguiente.
 | `scripts/generate-icon.ps1`     | Genera el icono compartido `assets/CyberManager.ico`.               |
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
+| `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con
 entradas BMP de 32 bits compatible con los ejecutables de .NET y con Inno Setup. Los cuatro
@@ -841,6 +863,36 @@ documentación y recursos satélite de otros idiomas para reducir el tamaño.
 
 > Ejecute los scripts con `Set-ExecutionPolicy -Scope Process Bypass -Force` si la política de
 > ejecución de PowerShell los bloquea.
+
+---
+
+## Sincronización automática con GitHub
+
+`scripts/sync-github.ps1` hace `git add` de todos los cambios, crea un commit si hay algo nuevo,
+integra los cambios del remoto con `rebase --autostash` y publica la rama `main`. El registro se
+guarda en `%LOCALAPPDATA%\CyberManager\logs\github-sync.log`.
+
+```powershell
+# Sincronizar una vez (commit automático con fecha y hora)
+.\scripts\sync-github.ps1
+
+# Commit con un mensaje propio
+.\scripts\sync-github.ps1 -Message "Agregar recordatorio de versiones"
+
+# Instalar la tarea programada cada 15 minutos
+.\scripts\sync-github.ps1 -InstallTask
+
+# Cambiar el intervalo y quitarla
+.\scripts\sync-github.ps1 -InstallTask -TaskMinutes 30
+.\scripts\sync-github.ps1 -RemoveTask
+```
+
+La tarea **CyberManagerGitSync** se ejecuta con la sesión del usuario (no necesita administrador) y
+requiere que GitHub CLI siga autenticado (`gh auth status`). Si no hay cambios pendientes no crea
+commits vacíos. Use `-NoPush` para crear solo el commit local.
+
+> La sincronización automática publica el estado actual del proyecto cada 15 minutos. Si prefiere
+> revisar antes de publicar, no instale la tarea y ejecute el script manualmente.
 
 ---
 

@@ -502,6 +502,46 @@ public static class L
             ["Prepago"] = "Prepaid",
             ["Postpago"] = "Postpaid",
             ["Cortesía"] = "Courtesy",
+
+            // ---------- Actualizaciones ----------
+            ["Versión"] = "Version",
+            ["Nueva versión disponible"] = "New version available",
+            ["Ver novedades"] = "View release",
+            ["Recordar luego"] = "Remind me later",
+            ["Versión publicada:"] = "Published:",
+            ["Actualización disponible"] = "Update available",
+            ["Actualización"] = "Update",
+            ["Actualizaciones"] = "Updates",
+            ["Última versión:"] = "Latest version:",
+            ["No hay versiones publicadas todavía."] = "No versions have been published yet.",
+            ["Ya tiene la última versión."] = "You already have the latest version.",
+            ["No se pudo consultar GitHub."] = "Could not check GitHub.",
+            ["Se reintentará automáticamente en la próxima comprobación."] =
+                "It will be retried automatically on the next check.",
+            ["Publique una versión en GitHub para activar los avisos."] =
+                "Publish a release on GitHub to enable reminders.",
+            ["Los recordatorios de nuevas versiones están desactivados."] =
+                "New version reminders are disabled.",
+            ["Aviso oculto para esta versión. Se mostrará con la próxima."] =
+                "Reminder hidden for this version. It will show again for the next one.",
+            ["El aviso ya se muestra en la parte superior de la consola."] =
+                "The reminder is already shown at the top of the console.",
+            ["El aviso aparecerá el"] = "The reminder will appear on",
+            ["El aviso aparecerá cuando GitHub informe la fecha de publicación."] =
+                "The reminder will appear once GitHub reports the release date.",
+            ["No se pudo ocultar el aviso"] = "Could not hide the reminder",
+            ["Avisar cuando haya una nueva versión disponible"] =
+                "Notify when a new version is available",
+            ["Horas de espera después de la publicación"] =
+                "Hours to wait after publication",
+            ["Buscar actualizaciones ahora"] = "Check for updates now",
+            ["Consultando GitHub..."] = "Checking GitHub...",
+            ["El servidor consulta GitHub automáticamente."] =
+                "The server checks GitHub automatically.",
+            ["El servidor consulta las versiones publicadas en GitHub cada 15 minutos. Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior."] =
+                "The server checks the versions published on GitHub every 15 minutes. When a new version appears, the console shows a reminder at the top.",
+            ["El aviso aparece 2 horas después de publicada una versión, por defecto. Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese aviso hasta la próxima versión."] =
+                "The reminder appears 2 hours after a version is published, by default. You can disable it or change the wait; “Remind me later” hides that reminder until the next version.",
         };
 
         return map;

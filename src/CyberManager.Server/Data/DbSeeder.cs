@@ -166,6 +166,9 @@ public static class DbSeeder
             [SettingsKeys.BackupIntervalHours] = "24",
             [SettingsKeys.BackupRetention] = "30",
             [SettingsKeys.BcvAutoUpdate] = "true",
+            [SettingsKeys.UpdateReminderEnabled] = "true",
+            [SettingsKeys.UpdateReminderDelayHours] = "2",
+            [SettingsKeys.UpdateReminderDismissedVersion] = string.Empty,
             [SettingsKeys.WallpaperMode] = nameof(WallpaperMode.None),
             [SettingsKeys.WallpaperRotationSeconds] = WallpaperSettings.Invariant(
                 WallpaperSettings.DefaultRotationSeconds),

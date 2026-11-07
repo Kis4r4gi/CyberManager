@@ -191,6 +191,27 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `SatelliteResourceLanguages=en;es` y el script elimina recursos satélite de otros idiomas. El
   agente ya no fija `RuntimeIdentifier=win-x64`; la arquitectura se decide al publicar.
 
+### Recordatorio de versiones y sincronización (1.0.2)
+
+- **Aviso de nueva versión**: `UpdateService` consulta las versiones publicadas en
+  `Kis4r4gi/CyberManager` y guarda el resultado en memoria durante 10 minutos para no agotar el
+  límite de la API de GitHub. `UpdateReminderWorker` revisa cada 15 minutos y, cuando la versión
+  más reciente supera la instalada y han pasado las horas de espera, envía el evento SignalR
+  `UpdateAvailable` a las consolas.
+- **Espera de 2 horas**: las claves `UpdateReminderEnabled` (activado), `UpdateReminderDelayHours`
+  (2) y `UpdateReminderDismissedVersion` controlan el aviso. El recordatorio aparece en una barra
+  superior de la consola con «Ver novedades» y «Recordar luego»; el segundo oculta esa versión
+  hasta la próxima.
+- **Configuración**: **Configuración → Instalación → Actualizaciones** permite activar/desactivar,
+  cambiar la espera, consultar GitHub inmediatamente y ver la fecha en que aparecerá el aviso.
+- **API**: `GET /api/updates/latest?refresh=true|false` y `POST /api/updates/dismiss`. Solo lectura
+  de datos públicos del repositorio; no se envían datos del negocio.
+- **Sincronización automática**: `scripts/sync-github.ps1` hace `git add`, commit (si hay cambios),
+  `pull --rebase --autostash` y `push`. Con `-InstallTask` registra la tarea
+  `CyberManagerGitSync` cada 15 minutos con la sesión del usuario; `-RemoveTask` la elimina y
+  `-NoPush` crea solo el commit local. El registro va a
+  `%LOCALAPPDATA%\CyberManager\logs\github-sync.log`.
+
 ---
 
 ## Verificación realizada
@@ -365,6 +386,24 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Pendiente: la ejecución real de los instaladores (confirmación de cierre, reinicio de procesos y
   desinstalación) requiere una sesión elevada.
 
+### Pruebas de la iteración de recordatorio de versiones y sincronización (2026-11-07)
+
+- `dotnet build CyberManager.sln`: **0 errores y 0 advertencias** con las clases
+  `UpdateService`, `UpdateReminderService`, `UpdateReminderWorker`, el DTO compartido, los
+  endpoints y el aviso de la consola.
+- Servidor de prueba con base temporal y puerto 5197: `GET /api/updates/latest` leyó la release
+  real `v1.0.1` de GitHub (`currentVersion=1.0.1`, `latestVersion=1.0.1`, `isNewer=false`,
+  `reminderEnabled=true`, `delayHours=2`, `reminderAtUtc=publishedUtc+2h`), sin errores.
+- `POST /api/updates/dismiss` guardó `UpdateReminderDismissedVersion=1.0.1` y devolvió
+  `isDismissed=true`; `GET /api/settings` confirmó las tres claves nuevas con sus valores por
+  defecto.
+- `UpdateReminderWorker` se ejecutó en segundo plano y consultó la API de GitHub sin afectar el
+  arranque; no emitió aviso porque la versión instalada era la última.
+- La consulta a GitHub se cachea 10 minutos y solo lee datos públicos del repositorio; el registro
+  no mostró advertencias ni errores de la API.
+- El script de sincronización se probó de extremo a extremo con el commit de esta iteración
+  (ver sección Publicación).
+
 ---
 
 ## Rutas y comandos clave
@@ -388,6 +427,13 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Ski
 
 # Publicación de diagnóstico de una sola arquitectura (sin instalador; sube la versión)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Architecture x64 -SkipInstaller -NoBump
+
+# Sincronizar con GitHub (commit automático + pull --rebase + push)
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\sync-github.ps1
+
+# Registrar o eliminar la tarea que sincroniza cada 15 minutos
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\sync-github.ps1 -InstallTask
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\sync-github.ps1 -RemoveTask
 ```
 
 Servidor en desarrollo (usar `dotnet` + DLL; el `.exe` falla sin runtime ASP.NET global):

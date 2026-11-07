@@ -230,6 +230,13 @@ public class CyberApi : ApiClient
     public Task<UserDto> CreateUserAsync(CreateUserRequest req) => PostAsync<UserDto>("/api/users", req);
     public Task<UserDto> UpdateUserAsync(int id, UpdateUserRequest req) => PutAsync<UserDto>($"/api/users/{id}", req);
     public Task DeactivateUserAsync(int id) => DeleteAsync($"/api/users/{id}");
+
+    // ---- actualizaciones publicadas en GitHub ----
+    public Task<UpdateInfoDto> LatestUpdateAsync(bool refresh = false)
+        => GetAsync<UpdateInfoDto>($"/api/updates/latest?refresh={(refresh ? "true" : "false")}");
+
+    public Task<UpdateInfoDto> DismissUpdateAsync(string version)
+        => PostAsync<UpdateInfoDto>("/api/updates/dismiss", new DismissUpdateRequest(version));
 }
 
 public static class AppPaths

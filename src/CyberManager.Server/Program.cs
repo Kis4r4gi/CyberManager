@@ -58,11 +58,14 @@ builder.Services.AddScoped<WallpaperService>();
 builder.Services.AddScoped<PromoVideoService>();
 builder.Services.AddScoped<RealtimeService>();
 builder.Services.AddScoped<BackupService>();
+builder.Services.AddSingleton<UpdateService>();
+builder.Services.AddScoped<UpdateReminderService>();
 builder.Services.AddSingleton(new DatabaseInfo(dbFile));
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddHostedService<StationMonitorService>();
 builder.Services.AddHostedService<BackupWorker>();
 builder.Services.AddHostedService<BcvRateWorker>();
+builder.Services.AddHostedService<UpdateReminderWorker>();
 
 builder.Services.AddSignalR(o =>
     {
@@ -77,6 +80,13 @@ builder.Services.AddHttpClient("rates", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(8);
     c.DefaultRequestHeaders.UserAgent.ParseAdd("CyberManager/1.0");
+});
+
+builder.Services.AddHttpClient("github", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(12);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("CyberManager/" + AppInfo.Version);
+    c.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 });
 
 // ---------- Autenticación ----------
@@ -166,6 +176,7 @@ app.MapReportEndpoints();
 app.MapWallpaperEndpoints();
 app.MapPromoVideoEndpoints();
 app.MapBackupEndpoints();
+app.MapUpdateEndpoints();
 
 app.MapHub<AdminHub>("/hubs/admin");
 app.MapHub<AgentHub>("/hubs/agent");

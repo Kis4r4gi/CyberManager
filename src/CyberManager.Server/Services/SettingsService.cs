@@ -33,6 +33,9 @@ public static class SettingsKeys
     public const string BackupIntervalHours = "BackupIntervalHours";
     public const string BackupRetention = "BackupRetention";
     public const string BcvAutoUpdate = "BcvAutoUpdate";
+    public const string UpdateReminderEnabled = "UpdateReminderEnabled";
+    public const string UpdateReminderDelayHours = "UpdateReminderDelayHours";
+    public const string UpdateReminderDismissedVersion = "UpdateReminderDismissedVersion";
     public const string WallpaperMode = WallpaperSettings.Mode;
     public const string WallpaperRotationSeconds = WallpaperSettings.RotationSeconds;
     public const string WallpaperActiveId = WallpaperSettings.ActiveId;

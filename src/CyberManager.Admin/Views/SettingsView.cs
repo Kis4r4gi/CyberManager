@@ -34,6 +34,9 @@ public sealed class SettingsView : UserControl, IRefreshable
     private readonly DataGrid _backupsGrid;
     private readonly TextBlock _backupStatus = Kit.Muted("Los respaldos se guardan en el servidor.");
     private readonly TextBlock _backupFolderText = Kit.Muted("Consultando carpeta...");
+    private readonly TextBlock _updateDetail = Kit.Muted("Consultando la última versión publicada...");
+    private readonly TextBlock _updateStatus = Kit.Muted("El servidor consulta GitHub automáticamente.");
+    private bool _updateBusy;
 
     private readonly Dictionary<string, TextBox> _appearanceTexts = new();
     private readonly Dictionary<string, Border> _appearanceSwatches = new();
@@ -1076,6 +1079,39 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(Kit.Section("Versión de CyberManager"));
         panel.Children.Add(Description($"{L.T("Versión instalada:")} {AppInfo.Version}"));
 
+        panel.Children.Add(Kit.Section("Actualizaciones"));
+        panel.Children.Add(Description(
+            "El servidor consulta las versiones publicadas en GitHub cada 15 minutos. " +
+            "Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior."));
+
+        var reminder = new UniformGrid { Columns = 1 };
+        AddCheck(reminder, "UpdateReminderEnabled",
+            "Avisar cuando haya una nueva versión disponible", true);
+        panel.Children.Add(reminder);
+
+        var reminderFields = new UniformGrid { Columns = 2 };
+        AddText(reminderFields, "UpdateReminderDelayHours",
+            "Horas de espera después de la publicación", "2");
+        panel.Children.Add(reminderFields);
+
+        _updateDetail.Margin = new Thickness(0, 2, 0, 4);
+        _updateDetail.TextWrapping = TextWrapping.Wrap;
+        panel.Children.Add(_updateDetail);
+
+        _updateStatus.Margin = new Thickness(0, 0, 0, 10);
+        _updateStatus.TextWrapping = TextWrapping.Wrap;
+        panel.Children.Add(_updateStatus);
+
+        var checkUpdates = Kit.Button("Buscar actualizaciones ahora", "GhostButton",
+            () => _ = Ui.Run(CheckUpdatesAsync, "No se pudo consultar GitHub"));
+        checkUpdates.HorizontalAlignment = HorizontalAlignment.Left;
+        checkUpdates.Margin = new Thickness(0, 0, 0, 8);
+        panel.Children.Add(checkUpdates);
+
+        panel.Children.Add(Description(
+            "El aviso aparece 2 horas después de publicada una versión, por defecto. " +
+            "Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese aviso hasta la próxima versión."));
+
         panel.Children.Add(Kit.Section("Desinstalación"));
         panel.Children.Add(Description(
             "El desinstalador detiene el servidor, el agente y el cliente antes de quitar los archivos. " +
@@ -1179,6 +1215,104 @@ public sealed class SettingsView : UserControl, IRefreshable
     }
 
     // ============================================================
+    //  Actualizaciones
+    // ============================================================
+    private async Task LoadUpdateAsync()
+    {
+        try
+        {
+            ShowUpdate(await App.Api.LatestUpdateAsync());
+        }
+        catch (Exception ex)
+        {
+            _updateDetail.Text = ex.Message;
+            _updateDetail.Foreground = Kit.Brush("DangerBrush");
+        }
+    }
+
+    private async Task CheckUpdatesAsync()
+    {
+        if (_updateBusy) return;
+        _updateBusy = true;
+        _updateStatus.Text = "Consultando GitHub...";
+        _updateStatus.Foreground = Kit.Brush("MutedBrush");
+
+        try
+        {
+            ShowUpdate(await App.Api.LatestUpdateAsync(refresh: true));
+        }
+        catch (Exception ex)
+        {
+            _updateStatus.Text = ex.Message;
+            _updateStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+        finally
+        {
+            _updateBusy = false;
+        }
+    }
+
+    private void ShowUpdate(UpdateInfoDto info)
+    {
+        if (info.CheckFailed && info.LatestVersion is null)
+        {
+            _updateDetail.Text = $"{L.T("Versión instalada:")} {info.CurrentVersion} · " +
+                                 L.T("No se pudo consultar GitHub.");
+            _updateDetail.Foreground = Kit.Brush("WarningBrush");
+            _updateStatus.Text = L.T("Se reintentará automáticamente en la próxima comprobación.");
+            _updateStatus.Foreground = Kit.Brush("MutedBrush");
+            return;
+        }
+
+        if (info.LatestVersion is null)
+        {
+            _updateDetail.Text = $"{L.T("Versión instalada:")} {info.CurrentVersion} · " +
+                                 L.T("No hay versiones publicadas todavía.");
+            _updateDetail.Foreground = Kit.Brush("MutedBrush");
+            _updateStatus.Text = L.T("Publique una versión en GitHub para activar los avisos.");
+            _updateStatus.Foreground = Kit.Brush("MutedBrush");
+            return;
+        }
+
+        _updateDetail.Text = $"{L.T("Versión instalada:")} {info.CurrentVersion} · " +
+                             $"{L.T("Última versión:")} {info.LatestVersion}";
+
+        if (!info.IsNewer)
+        {
+            _updateDetail.Foreground = Kit.Brush("SuccessBrush");
+            _updateStatus.Text = L.T("Ya tiene la última versión.");
+            _updateStatus.Foreground = Kit.Brush("SuccessBrush");
+            return;
+        }
+
+        _updateDetail.Foreground = Kit.Brush("AccentBrush");
+
+        if (!info.ReminderEnabled)
+        {
+            _updateStatus.Text = L.T("Los recordatorios de nuevas versiones están desactivados.");
+        }
+        else if (info.IsDismissed)
+        {
+            _updateStatus.Text = L.T("Aviso oculto para esta versión. Se mostrará con la próxima.");
+        }
+        else if (info.IsReminderDue)
+        {
+            _updateStatus.Text = L.T("El aviso ya se muestra en la parte superior de la consola.");
+        }
+        else if (info.ReminderAtUtc is DateTime reminderAt)
+        {
+            _updateStatus.Text = $"{L.T("El aviso aparecerá el")} " +
+                                 $"{reminderAt.ToLocalTime():dd/MM/yyyy HH:mm}.";
+        }
+        else
+        {
+            _updateStatus.Text = L.T("El aviso aparecerá cuando GitHub informe la fecha de publicación.");
+        }
+
+        _updateStatus.Foreground = Kit.Brush("MutedBrush");
+    }
+
+    // ============================================================
     //  Carga general
     // ============================================================
     public async Task RefreshAsync()
@@ -1205,6 +1339,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         await LoadRatesAsync();
         await LoadUsersAsync();
         await LoadBackupsAsync();
+        await LoadUpdateAsync();
     }
 
     // ============================================================

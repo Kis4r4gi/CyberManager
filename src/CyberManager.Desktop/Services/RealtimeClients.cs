@@ -13,6 +13,7 @@ public sealed class AdminRealtime : IAsyncDisposable
     public event Action<SessionWarningEvent>? SessionWarning;
     public event Action<RealtimeEvent>? EventReceived;
     public event Action<ScreenFrameResult>? ScreenFrameReceived;
+    public event Action<UpdateInfoDto>? UpdateAvailable;
     public event Action<bool>? ConnectionChanged;
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;
@@ -31,6 +32,7 @@ public sealed class AdminRealtime : IAsyncDisposable
         _hub.On<SessionWarningEvent>("SessionWarning", e => SessionWarning?.Invoke(e));
         _hub.On<RealtimeEvent>("Event", e => EventReceived?.Invoke(e));
         _hub.On<ScreenFrameResult>("ScreenFrame", e => ScreenFrameReceived?.Invoke(e));
+        _hub.On<UpdateInfoDto>("UpdateAvailable", e => UpdateAvailable?.Invoke(e));
 
         _hub.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         _hub.Reconnected += _ => { ConnectionChanged?.Invoke(true); return Task.CompletedTask; };
