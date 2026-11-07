@@ -183,8 +183,8 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Desinstalación selectiva: `desinstalar-servicios.ps1 -Servidor` o `-Agente`. El servidor
   conserva la base de datos; la estación conserva la configuración local del cliente.
 - Instaladores generados:
-  - `artifacts/CyberManager-Servidor-1.0.1.exe` (~158,8 MB, payloads x64 + x86).
-  - `artifacts/CyberManager-Estacion-1.0.1.exe` (~140,7 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Servidor-1.0.2.exe` (~158,8 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Estacion-1.0.2.exe` (~140,7 MB, payloads x64 + x86).
 - Ambos instaladores llevan `SetupIconFile=..\assets\CyberManager.ico` y los ejecutables
   publicados en ambas arquitecturas incluyen el icono en sus recursos.
 - **Reducción de tamaño**: las publicaciones omiten PDB y XML de documentación, usan
@@ -403,6 +403,11 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   no mostró advertencias ni errores de la API.
 - El script de sincronización se probó de extremo a extremo con el commit de esta iteración
   (ver sección Publicación).
+- `scripts/build-installer.ps1` subió `version.props` de `1.0.1` a `1.0.2` y generó sin errores
+  `CyberManager-Servidor-1.0.2.exe` (~158,8 MB) y `CyberManager-Estacion-1.0.2.exe` (~140,7 MB),
+  ambos con los payloads x64 y x86.
+- Release `v1.0.2` publicada con ambos instaladores; el recordatorio de 2 horas toma como
+  referencia la fecha `publishedUtc` de esa release.
 
 ---
 
@@ -557,3 +562,10 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
+- Release actual: **v1.0.2**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.2>) con
+  `CyberManager-Servidor-1.0.2.exe` y `CyberManager-Estacion-1.0.2.exe`. La release anterior
+  `v1.0.1` se conserva como historial.
+- La sincronización automática se registra con
+  `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
+  cada 15 minutos con la sesión del usuario).
