@@ -36,6 +36,8 @@ public sealed class SettingsView : UserControl, IRefreshable
     private readonly TextBlock _backupFolderText = Kit.Muted("Consultando carpeta...");
     private readonly TextBlock _updateDetail = Kit.Muted("Consultando la última versión publicada...");
     private readonly TextBlock _updateStatus = Kit.Muted("El servidor consulta GitHub automáticamente.");
+    private readonly TextBlock _emailStatus = Kit.Muted("El envío del cierre diario por correo está desactivado.");
+    private readonly PasswordBox _smtpPassword = new();
     private bool _updateBusy;
 
     private readonly Dictionary<string, TextBox> _appearanceTexts = new();
@@ -89,6 +91,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         tabs.Items.Add(new TabItem { Header = "Usuarios", Content = BuildUsersTab() });
         tabs.Items.Add(new TabItem { Header = "Apariencia", Content = BuildAppearanceTab() });
         tabs.Items.Add(new TabItem { Header = "Respaldos", Content = BuildBackupTab() });
+        tabs.Items.Add(new TabItem { Header = "Reportes por correo", Content = BuildEmailTab() });
         tabs.Items.Add(new TabItem { Header = "Instalación", Content = BuildInstallTab() });
 
         var root = new Grid();
@@ -209,13 +212,7 @@ public sealed class SettingsView : UserControl, IRefreshable
             return;
         }
 
-        var values = new Dictionary<string, string>();
-
-        foreach (var (key, box) in _texts)
-            values[key] = Normalize(box.Text);
-
-        foreach (var (key, check) in _checks)
-            values[key] = (check.IsChecked == true).ToString().ToLowerInvariant();
+        var values = CollectBusinessValues();
 
         _businessSaving = true;
         _businessStatus.Text = "Guardando...";
@@ -236,6 +233,24 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             _businessSaving = false;
         }
+    }
+
+    private Dictionary<string, string> CollectBusinessValues()
+    {
+        var values = new Dictionary<string, string>();
+
+        foreach (var (key, box) in _texts)
+            values[key] = Normalize(box.Text);
+
+        foreach (var (key, check) in _checks)
+            values[key] = (check.IsChecked == true).ToString().ToLowerInvariant();
+
+        // La contraseña guardada no se devuelve al cliente. Solo se envía cuando el
+        // administrador escribe una nueva; dejarla vacía conserva la existente.
+        if (!string.IsNullOrEmpty(_smtpPassword.Password))
+            values["SmtpPassword"] = _smtpPassword.Password;
+
+        return values;
     }
 
     private void ScheduleBusinessAutosave()
@@ -852,6 +867,112 @@ public sealed class SettingsView : UserControl, IRefreshable
         return Scroll(panel);
     }
 
+    // ============================================================
+    //  Reportes por correo
+    // ============================================================
+    private FrameworkElement BuildEmailTab()
+    {
+        var panel = new StackPanel();
+
+        panel.Children.Add(Kit.Section("Cierre diario por correo"));
+        panel.Children.Add(Description(
+            "Cuando esta opción está activa, al abrir el cierre diario el servidor envía el resumen " +
+            "del día a los destinatarios indicados. Si el correo falla, el cierre y la caja siguen " +
+            "funcionando normalmente. El envío se realiza una sola vez por fecha; use «Reenviar» " +
+            "en el cierre diario para repetirlo."));
+
+        var enabled = new UniformGrid { Columns = 1 };
+        AddCheck(enabled, "DailyReportEmailEnabled",
+            "Enviar automáticamente el cierre diario por correo", false);
+        panel.Children.Add(enabled);
+
+        AddText(panel, "DailyReportEmailRecipients",
+            "Destinatarios (separados por coma o punto y coma)", "", fullWidth: true);
+
+        panel.Children.Add(Kit.Section("Servidor SMTP"));
+        panel.Children.Add(Description(
+            "Use los datos del proveedor de correo. Ejemplos: Gmail (smtp.gmail.com, puerto 587, SSL activado, " +
+            "contraseña de aplicación), Outlook (smtp.office365.com, puerto 587) o el servidor SMTP del negocio. " +
+            "La contraseña se guarda en la base de datos del servidor."));
+
+        var smtp = new UniformGrid { Columns = 2 };
+        AddText(smtp, "SmtpHost", "Servidor SMTP", "");
+        AddText(smtp, "SmtpPort", "Puerto", "587");
+        AddText(smtp, "SmtpUsername", "Usuario SMTP", "");
+        AddText(smtp, "SmtpFromAddress", "Correo del remitente", "");
+        AddText(smtp, "SmtpFromName", "Nombre del remitente", "CyberManager");
+        panel.Children.Add(smtp);
+
+        _smtpPassword.PasswordChanged += (_, _) => ScheduleBusinessAutosave();
+        var passwordField = Kit.Field("Contraseña SMTP (deje vacío para conservar la actual)", _smtpPassword);
+        passwordField.Margin = new Thickness(0, 0, 16, 10);
+        panel.Children.Add(passwordField);
+
+        var clearPassword = Kit.Button("Borrar contraseña guardada", "DangerButton",
+            () => _ = ClearSmtpPasswordAsync());
+        clearPassword.HorizontalAlignment = HorizontalAlignment.Left;
+        clearPassword.Margin = new Thickness(0, 0, 0, 8);
+        panel.Children.Add(clearPassword);
+
+        var ssl = new UniformGrid { Columns = 1 };
+        AddCheck(ssl, "SmtpUseSsl", "Usar conexión segura SSL/TLS (recomendado)", true);
+        panel.Children.Add(ssl);
+
+        var actions = Kit.HStack(8,
+            Kit.Button("Guardar ahora", "SuccessButton", () => _ = SaveBusinessAsync()),
+            Kit.Button("Enviar correo de prueba", "GhostButton", () => _ = TestEmailAsync()));
+        actions.Margin = new Thickness(0, 8, 0, 0);
+        panel.Children.Add(actions);
+
+        _emailStatus.Margin = new Thickness(0, 10, 0, 0);
+        _emailStatus.TextWrapping = TextWrapping.Wrap;
+        panel.Children.Add(_emailStatus);
+
+        panel.Children.Add(Description(
+            "El correo incluye el resumen del cierre en el cuerpo y el detalle en un archivo CSV adjunto. " +
+            "Verifique la carpeta de correo no deseado si no llega el primer envío."));
+
+        return Scroll(panel);
+    }
+
+    private async Task ClearSmtpPasswordAsync()
+    {
+        try
+        {
+            await App.Api.SaveSettingsAsync(new Dictionary<string, string>
+            {
+                ["SmtpPassword"] = string.Empty
+            });
+            _smtpPassword.Password = string.Empty;
+            _emailStatus.Text = "Contraseña SMTP borrada del servidor.";
+            _emailStatus.Foreground = Kit.Brush("SuccessBrush");
+        }
+        catch (Exception ex)
+        {
+            _emailStatus.Text = ex.Message;
+            _emailStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+    }
+
+    private async Task TestEmailAsync()
+    {
+        _emailStatus.Text = "Guardando la configuración y enviando el correo de prueba...";
+        _emailStatus.Foreground = Kit.Brush("MutedBrush");
+
+        try
+        {
+            await App.Api.SaveSettingsAsync(CollectBusinessValues());
+            var result = await App.Api.SendTestEmailAsync();
+            _emailStatus.Text = result.Message;
+            _emailStatus.Foreground = Kit.Brush("SuccessBrush");
+        }
+        catch (Exception ex)
+        {
+            _emailStatus.Text = ex.Message;
+            _emailStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+    }
+
     private static FrameworkElement WithMargin(FrameworkElement element, double left, double top,
         double right, double bottom)
     {
@@ -1331,6 +1452,15 @@ public sealed class SettingsView : UserControl, IRefreshable
             check.IsChecked = settings.TryGetValue(key, out var raw) && bool.TryParse(raw, out var parsed)
                 ? parsed
                 : _checkDefaults.GetValueOrDefault(key, true);
+
+        _smtpPassword.Password = string.Empty;
+
+        var emailEnabled = settings.TryGetValue("DailyReportEmailEnabled", out var emailRaw)
+                           && bool.TryParse(emailRaw, out var emailParsed) && emailParsed;
+        _emailStatus.Text = emailEnabled
+            ? "El envío automático del cierre diario por correo está activo."
+            : "El envío del cierre diario por correo está desactivado.";
+        _emailStatus.Foreground = Kit.Brush(emailEnabled ? "SuccessBrush" : "MutedBrush");
 
         _businessLoaded = true;
         _businessStatus.Text = $"Configuración cargada · {settings.Count} claves · autoguardado activo";

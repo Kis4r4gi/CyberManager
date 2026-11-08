@@ -36,6 +36,16 @@ public static class SettingsKeys
     public const string UpdateReminderEnabled = "UpdateReminderEnabled";
     public const string UpdateReminderDelayHours = "UpdateReminderDelayHours";
     public const string UpdateReminderDismissedVersion = "UpdateReminderDismissedVersion";
+    public const string DailyReportEmailEnabled = "DailyReportEmailEnabled";
+    public const string DailyReportEmailRecipients = "DailyReportEmailRecipients";
+    public const string DailyReportEmailLastSentDate = "DailyReportEmailLastSentDate";
+    public const string SmtpHost = "SmtpHost";
+    public const string SmtpPort = "SmtpPort";
+    public const string SmtpUseSsl = "SmtpUseSsl";
+    public const string SmtpUsername = "SmtpUsername";
+    public const string SmtpPassword = "SmtpPassword";
+    public const string SmtpFromAddress = "SmtpFromAddress";
+    public const string SmtpFromName = "SmtpFromName";
     public const string WallpaperMode = WallpaperSettings.Mode;
     public const string WallpaperRotationSeconds = WallpaperSettings.RotationSeconds;
     public const string WallpaperActiveId = WallpaperSettings.ActiveId;
@@ -63,7 +73,10 @@ public class SettingsService
         => bool.TryParse(await GetAsync(key), out var v) ? v : fallback;
 
     public async Task<Dictionary<string, string>> GetAllAsync()
-        => await _db.Settings.AsNoTracking().ToDictionaryAsync(x => x.Key, x => x.Value);
+        => await _db.Settings.AsNoTracking()
+            // La contraseña SMTP nunca se expone a las consolas ni a las estaciones.
+            .Where(x => x.Key != SettingsKeys.SmtpPassword)
+            .ToDictionaryAsync(x => x.Key, x => x.Value);
 
     public async Task SetAsync(string key, string value, string? description = null)
     {

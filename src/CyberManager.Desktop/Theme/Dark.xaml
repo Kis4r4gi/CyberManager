@@ -54,6 +54,10 @@
         <Setter Property="FontFamily" Value="Segoe UI" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="HasDropShadow" Value="True" />
+        <!-- Globo flotante junto al cursor: no requiere clic y aparece tras 2 segundos. -->
+        <Setter Property="Placement" Value="Mouse" />
+        <Setter Property="HorizontalOffset" Value="14" />
+        <Setter Property="VerticalOffset" Value="18" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
@@ -62,6 +66,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="6" Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="14" ShadowDepth="3" Direction="270"
+                                              Color="#000000" Opacity="0.55" />
+                        </Border.Effect>
                         <ContentPresenter>
                             <ContentPresenter.Resources>
                                 <Style TargetType="TextBlock">
@@ -160,6 +168,7 @@
         <Setter Property="ToolTipService.InitialShowDelay" Value="2000" />
         <Setter Property="ToolTipService.ShowDuration" Value="15000" />
         <Setter Property="ToolTipService.BetweenShowDelay" Value="200" />
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">

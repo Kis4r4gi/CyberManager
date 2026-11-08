@@ -79,7 +79,7 @@ public class FormDialog : Window
             Style = Style("GhostButton"),
             Margin = new Thickness(0, 0, 8, 0),
             IsCancel = true,
-            ToolTip = L.T("Cierra sin guardar cambios.")
+            ToolTip = "Cierra sin guardar cambios."
         };
         CancelButton.Click += (_, _) => { DialogResult = false; Close(); };
 
@@ -87,7 +87,7 @@ public class FormDialog : Window
         {
             Content = acceptText,
             Style = Style("PrimaryButton"),
-            ToolTip = L.T("Guarda los datos del formulario.")
+            ToolTip = "Guarda los datos del formulario."
         };
         ToolTipService.SetInitialShowDelay(AcceptButton, 2000);
         ToolTipService.SetInitialShowDelay(CancelButton, 2000);

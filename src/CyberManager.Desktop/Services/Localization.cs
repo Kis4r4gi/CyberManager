@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using CyberManager.Shared;
@@ -69,7 +70,10 @@ public static class Loc
                 break;
         }
 
+        // Las descripciones de los botones son ayudas flotantes y se muestran
+        // siempre en español, sin importar el idioma elegido para la interfaz.
         if (element is FrameworkElement { ToolTip: string tooltip } fe &&
+            element is not ButtonBase &&
             !BindingOperations.IsDataBound(fe, FrameworkElement.ToolTipProperty))
             fe.ToolTip = L.T(tooltip);
     }

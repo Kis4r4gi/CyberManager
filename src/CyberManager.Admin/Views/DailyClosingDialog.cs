@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using CyberManager.Admin.Services;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
@@ -8,10 +9,16 @@ namespace CyberManager.Admin.Views;
 /// <summary>Resumen imprimible del cierre diario: ventas, caja, pagos y proveedores.</summary>
 public sealed class DailyClosingDialog : FormDialog
 {
-    public DailyClosingDialog(DailyClosingDto closing, TicketSettings settings)
+    private readonly DateTime _date;
+    private readonly TextBlock _emailStatus;
+    private readonly Button _emailButton;
+    private bool _emailBusy;
+
+    public DailyClosingDialog(DailyClosingDto closing, TicketSettings settings, bool emailEnabled = false)
         : base($"Cierre diario · {closing.Date:dd/MM/yyyy}",
             $"{closing.BusinessName} · Tasa 1 USD = {closing.ExchangeRate:N2} Bs")
     {
+        _date = closing.Date.Date;
         AcceptButton.Content = "Cerrar";
         HideCancel();
 
@@ -72,8 +79,54 @@ public sealed class DailyClosingDialog : FormDialog
         print.Margin = new Thickness(0, 12, 0, 0);
         Body.Children.Add(print);
 
+        _emailButton = Kit.Button("Enviar por correo", "GhostButton", () => _ = SendEmailAsync(force: true));
+        _emailButton.HorizontalAlignment = HorizontalAlignment.Left;
+        _emailButton.Margin = new Thickness(0, 8, 0, 0);
+        Body.Children.Add(_emailButton);
+
+        _emailStatus = new TextBlock
+        {
+            Text = emailEnabled
+                ? "Preparando el envío del cierre por correo..."
+                : "El envío automático por correo está desactivado en Configuración.",
+            Style = Style("Muted"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        Body.Children.Add(_emailStatus);
+
         AddNote(closing.CashCounted is null
             ? "La caja del día todavía no tiene un cierre registrado."
             : "El contado corresponde al cierre de caja del turno.");
+
+        if (emailEnabled)
+            Loaded += async (_, _) => await SendEmailAsync(force: false);
+    }
+
+    private async Task SendEmailAsync(bool force)
+    {
+        if (_emailBusy) return;
+        _emailBusy = true;
+        _emailButton.IsEnabled = false;
+        _emailStatus.Text = "Enviando el cierre por correo...";
+        _emailStatus.Foreground = Brush("MutedBrush");
+
+        try
+        {
+            var result = await App.Api.SendDailyClosingEmailAsync(_date, force);
+            _emailStatus.Text = result.Message;
+            _emailStatus.Foreground = Brush(result.Sent ? "SuccessBrush" : "MutedBrush");
+            if (result.Sent) _emailButton.Content = "Reenviar por correo";
+        }
+        catch (Exception ex)
+        {
+            _emailStatus.Text = ex.Message;
+            _emailStatus.Foreground = Brush("DangerBrush");
+        }
+        finally
+        {
+            _emailBusy = false;
+            _emailButton.IsEnabled = true;
+        }
     }
 }

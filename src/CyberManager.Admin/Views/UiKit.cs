@@ -126,9 +126,9 @@ public static class Kit
         ["Vista previa"] = "Muestra una vista previa del contenido."
     };
 
-    /// <summary>Devuelve la descripción del botón traducida al idioma actual.</summary>
+    /// <summary>Devuelve la descripción del botón. Las ayudas de botones se muestran solo en español.</summary>
     public static string? Tip(string? content)
-        => content is not null && ButtonTips.TryGetValue(content, out var tip) ? L.T(tip) : null;
+        => content is not null && ButtonTips.TryGetValue(content, out var tip) ? tip : null;
 
     /// <summary>Asigna a un botón la descripción asociada a su texto y el retardo de 2 segundos.</summary>
     public static T WithTip<T>(T element, string? content) where T : FrameworkElement

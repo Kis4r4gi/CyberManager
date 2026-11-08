@@ -208,10 +208,14 @@ public sealed class ReportsView : UserControl, IRefreshable
     {
         var date = (_toPicker.SelectedDate ?? DateTime.Today).Date;
         var closingTask = App.Api.DailyClosingAsync(date);
-        var settingsTask = TicketSettings.LoadAsync();
+        var settingsTask = App.Api.SettingsAsync();
         await Task.WhenAll(closingTask, settingsTask);
 
-        var dialog = new DailyClosingDialog(await closingTask, await settingsTask)
+        var settings = await settingsTask;
+        var emailEnabled = settings.TryGetValue("DailyReportEmailEnabled", out var emailRaw)
+                           && bool.TryParse(emailRaw, out var emailParsed) && emailParsed;
+
+        var dialog = new DailyClosingDialog(await closingTask, TicketSettings.From(settings), emailEnabled)
         {
             Owner = Window.GetWindow(this)
         };

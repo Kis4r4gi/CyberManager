@@ -154,6 +154,15 @@ public class CyberApi : ApiClient
     public Task<DailyClosingDto> DailyClosingAsync(DateTime date)
         => GetAsync<DailyClosingDto>($"/api/reports/daily-closing?date={date:yyyy-MM-dd}");
 
+    public Task<DailyReportEmailResultDto> SendDailyClosingEmailAsync(DateTime date, bool force = false)
+        => PostAsync<DailyReportEmailResultDto>(
+            $"/api/reports/daily-closing/email?date={date:yyyy-MM-dd}&force={(force ? "true" : "false")}",
+            new DailyReportEmailRequest(date, force));
+
+    public Task<DailyReportEmailResultDto> SendTestEmailAsync(string? recipient = null)
+        => PostAsync<DailyReportEmailResultDto>("/api/reports/daily-closing/email/test",
+            new TestEmailRequest(recipient));
+
     // ---- galería de fondos ----
     public Task<List<WallpaperDto>> WallpapersAsync() => GetAsync<List<WallpaperDto>>("/api/wallpapers");
     public Task<WallpaperPlaylistDto> WallpaperPlaylistAsync() => GetAsync<WallpaperPlaylistDto>("/api/wallpapers/playlist");
