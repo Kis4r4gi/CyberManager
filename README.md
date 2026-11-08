@@ -136,6 +136,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   fechas y exportación a CSV.
 - **Cierre diario** imprimible con ventas, caja, formas de pago, gastos, pagos a proveedores y
   productos más vendidos.
+- **Envío del cierre diario por correo**: opción configurable que envía el resumen del día y un
+  CSV adjunto a uno o varios destinatarios al abrir el cierre, con reenvío manual y correo de
+  prueba desde *Configuración → Reportes por correo*.
 - Usuarios con roles: administrador, cajero y técnico.
 - Configuración del negocio, IVA, IGTF, avisos, ticket, impresora y datos de instalación.
   Los cambios se guardan automáticamente unos instantes después de editarlos.
@@ -587,6 +590,18 @@ asociado, puede instalar allí el cliente y el agente para el bloqueo y las órd
 - Pulse **Imprimir ticket** para emitir el cierre en 80 mm.
 - *Exportar CSV* sigue disponible para cada pestaña del reporte.
 
+**Envío automático por correo**
+
+- En *Configuración → Reportes por correo* active **Enviar automáticamente el cierre diario por
+  correo** e indique los destinatarios (separados por coma o punto y coma).
+- Complete los datos del servidor SMTP: host, puerto, SSL/TLS, usuario, contraseña, correo y
+  nombre del remitente. Funciona con Gmail (contraseña de aplicación), Outlook y servidores SMTP
+  del negocio. La contraseña se guarda en el servidor y no se devuelve a las consolas.
+- **Enviar correo de prueba** valida la configuración sin esperar al cierre.
+- Al abrir el cierre diario, el servidor envía el resumen en HTML con el detalle en CSV adjunto.
+  El envío se hace **una sola vez por fecha**; el botón **Reenviar por correo** del cierre lo
+  repite. Si el correo falla, el cierre y la caja siguen funcionando normalmente.
+
 ---
 
 ## Apariencia y personalización
@@ -605,8 +620,9 @@ En *Configuración → Apariencia* puede cambiar la interfaz de la consola:
 
 Las cajas de selección (casillas, botones de opción, listas desplegables y campos de fecha) usan
 siempre un fondo oscuro con texto claro, de modo que sus etiquetas se distinguen incluso sobre
-superficies claras. Al dejar el cursor **2 segundos** sobre un botón aparece una descripción breve
-de su función; las descripciones están disponibles en español e inglés.
+superficies claras. Al dejar el cursor **2 segundos** sobre un botón aparece un globo flotante con
+una descripción breve de su función, sin necesidad de hacer clic; las descripciones de los botones
+se muestran **siempre en español**, aunque la interfaz esté en inglés.
 
 Los cambios de apariencia se guardan **automáticamente** pocos instantes después de editar un
 color o mover un control; el botón **Aplicar y guardar ahora** fuerza el guardado inmediato.

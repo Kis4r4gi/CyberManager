@@ -183,8 +183,8 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Desinstalación selectiva: `desinstalar-servicios.ps1 -Servidor` o `-Agente`. El servidor
   conserva la base de datos; la estación conserva la configuración local del cliente.
 - Instaladores generados:
-  - `artifacts/CyberManager-Servidor-1.0.3.exe` (~158,8 MB, payloads x64 + x86).
-  - `artifacts/CyberManager-Estacion-1.0.3.exe` (~140,7 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Servidor-1.0.4.exe` (~158,8 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Estacion-1.0.4.exe` (~140,7 MB, payloads x64 + x86).
 - Ambos instaladores llevan `SetupIconFile=..\assets\CyberManager.ico` y los ejecutables
   publicados en ambas arquitecturas incluyen el icono en sus recursos.
 - **Reducción de tamaño**: las publicaciones omiten PDB y XML de documentación, usan
@@ -433,6 +433,42 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.3> el `2026-11-07T13:02:06Z`;
   el recordatorio de 2 horas aparecerá a las `15:02:06Z`.
 
+### Cierre diario por correo y ayudas solo en español (1.0.4, 2026-11-08)
+
+- **Envío del cierre diario por correo**: `EmailService` arma el resumen del día en HTML y adjunta
+  el detalle en CSV. Usa `System.Net.Mail.SmtpClient` (sin dependencias nuevas), con host, puerto,
+  SSL/TLS, usuario, contraseña, remitente y nombre configurables. El envío es idempotente por
+  fecha mediante `DailyReportEmailLastSentDate`; `force=true` permite reenviar.
+- **Disparo automático**: `ReportsView` lee `DailyReportEmailEnabled` y `DailyClosingDialog` envía
+  el correo al abrirse. El diálogo muestra el estado y permite **Reenviar por correo**; si el
+  envío falla, el cierre y la caja continúan sin interrupción.
+- **Configuración**: nueva pestaña **Reportes por correo** en `SettingsView` con activación,
+  destinatarios, datos SMTP, **Guardar ahora**, **Enviar correo de prueba** y **Borrar contraseña
+  guardada**. La contraseña nunca se devuelve en `GET /api/settings`; solo se envía cuando se
+  escribe una nueva.
+- **Endpoints**: `POST /api/reports/daily-closing/email?date=...&force=...` y
+  `POST /api/reports/daily-closing/email/test`, ambos solo para administradores. Los DTO están en
+  `CyberManager.Shared/Dtos/Notifications.cs` y los métodos en `CyberApi`.
+- **Ayudas de botones solo en español**: `Kit.Tip` ya no traduce el texto y `Loc.Apply` omite los
+  `ToolTip` de `ButtonBase`, por lo que las descripciones de botones se muestran siempre en
+  español aunque la interfaz esté en inglés. `FormDialog` fija sus dos ayudas en español.
+- **Globo flotante a los 2 segundos**: el estilo `ToolTip` de `Dark.xaml` usa `Placement=Mouse`,
+  desplazamiento respecto al cursor, esquinas redondeadas y sombra; `BaseButton` aplica
+  `InitialShowDelay=2000`, `ShowDuration=15000`, `BetweenShowDelay=200` y `ShowOnDisabled=True`.
+  No hace falta hacer clic: basta con dejar el cursor sobre el botón.
+- **Pruebas**: con un servidor temporal y un SMTP local simulado se verificó que el envío
+  desactivado se omite; sin SMTP la API responde **400** controlado; con SMTP inaccesible responde
+  **502** controlado; el correo de prueba y el cierre con CSV adjunto se envían; el segundo envío
+  sin `force` se omite y con `force=true` se reenvía. También se comprobó que
+  `GET /api/settings` no incluye `SmtpPassword`.
+- **Compilación**: `dotnet build CyberManager.sln` terminó con **0 errores y 0 advertencias**.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.4` y generó
+  `CyberManager-Servidor-1.0.4.exe` (166.552.643 bytes, ~158,8 MB) y
+  `CyberManager-Estacion-1.0.4.exe` (147.543.719 bytes, ~140,7 MB), con payloads x64 y x86.
+- Release `v1.0.4` publicada con ambos instaladores en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4> el `2026-11-08T23:46:40Z`;
+  el recordatorio de 2 horas quedará para `2026-11-09T01:46:40Z`.
+
 ---
 
 ## Rutas y comandos clave
@@ -586,11 +622,12 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.3**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.3>) con
-  `CyberManager-Servidor-1.0.3.exe` y `CyberManager-Estacion-1.0.3.exe`, publicada el
-  `2026-11-07T13:02:06Z`. La release anterior `v1.0.2`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.2>) se conserva como historial.
+- Release actual: **v1.0.4**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4>) con
+  `CyberManager-Servidor-1.0.4.exe` y `CyberManager-Estacion-1.0.4.exe`, publicada el
+  `2026-11-08T23:46:40Z`. Las releases anteriores `v1.0.3`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.3>) y `v1.0.2`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.2>) se conservan como historial.
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
