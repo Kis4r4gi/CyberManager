@@ -506,6 +506,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.5` y generó
   `CyberManager-Servidor-1.0.5.exe` (166.576.316 bytes, ~158,9 MB) y
   `CyberManager-Estacion-1.0.5.exe` (147.552.394 bytes, ~140,7 MB), con payloads x64 y x86.
+- Release `v1.0.5` publicada con ambos instaladores en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.5> el `2026-11-09T01:09:13Z`;
+  el recordatorio de 2 horas quedará para `2026-11-09T03:09:13Z`.
 
 ---
 
