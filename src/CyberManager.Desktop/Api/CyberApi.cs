@@ -241,8 +241,9 @@ public class CyberApi : ApiClient
     public Task DeactivateUserAsync(int id) => DeleteAsync($"/api/users/{id}");
 
     // ---- actualizaciones publicadas en GitHub ----
-    public Task<UpdateInfoDto> LatestUpdateAsync(bool refresh = false)
-        => GetAsync<UpdateInfoDto>($"/api/updates/latest?refresh={(refresh ? "true" : "false")}");
+    public Task<UpdateInfoDto> LatestUpdateAsync(bool refresh = false, bool cached = false)
+        => GetAsync<UpdateInfoDto>(
+            $"/api/updates/latest?refresh={(refresh ? "true" : "false")}&cached={(cached ? "true" : "false")}");
 
     public Task<UpdateInfoDto> DismissUpdateAsync(string version)
         => PostAsync<UpdateInfoDto>("/api/updates/dismiss", new DismissUpdateRequest(version));

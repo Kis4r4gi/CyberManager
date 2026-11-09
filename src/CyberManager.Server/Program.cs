@@ -66,7 +66,6 @@ builder.Services.AddSingleton<TokenService>();
 builder.Services.AddHostedService<StationMonitorService>();
 builder.Services.AddHostedService<BackupWorker>();
 builder.Services.AddHostedService<BcvRateWorker>();
-builder.Services.AddHostedService<UpdateReminderWorker>();
 
 builder.Services.AddSignalR(o =>
     {

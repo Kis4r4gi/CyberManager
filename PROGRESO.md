@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-08
+> Última actualización: 2026-11-09
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -509,6 +509,27 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Release `v1.0.5` publicada con ambos instaladores en
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.5> el `2026-11-09T01:09:13Z`;
   el recordatorio de 2 horas quedará para `2026-11-09T03:09:13Z`.
+
+### Actualizaciones al abrir y versión en el título (1.0.6, 2026-11-09)
+
+- **Consulta única al abrir**: se eliminó `UpdateReminderWorker`, el servicio periódico que
+  consultaba GitHub cada 15 minutos y enviaba `UpdateAvailable` por SignalR. La consola hace una
+  consulta forzada una sola vez en `MainWindow_Loaded` y el temporizador del encabezado ya no
+  refresca el aviso cada 20 segundos. El botón **Buscar actualizaciones ahora** sigue disponible
+  para una consulta manual.
+- **Sin consultas al abrir Configuración**: `GET /api/updates/latest?cached=true` devuelve solo el
+  resultado en memoria. `SettingsView` usa esa variante al cargar y reserva `refresh=true` para el
+  botón manual; así no se consulta GitHub por el simple hecho de entrar a la pestaña Instalación.
+- **Versión en la barra de título**: la consola muestra `CyberManager · Administración · v1.0.6`
+  (traducido al inglés) y la pantalla de acceso `CyberManager · Iniciar sesión · v1.0.6`. La
+  versión de la barra lateral y de **Configuración → Instalación** se mantiene.
+- **Textos**: la pestaña Instalación explica que la comprobación ocurre solo al abrir la consola y
+  que el botón manual es la forma de reintentar si GitHub no responde.
+- **Pruebas de API**: con un servidor temporal en el puerto 5099 se comprobó que
+  `?cached=true` devuelve `checkedUtc=0001-01-01` sin consultar GitHub, que `?refresh=true`
+  actualiza `latestVersion` a `1.0.5` y que una consulta posterior a `cached=true` conserva ese
+  resultado. `dotnet build CyberManager.sln` terminó con **0 errores y 0 advertencias**.
+- **Pendiente de verificación visual**: el texto de la barra de título en pantalla.
 
 ---
 

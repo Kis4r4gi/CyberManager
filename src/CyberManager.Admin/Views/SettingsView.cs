@@ -1244,8 +1244,9 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         panel.Children.Add(Kit.Section("Actualizaciones"));
         panel.Children.Add(Description(
-            "El servidor consulta las versiones publicadas en GitHub cada 15 minutos. " +
-            "Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior."));
+            "CyberManager consulta las versiones publicadas en GitHub una sola vez, al abrir la consola. " +
+            "Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior. " +
+            "Use «Buscar actualizaciones ahora» si desea comprobarlo manualmente."));
 
         var reminder = new UniformGrid { Columns = 1 };
         AddCheck(reminder, "UpdateReminderEnabled",
@@ -1384,7 +1385,7 @@ public sealed class SettingsView : UserControl, IRefreshable
     {
         try
         {
-            ShowUpdate(await App.Api.LatestUpdateAsync());
+            ShowUpdate(await App.Api.LatestUpdateAsync(cached: true));
         }
         catch (Exception ex)
         {
@@ -1422,7 +1423,7 @@ public sealed class SettingsView : UserControl, IRefreshable
             _updateDetail.Text = $"{L.T("Versión instalada:")} {info.CurrentVersion} · " +
                                  L.T("No se pudo consultar GitHub.");
             _updateDetail.Foreground = Kit.Brush("WarningBrush");
-            _updateStatus.Text = L.T("Se reintentará automáticamente en la próxima comprobación.");
+            _updateStatus.Text = L.T("Use «Buscar actualizaciones ahora» para volver a intentarlo.");
             _updateStatus.Foreground = Kit.Brush("MutedBrush");
             return;
         }

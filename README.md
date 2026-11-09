@@ -408,7 +408,8 @@ Después de instalar:
 - La base de datos se crea en `C:\CyberManager\Servidor\Server\cybermanager.db`.
 - Inicie sesión en la consola con `admin` / `admin123` y cambie la contraseña.
 - Compruebe el servidor con `Invoke-RestMethod http://127.0.0.1:5080/api/health`.
-- La versión instalada aparece en la barra lateral y en **Configuración → Instalación**.
+- La versión instalada aparece en la **barra de título**, en la barra lateral y en
+  **Configuración → Instalación**.
 
 ### Estación
 
@@ -442,10 +443,12 @@ desinstalador de cada componente en **Aplicaciones instaladas** de Windows. Cada
 
 ## Avisos de nuevas versiones
 
-El servidor consulta **GitHub Releases** cada 15 minutos. Cuando detecta una versión más reciente
-que la instalada, muestra un aviso en la parte superior de la consola de administración **2 horas
-después de la publicación** (el tiempo de espera es configurable). El aviso permite abrir la página
-de la versión o posponerlo hasta la siguiente.
+El servidor consulta **GitHub Releases** una sola vez, al abrir la consola de administración. Si
+detecta una versión más reciente que la instalada, muestra un aviso en la parte superior de la
+consola **2 horas después de la publicación** (el tiempo de espera es configurable). El aviso
+permite abrir la página de la versión o posponerlo hasta la siguiente. No hay consultas
+periódicas: la comprobación solo se repite al volver a abrir el programa o al pulsar
+**Buscar actualizaciones ahora**.
 
 - Se configura en **Configuración → Instalación → Actualizaciones**.
 - **Avisar cuando haya una nueva versión disponible**: activa o desactiva el recordatorio.
@@ -645,9 +648,10 @@ La paleta trae bordes más luminosos que el tema original y la consola dibuja un
 alrededor de la ventana, de modo que los límites de paneles y tarjetas se distinguen con claridad.
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,
 **Maximizar/Restaurar** y **Cerrar** son los del sistema y siempre están visibles; en Windows 10/11
-se aplica el modo oscuro a esa barra. La ventana se encuadra automáticamente dentro del área de
-trabajo visible (sin quedar debajo de la barra de tareas) y se reajusta al cambiar de monitor o de
-escala (DPI).
+se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
+instalada (por ejemplo, `CyberManager · Administración · v1.0.6`). La ventana se encuadra
+automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
+reajusta al cambiar de monitor o de escala (DPI).
 
 La apariencia se guarda por usuario en
 `%LOCALAPPDATA%\CyberManager\Admin\appearance.json` y se aplica al abrir la consola, antes de la

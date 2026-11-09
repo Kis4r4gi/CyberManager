@@ -19,6 +19,7 @@ public partial class LoginWindow : Window
         Loaded += (_, _) =>
         {
             Loc.Apply(this);
+            Title = $"{L.T("CyberManager · Iniciar sesión")} · v{AppInfo.Version}";
             if (string.IsNullOrWhiteSpace(UsernameBox.Text)) UsernameBox.Focus();
             else PasswordBox.Focus();
         };

@@ -10,8 +10,11 @@ public static class UpdateEndpoints
     {
         var g = app.MapGroup("/api/updates").WithTags("Actualizaciones").RequireAuthorization();
 
-        g.MapGet("/latest", async (bool? refresh, UpdateReminderService updates, CancellationToken ct) =>
-            Results.Ok(await updates.GetStatusAsync(refresh == true, ct)));
+        g.MapGet("/latest", async (bool? refresh, bool? cached, UpdateReminderService updates,
+            CancellationToken ct) =>
+            Results.Ok(cached == true
+                ? await updates.GetCachedStatusAsync()
+                : await updates.GetStatusAsync(refresh == true, ct)));
 
         g.MapPost("/dismiss", async (DismissUpdateRequest request, UpdateReminderService updates,
             CancellationToken ct) =>

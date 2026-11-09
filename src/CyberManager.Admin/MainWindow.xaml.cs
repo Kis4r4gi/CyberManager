@@ -32,6 +32,7 @@ public partial class MainWindow : Window
 
         UserText.Text = App.Session.FullName;
         VersionText.Text = $"CyberManager {AppInfo.Version}";
+        UpdateWindowTitle();
         UpdateRoleText();
 
         App.NavigationRequested += OnNavigationRequested;
@@ -45,6 +46,10 @@ public partial class MainWindow : Window
 
     private void UpdateRoleText()
         => RoleText.Text = Labels.RoleName(App.Session.Role);
+
+    /// <summary>Muestra el nombre y la versión del software en la barra de título de Windows.</summary>
+    private void UpdateWindowTitle()
+        => Title = $"{L.T("CyberManager · Administración")} · v{AppInfo.Version}";
 
     protected override void OnClosing(CancelEventArgs e)
     {
@@ -107,6 +112,7 @@ public partial class MainWindow : Window
         // Al cambiar el idioma se traduce la ventana y se reconstruyen las vistas
         // para que los textos generados por código también queden traducidos.
         Loc.Apply(this);
+        UpdateWindowTitle();
         UpdateRoleText();
         ConnectionText.Text = L.T(ConnectionText.Text);
         if (_update is not null) ApplyUpdate(_update);
@@ -125,6 +131,9 @@ public partial class MainWindow : Window
         await RefreshHeaderAsync();
         Navigate("dashboard");
         _headerTimer.Start();
+
+        // La consulta de actualizaciones se hace una sola vez, al abrir la consola.
+        _ = RefreshUpdateBannerAsync(force: true);
 
         if (App.Realtime is not null)
         {
@@ -245,17 +254,15 @@ public partial class MainWindow : Window
             ConnectionDot.Fill = (Brush)FindResource("DangerBrush");
             ConnectionText.Text = L.T("Sin conexión");
         }
-
-        _ = RefreshUpdateBannerAsync();
     }
 
     // ===================== Aviso de nueva versión =====================
 
-    private async Task RefreshUpdateBannerAsync()
+    private async Task RefreshUpdateBannerAsync(bool force = false)
     {
         try
         {
-            ApplyUpdate(await App.Api.LatestUpdateAsync());
+            ApplyUpdate(await App.Api.LatestUpdateAsync(force));
         }
         catch
         {

@@ -51,6 +51,9 @@ public sealed class UpdateService
         _log = log;
     }
 
+    /// <summary>Devuelve el último resultado guardado en memoria sin consultar GitHub.</summary>
+    public UpdateSnapshot GetCachedSnapshot() => Snapshot();
+
     /// <summary>Devuelve la versión más reciente publicada; usa la caché salvo que se fuerce.</summary>
     public async Task<UpdateSnapshot> GetSnapshotAsync(bool force, CancellationToken ct = default)
     {
@@ -179,6 +182,19 @@ public sealed class UpdateReminderService
 
     public async Task<UpdateInfoDto> GetStatusAsync(bool force = false, CancellationToken ct = default)
     {
+        var snapshot = await _updates.GetSnapshotAsync(force, ct);
+        return await BuildStatusAsync(snapshot);
+    }
+
+    /// <summary>Arma el estado con el resultado que ya está en memoria, sin consultar GitHub.</summary>
+    public async Task<UpdateInfoDto> GetCachedStatusAsync()
+    {
+        var snapshot = _updates.GetCachedSnapshot();
+        return await BuildStatusAsync(snapshot);
+    }
+
+    private async Task<UpdateInfoDto> BuildStatusAsync(UpdateSnapshot snapshot)
+    {
         var currentVersion = AppInfo.Version;
         var current = UpdateService.ParseVersion(currentVersion);
 
@@ -186,7 +202,6 @@ public sealed class UpdateReminderService
         var delayHours = Math.Clamp(
             await _settings.GetIntAsync(SettingsKeys.UpdateReminderDelayHours, 2), 0, 168);
         var dismissed = await _settings.GetAsync(SettingsKeys.UpdateReminderDismissedVersion);
-        var snapshot = await _updates.GetSnapshotAsync(force, ct);
 
         var release = snapshot.Release;
         var latest = release is null ? null : UpdateService.ParseVersion(release.Version);
@@ -223,67 +238,5 @@ public sealed class UpdateReminderService
         var normalized = UpdateService.ParseVersion(version)?.ToString(3) ?? version.Trim();
         if (string.IsNullOrWhiteSpace(normalized)) return;
         await _settings.SetAsync(SettingsKeys.UpdateReminderDismissedVersion, normalized);
-    }
-}
-
-/// <summary>
-/// Revisa GitHub periódicamente y avisa a las consolas cuando una versión lleva publicada
-/// el tiempo de espera configurado (2 horas por defecto).
-/// </summary>
-public sealed class UpdateReminderWorker : BackgroundService
-{
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(15);
-
-    private readonly IServiceScopeFactory _scopes;
-    private readonly ILogger<UpdateReminderWorker> _log;
-    private string? _announcedVersion;
-
-    public UpdateReminderWorker(IServiceScopeFactory scopes, ILogger<UpdateReminderWorker> log)
-    {
-        _scopes = scopes;
-        _log = log;
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        try
-        {
-            await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        using var timer = new PeriodicTimer(Interval);
-        do
-        {
-            try
-            {
-                using var scope = _scopes.CreateScope();
-                var reminders = scope.ServiceProvider.GetRequiredService<UpdateReminderService>();
-                var status = await reminders.GetStatusAsync(force: true, stoppingToken);
-
-                if (!status.IsReminderDue || status.LatestVersion is null) continue;
-                if (string.Equals(_announcedVersion, status.LatestVersion, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var realtime = scope.ServiceProvider.GetRequiredService<RealtimeService>();
-                await realtime.UpdateAvailableAsync(status);
-                _announcedVersion = status.LatestVersion;
-
-                _log.LogInformation(
-                    "Nueva versión disponible: {Latest} (instalada {Current}, publicada {Published:u}).",
-                    status.LatestVersion, status.CurrentVersion, status.PublishedUtc);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "No se pudo comprobar si hay una nueva versión de CyberManager.");
-            }
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 }
