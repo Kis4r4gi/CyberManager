@@ -445,9 +445,9 @@ desinstalador de cada componente en **Aplicaciones instaladas** de Windows. Cada
 
 El servidor consulta **GitHub Releases** una sola vez, al abrir la consola de administración. Si
 detecta una versión más reciente que la instalada, muestra un aviso en la parte superior de la
-consola **2 horas después de la publicación** (el tiempo de espera es configurable). El aviso
-permite abrir la página de la versión o posponerlo hasta la siguiente. No hay consultas
-periódicas: la comprobación solo se repite al volver a abrir el programa o al pulsar
+consola cuando ya transcurrieron las **2 horas de espera** desde la publicación (el tiempo es
+configurable). El aviso permite abrir la página de la versión o posponerlo hasta la siguiente. No
+hay consultas periódicas: la comprobación solo se repite al volver a abrir el programa o al pulsar
 **Buscar actualizaciones ahora**.
 
 - Se configura en **Configuración → Instalación → Actualizaciones**.

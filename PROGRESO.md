@@ -515,8 +515,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Consulta única al abrir**: se eliminó `UpdateReminderWorker`, el servicio periódico que
   consultaba GitHub cada 15 minutos y enviaba `UpdateAvailable` por SignalR. La consola hace una
   consulta forzada una sola vez en `MainWindow_Loaded` y el temporizador del encabezado ya no
-  refresca el aviso cada 20 segundos. El botón **Buscar actualizaciones ahora** sigue disponible
-  para una consulta manual.
+  refresca el aviso cada 20 segundos. El aviso se muestra al abrir la consola cuando ya pasaron
+  las horas de espera; el botón **Buscar actualizaciones ahora** sigue disponible para una
+  consulta manual.
 - **Sin consultas al abrir Configuración**: `GET /api/updates/latest?cached=true` devuelve solo el
   resultado en memoria. `SettingsView` usa esa variante al cargar y reserva `refresh=true` para el
   botón manual; así no se consulta GitHub por el simple hecho de entrar a la pestaña Instalación.

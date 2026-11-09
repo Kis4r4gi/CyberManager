@@ -1273,8 +1273,9 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(checkUpdates);
 
         panel.Children.Add(Description(
-            "El aviso aparece 2 horas después de publicada una versión, por defecto. " +
-            "Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese aviso hasta la próxima versión."));
+            "El aviso aparece al abrir la consola una vez transcurridas las horas de espera " +
+            "(2 por defecto). Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese " +
+            "aviso hasta la próxima versión."));
 
         panel.Children.Add(Kit.Section("Desinstalación"));
         panel.Children.Add(Description(
