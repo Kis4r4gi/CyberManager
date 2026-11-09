@@ -18,4 +18,12 @@
   <ItemGroup>
     <ProjectReference Include="..\CyberManager.Shared\CyberManager.Shared.csproj" />
   </ItemGroup>
+
+  <!-- Fondos 4K incluidos de fábrica; se siembran en la base al iniciar. -->
+  <ItemGroup>
+    <Content Include="Assets\Wallpapers\*.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

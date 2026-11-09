@@ -538,6 +538,27 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.6> el `2026-11-09T18:13:34Z`;
   el recordatorio de 2 horas quedará para `2026-11-09T20:13:34Z`.
 
+### Fondos incluidos y cuadros de selección (1.0.7, 2026-11-09)
+
+- **Cuadros de selección**: la plantilla de `ComboBox` en `Dark.xaml` ahora enlaza
+  `ContentTemplateSelector` con `ItemTemplateSelector`. Sin ese enlace, `DisplayMemberPath`
+  creaba un `DisplayMemberTemplateSelector` que la plantilla no aplicaba y el cuadro mostraba
+  `Option { Value = ProductDto { ... } }` en lugar del nombre elegido. Se reprodujo y verificó
+  con una app WPF aislada: antes `[Option { Value = ... }]`, después `[Snack]`.
+- **30 fondos 4K incluidos**: se copiaron los JPG de `artifacts/Wallpapers Promo Logos 4K` a
+  `src/CyberManager.Server/Assets/Wallpapers` (47,65 MB) y se publican junto con el servidor.
+  `DbSeeder.SeedWallpapersAsync` los siembra una sola vez por versión de paquete
+  (`BundledWallpapersVersion`), omite duplicados por SHA-256 y calcula las dimensiones con
+  `ImageInspector`. Los nombres legibles y el orden 1-30 se definen en el sembrador.
+- **Pruebas**: con una base temporal en el puerto 5098, `GET /api/wallpapers` devolvió los 30
+  fondos con 3840 × 2160; tras borrar uno y reiniciar el servidor quedaron 29, lo que confirma
+  que no se vuelven a sembrar. `dotnet build CyberManager.sln` terminó con **0 errores y
+  0 advertencias**.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.7` y generó
+  `CyberManager-Servidor-1.0.7.exe` (265.461.043 bytes, ~253,2 MB; crece por los 30 fondos en
+  x64 y x86) y `CyberManager-Estacion-1.0.7.exe` (147.548.868 bytes, ~140,7 MB).
+- **Release**: pendiente de publicar en GitHub.
+
 ---
 
 ## Rutas y comandos clave

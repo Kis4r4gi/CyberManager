@@ -649,7 +649,7 @@ alrededor de la ventana, de modo que los límites de paneles y tarjetas se disti
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,
 **Maximizar/Restaurar** y **Cerrar** son los del sistema y siempre están visibles; en Windows 10/11
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
-instalada (por ejemplo, `CyberManager · Administración · v1.0.6`). La ventana se encuadra
+instalada (por ejemplo, `CyberManager · Administración · v1.0.7`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
 reajusta al cambiar de monitor o de escala (DPI).
 
@@ -822,6 +822,15 @@ Opciones:
 
 La consola incluye **Sistema → Fondos de pantalla** para administrar las imágenes que ven los
 clientes mientras el equipo está bloqueado.
+
+El servidor incluye de fábrica **30 fondos 4K (3840 × 2160)** con los logos de los juegos más
+populares (League of Legends, Free Fire, Valorant, Counter-Strike 2, GTA V/VI, Minecraft, Roblox,
+Fortnite, Call of Duty, Apex Legends, Dota 2, PUBG, Among Us, Elden Ring, Cyberpunk 2077,
+EA Sports FC, eFootball, Genshin Impact, Mobile Legends, Clash Royale, Brawl Stars, Rocket League,
+Rainbow Six Siege, Overwatch 2, Red Dead Redemption 2, God of War, Spider-Man 2, Dragon Ball y
+Mortal Kombat 1). La primera vez que arranca el servidor se copian a la tabla `Wallpapers`; si el
+administrador los borra, no se vuelven a agregar. Para incorporar un paquete nuevo se cambia la
+versión del paquete en `DbSeeder` y se reconstruye el instalador.
 
 1. Pulse **Subir imágenes** y seleccione uno o varios archivos **PNG, JPG, GIF o BMP** (máximo
    20 MB por imagen). Cada fondo se guarda como BLOB en la tabla `Wallpapers` de SQLite, por lo

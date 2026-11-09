@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using CyberManager.Server.Security;
 using CyberManager.Server.Services;
 using CyberManager.Shared;
@@ -115,6 +116,119 @@ public static class DbSeeder
         await SeedStationsAsync(db);
         await SeedRateAsync(db);
         await db.SaveChangesAsync();
+        await SeedWallpapersAsync(db);
+    }
+
+    /// <summary>Versión del paquete de fondos incluido; al cambiarla se vuelve a sembrar.</summary>
+    private const string BundledWallpapersVersion = "1";
+
+    private static readonly IReadOnlyDictionary<string, string> BundledWallpaperNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["01-league-of-legends"] = "League of Legends",
+            ["02-free-fire"] = "Free Fire",
+            ["03-valorant"] = "Valorant",
+            ["04-counter-strike-2"] = "Counter-Strike 2",
+            ["05-gta-v"] = "GTA V",
+            ["06-gta-vi"] = "GTA VI",
+            ["07-minecraft"] = "Minecraft",
+            ["08-roblox"] = "Roblox",
+            ["09-fortnite"] = "Fortnite",
+            ["10-call-of-duty"] = "Call of Duty",
+            ["11-apex-legends"] = "Apex Legends",
+            ["12-dota-2"] = "Dota 2",
+            ["13-pubg"] = "PUBG",
+            ["14-among-us"] = "Among Us",
+            ["15-elden-ring"] = "Elden Ring",
+            ["16-cyberpunk-2077"] = "Cyberpunk 2077",
+            ["17-ea-sports-fc"] = "EA Sports FC",
+            ["18-efootball"] = "eFootball",
+            ["19-genshin-impact"] = "Genshin Impact",
+            ["20-mobile-legends"] = "Mobile Legends",
+            ["21-clash-royale"] = "Clash Royale",
+            ["22-brawl-stars"] = "Brawl Stars",
+            ["23-rocket-league"] = "Rocket League",
+            ["24-rainbow-six-siege"] = "Rainbow Six Siege",
+            ["25-overwatch-2"] = "Overwatch 2",
+            ["26-red-dead-redemption-2"] = "Red Dead Redemption 2",
+            ["27-god-of-war"] = "God of War",
+            ["28-spider-man-2"] = "Spider-Man 2",
+            ["29-dragon-ball"] = "Dragon Ball",
+            ["30-mortal-kombat-1"] = "Mortal Kombat 1"
+        };
+
+    /// <summary>
+    /// Copia a la galería los fondos 4K que vienen con el instalador. Solo se ejecuta una vez
+    /// por versión de paquete; si el usuario borra un fondo, no se vuelve a agregar.
+    /// </summary>
+    private static async Task SeedWallpapersAsync(AppDbContext db)
+    {
+        var version = await db.Settings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Key == SettingsKeys.BundledWallpapersVersion);
+        if (string.Equals(version?.Value, BundledWallpapersVersion, StringComparison.Ordinal))
+            return;
+
+        var folder = Path.Combine(AppContext.BaseDirectory, "Assets", "Wallpapers");
+        if (Directory.Exists(folder))
+        {
+            var existing = await db.Wallpapers.AsNoTracking()
+                .Select(w => w.Sha256)
+                .ToListAsync();
+            var known = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+            var order = await db.Wallpapers.MaxAsync(w => (int?)w.SortOrder) ?? 0;
+
+            var files = Directory.EnumerateFiles(folder, "*.jpg")
+                .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var file in files)
+            {
+                byte[] data;
+                try
+                {
+                    data = await File.ReadAllBytesAsync(file);
+                }
+                catch (IOException)
+                {
+                    continue;
+                }
+
+                var probe = ImageInspector.Detect(data);
+                if (!probe.Valid) continue;
+
+                var hash = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+                if (!known.Add(hash)) continue;
+
+                var key = Path.GetFileNameWithoutExtension(file);
+                var name = BundledWallpaperNames.TryGetValue(key, out var pretty) ? pretty : key;
+                order++;
+
+                db.Wallpapers.Add(new Wallpaper
+                {
+                    Name = name,
+                    ContentType = probe.ContentType,
+                    Extension = probe.Extension,
+                    Data = data,
+                    Width = probe.Width,
+                    Height = probe.Height,
+                    SizeBytes = data.LongLength,
+                    Sha256 = hash,
+                    Active = true,
+                    SortOrder = order,
+                    CreatedUtc = DateTime.UtcNow,
+                    UpdatedUtc = DateTime.UtcNow
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+
+        var setting = await db.Settings.FirstOrDefaultAsync(x => x.Key == SettingsKeys.BundledWallpapersVersion);
+        if (setting is null)
+            db.Settings.Add(new Setting { Key = SettingsKeys.BundledWallpapersVersion, Value = BundledWallpapersVersion });
+        else
+            setting.Value = BundledWallpapersVersion;
+
+        await db.SaveChangesAsync();
     }
 
     private static async Task SeedUsersAsync(AppDbContext db)
@@ -172,7 +286,8 @@ public static class DbSeeder
             [SettingsKeys.WallpaperMode] = nameof(WallpaperMode.None),
             [SettingsKeys.WallpaperRotationSeconds] = WallpaperSettings.Invariant(
                 WallpaperSettings.DefaultRotationSeconds),
-            [SettingsKeys.WallpaperActiveId] = string.Empty
+            [SettingsKeys.WallpaperActiveId] = string.Empty,
+            [SettingsKeys.BundledWallpapersVersion] = string.Empty
         };
 
         // Agrega solo las claves nuevas, sin sobrescribir la configuración existente.

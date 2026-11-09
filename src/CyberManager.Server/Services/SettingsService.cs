@@ -50,6 +50,8 @@ public static class SettingsKeys
     public const string WallpaperMode = WallpaperSettings.Mode;
     public const string WallpaperRotationSeconds = WallpaperSettings.RotationSeconds;
     public const string WallpaperActiveId = WallpaperSettings.ActiveId;
+    /// <summary>Versión del paquete de fondos incluido con el instalador.</summary>
+    public const string BundledWallpapersVersion = "BundledWallpapersVersion";
 }
 
 public class SettingsService
