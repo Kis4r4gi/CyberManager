@@ -561,6 +561,68 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.7> el `2026-11-09T22:34:07Z`;
   el recordatorio de 2 horas quedará para `2026-11-10T00:34:07Z`.
 
+### Cierre detallado, control remoto, WoL y NetFiltroWeb (1.0.8, 2026-11-09)
+
+- **Cierre de ventas detallado**: `ReportService` dejó de limitar `TopProducts` a 15 elementos.
+  `DailyClosingDialog`, el ticket (`TicketPrinter`) y el correo HTML (`EmailService`) muestran
+  **todos los productos vendidos con su cantidad** y su importe, no solo los más vendidos.
+- **Cuadros de escritura compactos**: `Dark.xaml` reduce `TextBox` y `PasswordBox` a `MinHeight`
+  26, padding `8,4` y fuente 12,5; los campos multilínea alinean el texto arriba con padding
+  `8,6`. Mejora la estética sin perder legibilidad.
+- **Wake on LAN**: `WakeOnLanService` parsea MAC con separadores `:`, `-`, `.` o espacios y envía
+  el paquete mágico por UDP a `255.255.255.255` y al broadcast de la subred en los puertos 9 y 7.
+  `POST /api/stations/{id}/wake` (solo `Admin`) resuelve la MAC en el servidor. La acción está en
+  `StationActionsDialog` («Encender equipo (WoL)») y en `DashboardView` (`case "wake"`).
+- **Respaldo de tiempos del cliente**: `SessionBackupService` guarda
+  `%LOCALAPPDATA%\CyberManager\Client\session-backup.json` de forma atómica (temporal +
+  reemplazo) en cada consulta exitosa y lo borra si no hay sesión. Si el servidor no responde al
+  iniciar, `App.RefreshAsync` restaura el respaldo del mismo equipo, avanza minutos e importe y la
+  barra avisa «Sin conexión: tiempo restaurado desde el respaldo local».
+- **Extensión sobre la marcha**: se mantiene `ExtendSessionAsync`/`ExtendSessionDialog`; la sesión
+  continúa activa mientras se agregan minutos y el cobro se suma al cierre.
+- **Barra flotante configurable**: `StationClientStateDto` incluye `SessionBarDescription` y
+  `SessionBarScale` (70–160). El servidor los envía en `/api/station/state` desde las claves
+  `SessionBarDescription` y `SessionBarScale`. `SessionBarWindow` aplica el texto y un
+  `ScaleTransform`; la ventana sigue siendo flotante, superior y sin foco.
+- **Control remoto de escritorio**: `RemoteInputInjector` inyecta mouse y teclado con `SendInput`
+  en la sesión del cliente. `ScreenViewerWindow` captura movimiento, clics, rueda y teclas
+  (incluye Ctrl/Shift/Alt y `Key.System`) y los envía por `AdminHub.SendRemoteInput` →
+  `RealtimeService.SendRemoteInputAsync` → evento `RemoteInput` en `/hubs/station`. Se corrigió
+  la estructura `INPUT`: ahora usa una unión anidada con `LayoutKind.Sequential`, de modo que en
+  x64 mide 40 bytes con la unión en el desplazamiento 8 (antes el desplazamiento fijo 4 solo era
+  válido en x86).
+- **VNC externo**: botón **Abrir VNC** en el visualizador. Lee `VncViewerPath` y
+  `VncDefaultPort` de la configuración y ejecuta `visor.exe IP:puerto` con la IP del equipo.
+  CyberManager no instala el servidor VNC; solo lanza el visor configurado.
+- **NetFiltroWeb**: entidad `WebFilterRule` (`Domain`/`Keyword`), 24 reglas iniciales sembradas
+  una sola vez, CRUD en `/api/webfilter`, restauración sin duplicados y lista activa en
+  `/api/station/webfilter`. `WebFilterService` del agente escribe los dominios en un bloque
+  marcado del archivo `hosts`, aplica las palabras clave con un proxy HTTP/CONNECT local
+  (`127.0.0.1:8877`, configurable) y descarga la lista cada 60 s y al recibir `WebFilterChanged`.
+  `SettingsView` agrega la pestaña **Control remoto y filtro** con la barra, VNC, proxy y la
+  tabla de reglas (`WebFilterRuleDialog`).
+- **Pruebas**:
+  - `dotnet build CyberManager.sln`: **0 errores y 0 advertencias**.
+  - Servidor temporal en el puerto 5099: `/api/station/webfilter` devolvió **24 reglas** con
+    `proxy=True:8877`; `PUT /api/settings` guardó la barra y `/api/station/state` devolvió
+    `sessionBarDescription` y `sessionBarScale=125`; `POST /api/stations/{id}/wake` respondió
+    `sent=true` con la MAC `AA:BB:CC:DD:EE:FF`; el token del equipo no cambió.
+  - Respaldo del cliente con un arnés de reflexión: guardó, restauró tras simular 10 minutos
+    (`transcurrido=40`, `restante=80`, `tiempo=1,33`), devolvió `null` para otro equipo y limpió
+    el archivo. Se preservó cualquier respaldo real existente.
+  - NetFiltroWeb: la coincidencia devolvió `true` para `ejemplo.com`, `www.ejemplo.com`,
+    `sub.ejemplo.com`, `sitio-porno.net` y `pornografia.com`, y `false` para `otro.com` y
+    `limpio.org`; el proxy local respondió **403** con la página de bloqueo. La prueba no escribió
+    en el archivo `hosts` real.
+  - Estructura `INPUT` verificada por reflexión en x64: tamaño **40**, unión en desplazamiento
+    **8**, `MOUSEINPUT` de 32 bytes.
+- **Pendiente de verificación real**: instalación/desinstalación con UAC, firewall, agente como
+  servicio, control remoto contra una estación física, visor VNC instalado y filtrado con
+  navegadores reales. El envío real a Gmail/Outlook sigue requiriendo credenciales del usuario.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.8` y generó
+  `CyberManager-Servidor-1.0.8.exe` (265.493.981 bytes, ~253,2 MB) y
+  `CyberManager-Estacion-1.0.8.exe` (147.580.604 bytes, ~140,7 MB).
+
 ---
 
 ## Rutas y comandos clave

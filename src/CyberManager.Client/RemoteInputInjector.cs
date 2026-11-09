@@ -46,11 +46,19 @@ public static class RemoteInputInjector
     }
 
     [StructLayout(LayoutKind.Explicit)]
+    private struct INPUTUNION
+    {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+        [FieldOffset(0)] public KEYBDINPUT ki;
+    }
+
+    // La unión debe quedar en el desplazamiento natural (8 bytes en x64 y 4 en x86).
+    // Usar LayoutKind.Sequential evita un desplazamiento fijo que solo funcionaba en x86.
+    [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
     {
-        [FieldOffset(0)] public uint type;
-        [FieldOffset(4)] public MOUSEINPUT mi;
-        [FieldOffset(4)] public KEYBDINPUT ki;
+        public uint type;
+        public INPUTUNION u;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
@@ -82,11 +90,14 @@ public static class RemoteInputInjector
         Send(new INPUT
         {
             type = INPUT_MOUSE,
-            mi = new MOUSEINPUT
+            u = new INPUTUNION
             {
-                dx = nx,
-                dy = ny,
-                dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
+                mi = new MOUSEINPUT
+                {
+                    dx = nx,
+                    dy = ny,
+                    dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE
+                }
             }
         });
     }
@@ -99,7 +110,11 @@ public static class RemoteInputInjector
             2 => down ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP,
             _ => down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP
         };
-        Send(new INPUT { type = INPUT_MOUSE, mi = new MOUSEINPUT { dwFlags = flag } });
+        Send(new INPUT
+        {
+            type = INPUT_MOUSE,
+            u = new INPUTUNION { mi = new MOUSEINPUT { dwFlags = flag } }
+        });
     }
 
     private static void Wheel(int delta)
@@ -107,7 +122,10 @@ public static class RemoteInputInjector
         Send(new INPUT
         {
             type = INPUT_MOUSE,
-            mi = new MOUSEINPUT { mouseData = (uint)delta, dwFlags = MOUSEEVENTF_WHEEL }
+            u = new INPUTUNION
+            {
+                mi = new MOUSEINPUT { mouseData = (uint)delta, dwFlags = MOUSEEVENTF_WHEEL }
+            }
         });
     }
 
@@ -117,10 +135,13 @@ public static class RemoteInputInjector
         Send(new INPUT
         {
             type = INPUT_KEYBOARD,
-            ki = new KEYBDINPUT
+            u = new INPUTUNION
             {
-                wVk = (ushort)keyCode,
-                dwFlags = down ? 0u : KEYEVENTF_KEYUP
+                ki = new KEYBDINPUT
+                {
+                    wVk = (ushort)keyCode,
+                    dwFlags = down ? 0u : KEYEVENTF_KEYUP
+                }
             }
         });
     }

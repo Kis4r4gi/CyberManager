@@ -306,10 +306,11 @@ public sealed class ScreenViewerWindow : Window
 
     private void OnRemoteKeyDown(object sender, KeyEventArgs e)
     {
-        if (!ControlEnabled || e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl) return;
-        if (e.Key is Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt) return;
+        if (!ControlEnabled) return;
 
-        var vk = KeyInterop.VirtualKeyFromKey(e.Key);
+        // Alt y las combinaciones con Alt llegan como Key.System.
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var vk = KeyInterop.VirtualKeyFromKey(key);
         if (vk <= 0) return;
         SendInput(new RemoteInputEvent(_stationId, "key", KeyCode: vk, Down: true));
         e.Handled = true;
@@ -318,7 +319,9 @@ public sealed class ScreenViewerWindow : Window
     private void OnRemoteKeyUp(object sender, KeyEventArgs e)
     {
         if (!ControlEnabled) return;
-        var vk = KeyInterop.VirtualKeyFromKey(e.Key);
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        var vk = KeyInterop.VirtualKeyFromKey(key);
         if (vk <= 0) return;
         SendInput(new RemoteInputEvent(_stationId, "key", KeyCode: vk, Down: false));
         e.Handled = true;

@@ -57,6 +57,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - [Inicio automático del cliente](#inicio-automático-del-cliente)
 - [Galería de fondos de pantalla](#galería-de-fondos-de-pantalla)
 - [Videos promocionales](#videos-promocionales)
+- [Control remoto, Wake on LAN y NetFiltroWeb](#control-remoto-wake-on-lan-y-netfiltroweb)
+- [Respaldo de tiempos del cliente](#respaldo-de-tiempos-del-cliente)
 - [Scripts incluidos](#scripts-incluidos)
 - [Sincronización automática con GitHub](#sincronización-automática-con-github)
 - [Firewall y red](#firewall-y-red)
@@ -83,7 +85,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - Equipos de tipo **computadora, consola de videojuegos u otro**, con plataforma y cantidad de
   mandos visibles en el tablero y en la ficha del equipo.
 - Sesiones **prepago** y **postpago**, con tarifas por hora, bloques de cobro y tiempo mínimo.
-- Pausar, reanudar, extender, transferir de equipo y finalizar sesiones.
+- Pausar, reanudar, **extender sobre la marcha** (sin detener la sesión), transferir de equipo y
+  finalizar sesiones.
 - Paquetes de tiempo con minutos de bono, seleccionables al iniciar la sesión; el precio del
   paquete se cobra por adelantado y los minutos incluyen el bono.
 - Consumo de productos cargado a la sesión (se cobra al cerrar) o cobrado directo en caja.
@@ -92,6 +95,18 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Control remoto ampliado del terminal**: ajuste de volumen maestro, silenciar o reactivar el
   audio, apagar o encender el monitor, bloquear teclado y mouse (solo se liberan con
   «Desbloquear entrada») y cerrar un programa por nombre de proceso.
+- **Control remoto de escritorio**: desde «Ver pantalla remota» active **Control remoto** para
+  enviar el mouse y el teclado de la consola al equipo, incluidas las teclas Ctrl, Shift y Alt.
+  Si el equipo tiene un servidor VNC instalado, **Abrir VNC** lanza el visor configurado.
+- **Barra de sesión configurable**: el cliente muestra el tiempo y el monto a cancelar en una
+  ventana flotante; el administrador define el texto descriptivo y el tamaño (70–160 %) desde
+  *Configuración → Control remoto y filtro*.
+- **Encendido remoto (Wake on LAN)**: con la MAC registrada en el equipo, la consola envía el
+  paquete mágico desde la ficha del equipo o el tablero cuando está fuera de línea.
+- **Respaldo local de tiempos**: el cliente guarda el estado de la sesión de forma atómica y, si
+  se corta la energía o el servidor no responde, restaura el tiempo transcurrido al reiniciar.
+- **NetFiltroWeb**: bloqueo de sitios y palabras prohibidas con una lista inicial editable por el
+  administrador; se aplica en cada equipo mediante el archivo `hosts` y un proxy local opcional.
 - Aviso y bloqueo automático al agotarse el tiempo contratado (configurable).
 - Galería de fondos sincronizada: los equipos bloqueados muestran un fondo fijo o una
   presentación rotativa controlada desde la consola.
@@ -115,6 +130,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   con impresión automática opcional, copias y selección de impresora.
 - **Lector de códigos de barras** tipo teclado: al escanear un SKU y pulsar Enter, el producto se
   agrega al POS si coincide exactamente.
+- **Cierre de ventas detallado**: el cierre diario, el ticket y el correo incluyen **todos los
+  productos vendidos con sus cantidades**, no solo un resumen de los más vendidos.
 - Facturación venezolana: RIF del negocio y del cliente, IVA desglosado, IGTF sobre divisas,
   numeración de facturas y notas de entrega.
 
@@ -145,7 +162,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Apariencia personalizable**: seis temas predefinidos, doce colores, tamaño de iconos y texto
   de navegación, y tamaño de los cuadros de artículos y de terminales (80 a 160 %), guardados por
   usuario. Los bordes tienen mayor contraste para mejorar la legibilidad y los botones de
-  minimizar, maximizar y cerrar siempre quedan visibles. Los cambios se confirman con
+  minimizar, maximizar y cerrar siempre quedan visibles. Los campos de escritura son compactos
+  (altura mínima de 26 px, relleno reducido y fuente de 12,5). Los cambios se confirman con
   **Aplicar y guardar**.
 - **Dos idiomas**: español e inglés, seleccionables en la consola y en la configuración de cada
   estación. El cambio de idioma se aplica al instante.
@@ -592,7 +610,7 @@ asociado, puede instalar allí el cliente y el agente para el bloqueo y las órd
 - En *Reportes* seleccione la fecha final del rango y pulse **Cierre diario**.
 - El resumen incluye ventas de productos y tiempo, totales USD/Bs, IVA, IGTF, descuentos, ticket
   promedio, sesiones, fondo y arqueo de caja, gastos, abonos a proveedores, desglose por forma de
-  pago y productos más vendidos.
+  pago y **todos los productos vendidos con sus cantidades**.
 - Pulse **Imprimir cierre** para emitirlo en el formato configurado: ticket de 80 mm, A4 o Carta.
 - *Exportar CSV* sigue disponible para cada pestaña del reporte.
 
@@ -627,10 +645,11 @@ En *Configuración → Apariencia* puede cambiar la interfaz de la consola:
 Las cajas de selección (casillas, botones de opción, listas desplegables y campos de fecha) usan
 siempre un fondo oscuro con texto claro, de modo que sus etiquetas se distinguen incluso sobre
 superficies claras. Las **listas desplegables son compactas** (altura mínima y sin texto adicional
-en cada opción): solo muestran el nombre de la opción a elegir. Al dejar el cursor **2 segundos**
-sobre un botón aparece un globo flotante con una descripción breve de su función, sin necesidad de
-hacer clic; las descripciones de los botones se muestran **siempre en español**, aunque la
-interfaz esté en inglés.
+en cada opción): solo muestran el nombre de la opción a elegir. Los **campos de escritura** también
+son compactos: altura mínima de 26 px, relleno reducido y fuente de 12,5; los campos de varias
+líneas alinean el texto arriba. Al dejar el cursor **2 segundos** sobre un botón aparece un globo
+flotante con una descripción breve de su función, sin necesidad de hacer clic; las descripciones de
+los botones se muestran **siempre en español**, aunque la interfaz esté en inglés.
 
 **Guardado manual**: los cambios de configuración y de apariencia quedan como borrador o vista
 previa y **solo se guardan al pulsar «Aplicar y guardar»**. No hay autoguardado: si cierra la
@@ -649,7 +668,7 @@ alrededor de la ventana, de modo que los límites de paneles y tarjetas se disti
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,
 **Maximizar/Restaurar** y **Cerrar** son los del sistema y siempre están visibles; en Windows 10/11
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
-instalada (por ejemplo, `CyberManager · Administración · v1.0.7`). La ventana se encuadra
+instalada (por ejemplo, `CyberManager · Administración · v1.0.8`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
 reajusta al cambiar de monitor o de escala (DPI).
 
@@ -884,6 +903,113 @@ video y continúa con el siguiente.
 
 ---
 
+## Control remoto, Wake on LAN y NetFiltroWeb
+
+### Control remoto integrado
+
+En el tablero o en *Equipos* abra **Ver pantalla remota**. La ventana muestra la pantalla del
+cliente en vivo (actualización automática cada 2 segundos o captura manual). Marque **Control
+remoto** para enviar el mouse y el teclado de la consola al equipo:
+
+- El mouse se envía con coordenadas relativas a la imagen, por lo que funciona con cualquier
+  resolución o escala de Windows.
+- Se admiten clic izquierdo, derecho, central, rueda, escritura y combinaciones con **Ctrl**,
+  **Shift** y **Alt**.
+- El cliente inyecta los eventos en su sesión interactiva mediante la API `SendInput` de Windows.
+  No hace falta instalar software adicional ni abrir puertos nuevos: el tráfico viaja por SignalR
+  a través del servidor.
+- El control funciona aunque el equipo esté bloqueado o en la pantalla de inicio de sesión del
+  cliente; para operar el escritorio de Windows con otra cuenta de usuario, use VNC o Escritorio
+  remoto.
+
+### VNC externo (opcional)
+
+Si los equipos tienen un servidor VNC instalado (TightVNC, UltraVNC, RealVNC, etc.), la consola
+puede abrir el visor con un clic:
+
+1. Instale y configure el servidor VNC en cada estación (fuera de CyberManager).
+2. En *Configuración → Control remoto y filtro* indique la **ruta del visor VNC**
+   (`VncViewerPath`, por ejemplo `C:\Program Files\TightVNC\tvnviewer.exe`) y el **puerto VNC por
+   defecto** (`VncDefaultPort`, 5900).
+3. En la ventana de pantalla remota pulse **Abrir VNC**. Se ejecutará
+   `visor.exe <IP del equipo>:<puerto>`.
+
+La IP se toma de la ficha del equipo (*Equipos → Editar*), por lo que conviene asignar una IP fija
+o una reserva DHCP. CyberManager no instala ni configura el servidor VNC.
+
+### Wake on LAN
+
+Permite encender un equipo apagado desde la consola:
+
+1. En *Equipos → Editar* registre la **dirección MAC** del equipo. Se aceptan formatos como
+   `AA:BB:CC:DD:EE:FF`, `AA-BB-CC-DD-EE-FF` o `AABBCCDDEEFF`.
+2. En la ficha del equipo (o en el tablero cuando está fuera de línea) pulse **Encender equipo
+   (WoL)**. El servidor envía el paquete mágico por UDP a `255.255.255.255` y al broadcast de la
+   subred, en los puertos 9 y 7.
+3. Active **Wake on LAN / Magic Packet** en el BIOS/UEFI y en las propiedades de la tarjeta de
+   red. Si el equipo no enciende, desactive el **inicio rápido** de Windows y confirme que la
+   tarjeta recibe energía en modo apagado.
+
+El servidor debe estar en la misma red local (o tener una ruta hacia ella). El endpoint es
+`POST /api/stations/{id}/wake`.
+
+### NetFiltroWeb
+
+Módulo para bloquear sitios de contenido no deseado. Se administra en
+*Configuración → Control remoto y filtro → NetFiltroWeb*:
+
+- **Lista inicial**: 24 reglas de fábrica (dominios y palabras clave) que se siembran una sola vez.
+  **Restaurar lista de fábrica** agrega las reglas que falten sin duplicar las existentes.
+- **Reglas de tipo sitio/dominio**: bloquean el dominio exacto y todos sus subdominios. Se escriben
+  en el archivo `hosts` de Windows dentro de un bloque marcado
+  (`# >>> CyberManager NetFiltroWeb >>>`), que el agente actualiza y puede retirar sin tocar el
+  resto del archivo.
+- **Reglas de tipo palabra clave**: bloquean cualquier sitio cuyo nombre de host contenga la
+  palabra. Se aplican con un **proxy HTTP local** en `127.0.0.1:8877` (puerto configurable).
+  Configure el navegador o el proxy del sistema para usar esa dirección. El proxy solo puede
+  inspeccionar el nombre del host; en HTTPS no puede leer la ruta ni el contenido.
+- Los equipos descargan la lista cada **60 segundos** y también al instante cuando el administrador
+  guarda un cambio (evento SignalR `WebFilterChanged`). No hay que reiniciar el cliente.
+- El agente debe ejecutarse como servicio con permisos de administrador (la cuenta `LocalSystem`
+  predeterminada es suficiente) para poder escribir en `hosts` y abrir el puerto del proxy.
+- Los cambios en `hosts` son inmediatos, pero los navegadores pueden conservar DNS en caché:
+  ciérrelos y vuelva a abrirlos si un sitio sigue cargando.
+- **Alcance**: el bloqueo por `hosts` no impide el acceso por dirección IP y el proxy no descifra
+  HTTPS. NetFiltroWeb es una barrera de disuasión; para un filtrado exhaustivo combine el módulo
+  con las reglas del router o un servidor DNS filtrado.
+
+### Barra flotante del cliente
+
+La barra de sesión muestra el tiempo restante y el monto a cancelar sobre el escritorio del
+cliente. En *Configuración → Control remoto y filtro* puede cambiar:
+
+- **Descripción de la barra** (`SessionBarDescription`): texto que aparece bajo el nombre del
+  equipo, por ejemplo «Sesión activa · consulte su tiempo y consumo».
+- **Tamaño de la barra** (`SessionBarScale`): porcentaje entre **70 y 160**.
+
+Los cambios se aplican en la siguiente actualización de estado, sin reiniciar los equipos. La
+ventana es flotante, siempre visible y no roba el foco al usuario.
+
+---
+
+## Respaldo de tiempos del cliente
+
+Para que un corte de energía o una caída del servidor no borre el tiempo de una sesión, el cliente
+guarda una copia local del estado:
+
+- Archivo: `%LOCALAPPDATA%\CyberManager\Client\session-backup.json`.
+- Se escribe de forma **atómica** (archivo temporal y reemplazo) en cada consulta exitosa al
+  servidor, para que el equipo pueda apagarse en cualquier momento sin dejar el archivo corrupto.
+- Cuando no hay sesión activa, el respaldo se elimina.
+- Al iniciar el cliente, si el servidor no responde y existe un respaldo del **mismo equipo**, se
+  restaura la sesión y se avanza el tiempo transcurrido desde el último guardado, incluido el
+  importe acumulado. La barra muestra «Sin conexión: tiempo restaurado desde el respaldo local».
+- El respaldo es una red de seguridad local: cuando el servidor vuelve a responder, su estado es
+  la fuente de verdad y reemplaza al respaldo. Si la sesión ya se cerró en el servidor, el siguiente
+  estado correcto descarta la copia local.
+
+---
+
 ## Scripts incluidos
 
 | Script                          | Uso                                                                 |
@@ -985,12 +1111,16 @@ Invoke-RestMethod http://192.168.1.10:5080/api/health
 - **Autenticación de estaciones**: cabeceras `X-Station-Id` y `X-Station-Token` enviadas por el
   cliente y el agente.
 - **Hubs SignalR**:
-  - `/hubs/admin` — eventos del tablero y de las sesiones para la consola (JWT).
-  - `/hubs/agent` — comandos y heartbeat del servicio de Windows (token de equipo por query).
-  - `/hubs/station` — estado, avisos y comandos del cliente (token de equipo por query).
+  - `/hubs/admin` — eventos del tablero y de las sesiones para la consola (JWT); también recibe
+    `SendRemoteInput` para reenviar mouse y teclado a una estación.
+  - `/hubs/agent` — comandos, heartbeat y `WebFilterChanged` del servicio de Windows (token de
+    equipo por query).
+  - `/hubs/station` — estado, avisos, comandos, `RemoteInput` y `WebFilterChanged` del cliente
+    (token de equipo por query).
 
 Identificadores clave: `/api/health`, `/api/auth/login`, `/api/dashboard`, `/api/stations`,
-`/api/sessions/active`, `/api/sales`, `/api/cash`, `/api/products`, `/api/inventory`,
+`/api/stations/{id}/wake` (Wake on LAN, solo rol `Admin`), `/api/sessions/active`, `/api/sales`,
+`/api/cash`, `/api/products`, `/api/inventory`,
 `/api/purchases`, `/api/suppliers/balances`, `/api/suppliers/{id}/payments`,
 `/api/supplier-payments`, `/api/reports/*`, `/api/reports/daily-closing`, `/api/settings`,
 `/api/exchange-rates`, `/api/exchange-rates/bcv` (consulta forzada al BCV, solo rol `Admin`),
@@ -998,7 +1128,10 @@ Identificadores clave: `/api/health`, `/api/auth/login`, `/api/dashboard`, `/api
 `/api/promo-videos` (galería de videos, solo rol `Admin`), `/api/promo-videos/playlist`,
 `/api/promo-videos/{id}/file`, `/api/promo-videos/refresh`,
 `/api/station/promo-videos/{id}/file` (descarga con token de equipo),
-`/api/backups` (respaldos, solo rol `Admin`) y `/api/stations/{id}/config`.
+`/api/webfilter` (CRUD de NetFiltroWeb, solo rol `Admin`), `/api/webfilter/restore`,
+`/api/station/webfilter` (lista activa con token de equipo), `/api/station/state` (estado y barra
+flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`) y
+`/api/stations/{id}/config`.
 
 ---
 
@@ -1063,6 +1196,41 @@ Identificadores clave: `/api/health`, `/api/auth/login`, `/api/dashboard`, `/api
   `C:\CyberManager\Agent\appsettings.json` (script manual).
 - Verifique que el `StationId` y el `Token` coincidan con el equipo registrado.
 - El servicio debe ejecutarse con permisos suficientes para apagar o reiniciar el equipo.
+
+**El control remoto no mueve el mouse ni escribe**
+
+- Confirme que la casilla **Control remoto** esté marcada en la ventana de pantalla remota.
+- El cliente WPF debe estar ejecutándose en la **sesión interactiva** del usuario (no como
+  servicio) y el equipo debe aparecer conectado en el tablero.
+- Si la consola perdió la conexión SignalR, ciérrela y vuelva a abrirla.
+- Para escribir en la pantalla de inicio de sesión de Windows o con otra cuenta, use VNC o
+  Escritorio remoto.
+
+**El equipo no enciende con Wake on LAN**
+
+- Verifique la MAC en *Equipos → Editar* y que el servidor esté en la misma subred.
+- Active **Magic Packet** en el BIOS/UEFI y en las propiedades de la tarjeta de red.
+- Desactive el **inicio rápido** de Windows y confirme que la tarjeta de red mantiene energía en
+  modo apagado.
+- Algunos switches o repetidores Wi-Fi descartan los paquetes de broadcast; pruebe con cable.
+
+**NetFiltroWeb no bloquea un sitio**
+
+- Compruebe que el servicio del agente esté activo y ejecutándose como administrador/SYSTEM.
+- Revise el bloque marcado de CyberManager en `C:\Windows\System32\drivers\etc\hosts`.
+- Cierre y vuelva a abrir el navegador para descartar la caché de DNS.
+- Las **palabras clave** requieren configurar el navegador o el proxy del sistema en
+  `127.0.0.1:8877` (o el puerto elegido). El bloqueo por dominio no necesita el proxy.
+- Recuerde que `hosts` no bloquea el acceso por IP y que el proxy no puede leer rutas HTTPS.
+
+**La sesión del cliente no se restaura tras un corte**
+
+- El respaldo se guarda en `%LOCALAPPDATA%\CyberManager\Client\session-backup.json` y solo se
+  restaura si pertenece al mismo ID de equipo.
+- Si el servidor responde al iniciar, su estado reemplaza al respaldo; la restauración es solo para
+  cortes de energía o caídas del servidor.
+- Si la sesión ya se había cerrado en el servidor, el respaldo se descarta en la siguiente
+  consulta exitosa.
 
 **El cliente no inicia con Windows**
 
