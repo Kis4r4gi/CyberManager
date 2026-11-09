@@ -4,6 +4,6 @@
     número de compilación (patch) automáticamente en cada empaquetado.
   -->
   <PropertyGroup>
-    <CyberManagerVersion>1.0.4</CyberManagerVersion>
+    <CyberManagerVersion>1.0.5</CyberManagerVersion>
   </PropertyGroup>
 </Project>

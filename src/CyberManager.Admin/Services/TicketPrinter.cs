@@ -12,7 +12,8 @@ namespace CyberManager.Admin.Services;
 /// <summary>Datos de encabezado y configuración de impresión de tickets.</summary>
 public sealed record TicketSettings(
     string BusinessName, string? TaxId, string? Address, string? Phone,
-    string? Header, string? Footer, string? PrinterName, int Copies, bool AutoPrint)
+    string? Header, string? Footer, string? PrinterName, int Copies, bool AutoPrint,
+    string ClosingFormat)
 {
     public static TicketSettings From(IReadOnlyDictionary<string, string> settings)
     {
@@ -31,16 +32,28 @@ public sealed record TicketSettings(
             Get("TicketFooter", "¡Gracias por su visita!"),
             Get("PrinterName"),
             copies,
-            autoPrint);
+            autoPrint,
+            TicketPrinter.NormalizeClosingFormat(Get("DailyClosingFormat", "ticket80")));
     }
 
     public static async Task<TicketSettings> LoadAsync() => From(await App.Api.SettingsAsync());
 }
 
-/// <summary>Genera e imprime tickets de 80 mm con FlowDocument.</summary>
+/// <summary>Genera e imprime tickets de venta y cierres diarios con FlowDocument.</summary>
 public static class TicketPrinter
 {
-    private const double PageWidth = 302; // 80 mm a 96 ppp
+    private const double TicketWidth = 302; // 80 mm a 96 ppp
+    private const double A4Width = 794;      // 210 mm a 96 ppp
+    private const double LetterWidth = 816;  // 216 mm a 96 ppp
+
+    /// <summary>Normaliza el formato elegido para el cierre diario.</summary>
+    public static string NormalizeClosingFormat(string? value) => (value ?? string.Empty)
+        .Trim().ToLowerInvariant() switch
+    {
+        "a4" => "a4",
+        "carta" or "letter" => "carta",
+        _ => "ticket80"
+    };
 
     public static bool PrintSale(SaleDto sale, TicketSettings settings, bool silent = false)
         => Print(BuildSale(sale, settings), silent ? settings.PrinterName : null, settings.Copies,
@@ -105,7 +118,7 @@ public static class TicketPrinter
 
     public static FlowDocument BuildClosing(DailyClosingDto closing, TicketSettings settings)
     {
-        var doc = NewDocument();
+        var doc = NewDocument(settings.ClosingFormat);
         AddHeader(doc, settings, "CIERRE DE CAJA");
         AddKV(doc, "Fecha", closing.Date.ToString("dd/MM/yyyy"));
         AddKV(doc, "Tasa", $"1 USD = {closing.ExchangeRate:N2} Bs");
@@ -214,16 +227,27 @@ public static class TicketPrinter
 
     // ===================== construcción del documento =====================
 
-    private static FlowDocument NewDocument() => new()
+    private static FlowDocument NewDocument(string? closingFormat = null)
     {
-        PageWidth = PageWidth,
-        ColumnWidth = PageWidth,
-        PagePadding = new Thickness(8),
-        FontFamily = new FontFamily("Segoe UI"),
-        FontSize = 10.5,
-        Foreground = Brushes.Black,
-        Background = Brushes.White
-    };
+        var format = NormalizeClosingFormat(closingFormat);
+        var (width, padding, fontSize) = format switch
+        {
+            "a4" => (A4Width, 36d, 11.5d),
+            "carta" => (LetterWidth, 36d, 11.5d),
+            _ => (TicketWidth, 8d, 10.5d)
+        };
+
+        return new FlowDocument
+        {
+            PageWidth = width,
+            ColumnWidth = width,
+            PagePadding = new Thickness(padding),
+            FontFamily = new FontFamily("Segoe UI"),
+            FontSize = fontSize,
+            Foreground = Brushes.Black,
+            Background = Brushes.White
+        };
+    }
 
     private static void AddHeader(FlowDocument doc, TicketSettings settings, string title)
     {

@@ -17,7 +17,7 @@ public static class NotificationEndpoints
             .RequireAuthorization("Admin");
 
         g.MapPost("/email/test", async (TestEmailRequest? request, EmailService email) =>
-            Results.Ok(await email.SendTestAsync(request?.Recipient)))
+            Results.Ok(await email.SendTestAsync(request)))
             .RequireAuthorization("Admin");
 
         return app;

@@ -449,7 +449,7 @@ public sealed class StationDialog : FormDialog
 
         var rateOptions = new List<Option<int?>> { new(null, "Tarifa por defecto") };
         rateOptions.AddRange(rates.Where(r => r.Active).OrderBy(r => r.PricePerHour)
-            .Select(r => new Option<int?>(r.Id, $"{r.Name} · $ {r.PricePerHour:N2} / hora")));
+            .Select(r => new Option<int?>(r.Id, r.Name)));
         _rateBox = AddCombo("Tarifa por hora", rateOptions);
         SelectOption(_rateBox, rateOptions, station?.RateId);
 

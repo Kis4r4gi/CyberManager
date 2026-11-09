@@ -37,6 +37,8 @@ public sealed class DashboardView : UserControl, IRefreshable
     private readonly Button _orderButton;
     private readonly FrameworkElement _metricsPanel;
     private readonly TextBlock _legend;
+    private Border? _toolbarPanel;
+    private Button? _toolbarToggle;
     private bool _toolbarLoading;
 
     private DashboardDto? _dashboard;
@@ -66,14 +68,17 @@ public sealed class DashboardView : UserControl, IRefreshable
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
+        _toolbarToggle = Kit.Button("Configuración", "GhostButton", ToggleToolbar);
         root.Children.Add(Kit.PageHeader("Tablero de equipos",
             "Estado en vivo de cada PC, sesiones y movimientos del día.",
+            _toolbarToggle,
             Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync())));
 
-        // Barra de personalización: búsqueda, orden, tamaño, zona y visibilidad.
-        var toolbar = BuildToolbar();
-        Grid.SetRow(toolbar, 1);
-        root.Children.Add(toolbar);
+        // La barra de personalización queda oculta tras el botón «Configuración».
+        _toolbarPanel = BuildToolbar();
+        _toolbarPanel.Visibility = Visibility.Collapsed;
+        Grid.SetRow(_toolbarPanel, 1);
+        root.Children.Add(_toolbarPanel);
 
         // Los terminales van primero: ocupan el área principal del tablero.
         var scroll = new ScrollViewer
@@ -136,15 +141,15 @@ public sealed class DashboardView : UserControl, IRefreshable
     // Barra de personalización
     // ---------------------------------------------------------------------
 
-    private FrameworkElement BuildToolbar()
+    private Border BuildToolbar()
     {
-        _searchBox.Width = 210;
+        _searchBox.Width = 200;
         _searchBox.Margin = new Thickness(0, 0, 8, 0);
         _searchBox.VerticalAlignment = VerticalAlignment.Center;
         _searchBox.ToolTip = L.T("Buscar por nombre, zona, tipo o usuario");
         _searchBox.TextChanged += (_, _) => OnToolbarChanged(render: true);
 
-        _sortBox.Width = 138;
+        _sortBox.Width = 120;
         _sortBox.Margin = new Thickness(0, 0, 8, 0);
         _sortBox.VerticalAlignment = VerticalAlignment.Center;
         _sortBox.ItemsSource = SortKeys
@@ -157,7 +162,7 @@ public sealed class DashboardView : UserControl, IRefreshable
         _orderButton.Padding = new Thickness(10, 5, 10, 5);
         _orderButton.FontSize = 12;
 
-        _sizeBox.Width = 84;
+        _sizeBox.Width = 72;
         _sizeBox.Margin = new Thickness(0, 0, 8, 0);
         _sizeBox.VerticalAlignment = VerticalAlignment.Center;
         _sizeBox.ItemsSource = SizePresets
@@ -172,7 +177,7 @@ public sealed class DashboardView : UserControl, IRefreshable
             Render();
         };
 
-        _zoneBox.Width = 150;
+        _zoneBox.Width = 130;
         _zoneBox.Margin = new Thickness(0, 0, 8, 0);
         _zoneBox.VerticalAlignment = VerticalAlignment.Center;
         _zoneBox.DisplayMemberPath = nameof(Option<int?>.DisplayText);
@@ -213,6 +218,17 @@ public sealed class DashboardView : UserControl, IRefreshable
         var border = Kit.Panel(row);
         border.Margin = new Thickness(0, 0, 0, 12);
         return border;
+    }
+
+    /// <summary>Muestra u oculta la barra de personalización del tablero.</summary>
+    private void ToggleToolbar()
+    {
+        if (_toolbarPanel is null) return;
+
+        var show = _toolbarPanel.Visibility != Visibility.Visible;
+        _toolbarPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (_toolbarToggle is not null)
+            _toolbarToggle.Content = show ? L.T("Ocultar configuración") : L.T("Configuración");
     }
 
     private void SyncToolbar()

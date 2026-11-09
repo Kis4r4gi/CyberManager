@@ -63,7 +63,7 @@ public sealed class DailyClosingDialog : FormDialog
                 AddRow($"{product.Quantity:0.##} × {product.Name}", $"$ {product.Total:N2}");
         }
 
-        var print = Kit.Button("Imprimir ticket", "BlueButton", () =>
+        var print = Kit.Button("Imprimir cierre", "BlueButton", () =>
         {
             try
             {

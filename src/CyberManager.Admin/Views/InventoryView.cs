@@ -174,8 +174,7 @@ public sealed class InventoryView : UserControl, IRefreshable
         _products = await App.Api.ProductsAsync();
 
         var previous = (_productBox.SelectedItem as Option<ProductDto>)?.Value.Id;
-        var options = _products.Select(p => new Option<ProductDto>(p,
-            $"{p.Name} · stock {p.Stock:N0} {p.Unit}")).ToList();
+        var options = _products.Select(p => new Option<ProductDto>(p, p.Name)).ToList();
         _productBox.ItemsSource = options;
         _productBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
         _productBox.SelectedIndex = previous is int id

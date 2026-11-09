@@ -159,9 +159,9 @@ public class CyberApi : ApiClient
             $"/api/reports/daily-closing/email?date={date:yyyy-MM-dd}&force={(force ? "true" : "false")}",
             new DailyReportEmailRequest(date, force));
 
-    public Task<DailyReportEmailResultDto> SendTestEmailAsync(string? recipient = null)
+    public Task<DailyReportEmailResultDto> SendTestEmailAsync(TestEmailRequest? request = null)
         => PostAsync<DailyReportEmailResultDto>("/api/reports/daily-closing/email/test",
-            new TestEmailRequest(recipient));
+            request ?? new TestEmailRequest());
 
     // ---- galería de fondos ----
     public Task<List<WallpaperDto>> WallpapersAsync() => GetAsync<List<WallpaperDto>>("/api/wallpapers");

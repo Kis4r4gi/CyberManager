@@ -273,7 +273,7 @@ public sealed class ReservationDialog : FormDialog
     {
         var stationOptions = stations
             .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
-            .Select(s => new Option<StationDto>(s, $"{s.Name} · {s.ZoneName ?? "sin zona"}"))
+            .Select(s => new Option<StationDto>(s, s.Name))
             .ToList();
         _stationBox = AddCombo("Equipo reservado", stationOptions);
         if (reservation is not null)

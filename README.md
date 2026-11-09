@@ -111,8 +111,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - Formas de pago: efectivo en bolívares, efectivo en dólares, tarjeta, transferencia,
   **Pago Móvil**, saldo del cliente, mixto y pendiente (cargado a la sesión).
 - Descuentos, devoluciones y gastos de caja.
-- **Tickets de 80 mm** para ventas y cierre diario, con impresión automática opcional, copias y
-  selección de impresora.
+- **Tickets de 80 mm** para ventas y **cierre diario configurable** (ticket 80 mm, A4 o Carta),
+  con impresión automática opcional, copias y selección de impresora.
 - **Lector de códigos de barras** tipo teclado: al escanear un SKU y pulsar Enter, el producto se
   agrega al POS si coincide exactamente.
 - Facturación venezolana: RIF del negocio y del cliente, IVA desglosado, IGTF sobre divisas,
@@ -135,17 +135,18 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - Reportes de ventas por día, productos, equipos, inventario valorizado y cajas, con filtro de
   fechas y exportación a CSV.
 - **Cierre diario** imprimible con ventas, caja, formas de pago, gastos, pagos a proveedores y
-  productos más vendidos.
+  productos más vendidos, en ticket de 80 mm, A4 o Carta.
 - **Envío del cierre diario por correo**: opción configurable que envía el resumen del día y un
   CSV adjunto a uno o varios destinatarios al abrir el cierre, con reenvío manual y correo de
   prueba desde *Configuración → Reportes por correo*.
 - Usuarios con roles: administrador, cajero y técnico.
 - Configuración del negocio, IVA, IGTF, avisos, ticket, impresora y datos de instalación.
-  Los cambios se guardan automáticamente unos instantes después de editarlos.
+  Los cambios quedan como borrador y se guardan solo al pulsar **Aplicar y guardar**.
 - **Apariencia personalizable**: seis temas predefinidos, doce colores, tamaño de iconos y texto
   de navegación, y tamaño de los cuadros de artículos y de terminales (80 a 160 %), guardados por
   usuario. Los bordes tienen mayor contraste para mejorar la legibilidad y los botones de
-  minimizar, maximizar y cerrar siempre quedan visibles.
+  minimizar, maximizar y cerrar siempre quedan visibles. Los cambios se confirman con
+  **Aplicar y guardar**.
 - **Dos idiomas**: español e inglés, seleccionables en la consola y en la configuración de cada
   estación. El cambio de idioma se aplica al instante.
 - **Tasa oficial del BCV automática**: el servidor consulta el sitio del Banco Central de
@@ -495,7 +496,8 @@ La base de demostración también incluye:
 8. **Cerrar caja** al final del turno: el sistema muestra el esperado, usted digita el contado y
    se registra la diferencia.
 9. **Emitir el cierre diario** en *Reportes → Cierre diario*: resume ventas, caja, formas de pago,
-   gastos, pagos a proveedores y productos más vendidos, y se puede imprimir en 80 mm.
+   gastos, pagos a proveedores y productos más vendidos, y se puede imprimir en ticket de 80 mm,
+   A4 o Carta según el formato configurado.
 
 ---
 
@@ -538,9 +540,10 @@ En *Configuración → Ticket y scanner* puede definir:
 - **Impresión automática**: imprime el ticket al registrar una venta.
 - **Agregar al POS al escanear**: interpreta el lector como teclado.
 
-Los tickets se generan como documento de **80 mm** e incluyen número, fecha, forma de pago,
+Los tickets de venta se generan como documento de **80 mm** e incluyen número, fecha, forma de pago,
 cliente, artículos, subtotal, IVA incluido, IGTF, totales en USD y Bs, tasa aplicada, recibido y
-cambio. El cierre diario usa el mismo formato.
+cambio. El **cierre diario** usa el formato elegido en *Configuración → Ticket y operación*:
+ticket de 80 mm para impresoras térmicas, **A4** o **Carta** para hojas normales.
 
 **Lector de códigos de barras**
 
@@ -587,7 +590,7 @@ asociado, puede instalar allí el cliente y el agente para el bloqueo y las órd
 - El resumen incluye ventas de productos y tiempo, totales USD/Bs, IVA, IGTF, descuentos, ticket
   promedio, sesiones, fondo y arqueo de caja, gastos, abonos a proveedores, desglose por forma de
   pago y productos más vendidos.
-- Pulse **Imprimir ticket** para emitir el cierre en 80 mm.
+- Pulse **Imprimir cierre** para emitirlo en el formato configurado: ticket de 80 mm, A4 o Carta.
 - *Exportar CSV* sigue disponible para cada pestaña del reporte.
 
 **Envío automático por correo**
@@ -614,18 +617,30 @@ En *Configuración → Apariencia* puede cambiar la interfaz de la consola:
 - **Tamaño de los cuadros**: los artículos del punto de venta y las terminales del tablero se
   escalan entre **80 % y 160 %**. El tamaño afecta dimensiones, relleno, esquinas y tipografía; se
   aplica al volver a abrir la vista correspondiente.
-- **Idioma de la interfaz**: español o inglés, con aplicación inmediata (ver
+- **Idioma de la interfaz**: español o inglés; el cambio se aplica al guardar (ver
   [Idioma de la interfaz](#idioma-de-la-interfaz)).
 - **Restablecer** vuelve a los valores del tema oscuro original (incluidos los cuadros al 100 %).
 
 Las cajas de selección (casillas, botones de opción, listas desplegables y campos de fecha) usan
 siempre un fondo oscuro con texto claro, de modo que sus etiquetas se distinguen incluso sobre
-superficies claras. Al dejar el cursor **2 segundos** sobre un botón aparece un globo flotante con
-una descripción breve de su función, sin necesidad de hacer clic; las descripciones de los botones
-se muestran **siempre en español**, aunque la interfaz esté en inglés.
+superficies claras. Las **listas desplegables son compactas** (altura mínima y sin texto adicional
+en cada opción): solo muestran el nombre de la opción a elegir. Al dejar el cursor **2 segundos**
+sobre un botón aparece un globo flotante con una descripción breve de su función, sin necesidad de
+hacer clic; las descripciones de los botones se muestran **siempre en español**, aunque la
+interfaz esté en inglés.
 
-Los cambios de apariencia se guardan **automáticamente** pocos instantes después de editar un
-color o mover un control; el botón **Aplicar y guardar ahora** fuerza el guardado inmediato.
+**Guardado manual**: los cambios de configuración y de apariencia quedan como borrador o vista
+previa y **solo se guardan al pulsar «Aplicar y guardar»**. No hay autoguardado: si cierra la
+ventana o recarga sin guardar, se conservan los valores anteriores. El botón está en el encabezado
+de *Configuración* y también en las pestañas Negocio, Reportes por correo y Apariencia.
+
+**Tablero de equipos**: la barra de personalización (buscador, orden, tamaño, zona, métricas y
+leyenda) está oculta por defecto; pulse **Configuración** en el encabezado del tablero para
+mostrarla u **Ocultar configuración** para plegarla.
+
+**Barras laterales ajustables**: arrastre los separadores a los lados del área central para
+cambiar el ancho del menú de navegación y de la bitácora de terminales. Cada barra tiene un ancho
+mínimo y máximo para no perder accesos ni contenido.
 La paleta trae bordes más luminosos que el tema original y la consola dibuja un marco de 1 píxel
 alrededor de la ventana, de modo que los límites de paneles y tarjetas se distinguen con claridad.
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,

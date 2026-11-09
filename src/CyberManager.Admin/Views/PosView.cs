@@ -342,7 +342,7 @@ public sealed class PosView : UserControl, IRefreshable
         };
         customerOptions.AddRange(_customers
             .OrderBy(c => c.Name)
-            .Select(c => new Option<int?>(c.Id, $"{c.Name} · saldo $ {c.Balance:N2}")));
+            .Select(c => new Option<int?>(c.Id, c.Name)));
 
         _customerBox.ItemsSource = customerOptions;
         _customerBox.DisplayMemberPath = nameof(Option<object>.DisplayText);

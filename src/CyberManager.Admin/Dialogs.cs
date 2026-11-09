@@ -246,7 +246,7 @@ public sealed class StartSessionDialog : FormDialog
         });
 
         _rateBox = AddCombo("Tarifa por hora", rates.Select(r =>
-            new Option<RateDto>(r, $"{r.Name} · $ {r.PricePerHour:N2} / hora")));
+            new Option<RateDto>(r, r.Name)));
         var stationRate = rates.FirstOrDefault(r => r.Id == station.RateId);
         if (stationRate is not null)
         {
@@ -264,8 +264,7 @@ public sealed class StartSessionDialog : FormDialog
         };
         packageOptions.AddRange((packages ?? new List<TimePackageDto>())
             .Where(p => p.Active)
-            .Select(p => new Option<TimePackageDto?>(p,
-                $"{p.Name} · {p.Minutes + p.BonusMinutes} min · $ {p.Price:N2}")));
+            .Select(p => new Option<TimePackageDto?>(p, p.Name)));
 
         _packageBox = AddCombo("Paquete de tiempo", packageOptions);
         _packageInfo = new TextBlock
@@ -279,7 +278,7 @@ public sealed class StartSessionDialog : FormDialog
 
         var customerOptions = new List<Option<int?>> { new(null, "Sin cliente registrado") };
         customerOptions.AddRange(customers.Select(c =>
-            new Option<int?>(c.Id, $"{c.Name} · saldo $ {c.Balance:N2}")));
+            new Option<int?>(c.Id, c.Name)));
         _customerBox = AddCombo("Cliente", customerOptions);
 
         _chargeBox = AddCheck("Cobrar el tiempo ahora (requiere caja abierta)", true);
@@ -500,7 +499,7 @@ public sealed class TransferSessionDialog : FormDialog
         : base("Transferir sesión", $"Mover la sesión de {currentStation} a otro equipo disponible.")
     {
         _targetBox = AddCombo("Equipo destino", targets.Select(s =>
-            new Option<StationDto>(s, $"{s.Name} · {s.ZoneName ?? "sin zona"}")));
+            new Option<StationDto>(s, s.Name)));
 
         if (targets.Count == 0)
         {

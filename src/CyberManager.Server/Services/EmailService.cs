@@ -61,17 +61,20 @@ public class EmailService
             DateTime.UtcNow, string.Join(", ", recipients));
     }
 
-    /// <summary>Envía un correo de prueba con la configuración SMTP actual.</summary>
-    public async Task<DailyReportEmailResultDto> SendTestAsync(string? recipient)
+    /// <summary>
+    /// Envía un correo de prueba. Usa los datos SMTP del formulario cuando se
+    /// reciben; si faltan, completa con la configuración guardada.
+    /// </summary>
+    public async Task<DailyReportEmailResultDto> SendTestAsync(TestEmailRequest? request)
     {
-        var recipients = string.IsNullOrWhiteSpace(recipient)
+        var recipients = string.IsNullOrWhiteSpace(request?.Recipient)
             ? ParseRecipients(await _settings.GetAsync(SettingsKeys.DailyReportEmailRecipients))
-            : ParseRecipients(recipient);
+            : ParseRecipients(request.Recipient);
 
         if (recipients.Count == 0)
             throw new AppException("Indique un destinatario o configure los destinatarios del cierre diario.");
 
-        var config = await LoadConfigAsync();
+        var config = await LoadConfigAsync(request);
         var body = """
             <div style="font-family:Segoe UI,Arial,sans-serif;color:#1f2937">
               <h2 style="color:#0e7490">Correo de prueba · CyberManager</h2>
@@ -90,15 +93,26 @@ public class EmailService
     // ============================================================
     //  Configuración y envío
     // ============================================================
-    private async Task<SmtpConfig> LoadConfigAsync()
+    private async Task<SmtpConfig> LoadConfigAsync(TestEmailRequest? overrides = null)
     {
-        var host = (await _settings.GetAsync(SettingsKeys.SmtpHost)).Trim();
-        var port = await _settings.GetIntAsync(SettingsKeys.SmtpPort, 587);
-        var useSsl = await _settings.GetBoolAsync(SettingsKeys.SmtpUseSsl, true);
-        var username = (await _settings.GetAsync(SettingsKeys.SmtpUsername)).Trim();
-        var password = await _settings.GetAsync(SettingsKeys.SmtpPassword);
-        var from = (await _settings.GetAsync(SettingsKeys.SmtpFromAddress)).Trim();
-        var fromName = (await _settings.GetAsync(SettingsKeys.SmtpFromName, "CyberManager")).Trim();
+        var host = !string.IsNullOrWhiteSpace(overrides?.SmtpHost)
+            ? overrides!.SmtpHost!.Trim()
+            : (await _settings.GetAsync(SettingsKeys.SmtpHost)).Trim();
+        var port = overrides?.SmtpPort ?? await _settings.GetIntAsync(SettingsKeys.SmtpPort, 587);
+        var useSsl = overrides?.SmtpUseSsl ?? await _settings.GetBoolAsync(SettingsKeys.SmtpUseSsl, true);
+        var username = !string.IsNullOrWhiteSpace(overrides?.SmtpUsername)
+            ? overrides!.SmtpUsername!.Trim()
+            : (await _settings.GetAsync(SettingsKeys.SmtpUsername)).Trim();
+        // Una contraseña vacía en el formulario conserva la guardada en el servidor.
+        var password = !string.IsNullOrEmpty(overrides?.SmtpPassword)
+            ? overrides.SmtpPassword!
+            : await _settings.GetAsync(SettingsKeys.SmtpPassword);
+        var from = !string.IsNullOrWhiteSpace(overrides?.SmtpFromAddress)
+            ? overrides!.SmtpFromAddress!.Trim()
+            : (await _settings.GetAsync(SettingsKeys.SmtpFromAddress)).Trim();
+        var fromName = !string.IsNullOrWhiteSpace(overrides?.SmtpFromName)
+            ? overrides!.SmtpFromName!.Trim()
+            : (await _settings.GetAsync(SettingsKeys.SmtpFromName, "CyberManager")).Trim();
 
         if (string.IsNullOrWhiteSpace(host))
             throw new AppException(

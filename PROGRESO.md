@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-06
+> Última actualización: 2026-11-08
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -47,10 +47,14 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   escaladas) antes de los indicadores resumidos, con textos recortados y ajustados para evitar
   superposiciones. Cada tarjeta muestra estado, tiempo transcurrido/restante e importe acumulado,
   y siempre incluye un bloque de tiempo (sesión, `00:00` libre o `—` fuera de servicio).
-- **Tablero personalizable**: buscador, orden por manual/nombre/estado/zona/tipo/tiempo/importe,
-  sentido ascendente o descendente, filtro por zona, «Solo en uso», tamaño de tarjetas (80–160 %)
-  y visibilidad de métricas y leyenda. Las preferencias se guardan en `appearance.json` y no se
-  pierden al cambiar de tema, tamaño, idioma ni al restablecer la apariencia.
+- **Tablero personalizable**: la barra de configuración queda oculta tras el botón
+  **Configuración** del encabezado; incluye buscador, orden por
+  manual/nombre/estado/zona/tipo/tiempo/importe, sentido ascendente o descendente, filtro por zona,
+  «Solo en uso», tamaño de tarjetas (80–160 %) y visibilidad de métricas y leyenda. Las
+  preferencias se guardan en `appearance.json` y no se pierden al cambiar de tema, tamaño, idioma
+  ni al restablecer la apariencia.
+- **Barras laterales ajustables**: el menú de navegación y la bitácora de terminales se redimensionan
+  arrastrando los separadores, con anchos mínimos y máximos.
 - **Control remoto del terminal**: volumen maestro, silenciar, reactivar sonido, apagar/encender
   monitor, bloquear/desbloquear teclado y mouse, y cerrar un programa por nombre. El audio usa
   Core Audio, el monitor `WM_SYSCOMMAND` y el bloqueo de entrada hooks de bajo nivel; los comandos
@@ -468,6 +472,40 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Release `v1.0.4` publicada con ambos instaladores en
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4> el `2026-11-08T23:46:40Z`;
   el recordatorio de 2 horas quedará para `2026-11-09T01:46:40Z`.
+
+### Interfaz compacta, cierre configurable y guardado manual (1.0.5, 2026-11-08)
+
+- **Cuadros de selección compactos**: `Dark.xaml` reduce `ComboBox` a 28 px de alto, padding
+  `8,2`, fuente 12,5 y flecha de 10 px; `ComboBoxItem` usa padding `8,4` y la misma fuente. Las
+  opciones ya no incluyen detalles dinámicos (precio de tarifa, saldo de cliente, stock de
+  producto, zona de equipo, minutos/precio de paquete): solo muestran el nombre a elegir.
+- **Formato del cierre diario**: nueva clave `DailyClosingFormat` (`ticket80`, `a4`, `carta`) en
+  `SettingsKeys`, `TicketSettings` y el selector de *Configuración → Negocio → Ticket y operación*.
+  `TicketPrinter.NormalizeClosingFormat` valida el valor y `NewDocument` ajusta `PageWidth`,
+  márgenes y fuente (302 px / 794 px / 816 px). El ticket de venta sigue en 80 mm y el botón del
+  cierre pasa a **Imprimir cierre**.
+- **Guardado solo con «Aplicar y guardar»**: se eliminaron los temporizadores de autoguardado de
+  negocio y apariencia. Los cambios quedan como borrador o vista previa; el botón global del
+  encabezado y los botones locales de Negocio, Reportes por correo y Apariencia llaman a
+  `SaveAllAsync`, que valida la apariencia y guarda ambos bloques en una sola acción. El correo de
+  prueba usa los valores actuales del formulario mediante `TestEmailRequest` ampliado y no guarda
+  nada; si faltan datos SMTP, `EmailService.LoadConfigAsync` completa con la configuración
+  guardada. «Borrar contraseña guardada» queda pendiente hasta el guardado.
+- **Barra del tablero en menú desplegable**: `DashboardView` oculta la barra de personalización y
+  agrega el botón **Configuración** / **Ocultar configuración** en el encabezado. Los controles se
+  compactaron (buscador 200, orden 120, tamaño 72, zona 130).
+- **Barras laterales ajustables**: `MainWindow.xaml` usa columnas `228/4/*/4/322` con
+  `MinWidth`/`MaxWidth` y dos `GridSplitter` (`ResizeDirection=Columns`) para el menú de navegación
+  y la bitácora de terminales.
+- **Pruebas**: `dotnet build CyberManager.sln` terminó con **0 errores y 0 advertencias**. Con un
+  servidor temporal en el puerto 5099 se comprobó que `DailyClosingFormat=a4` persiste y se
+  devuelve en `GET /api/settings`, que `SmtpPassword` no se expone y que el correo de prueba con
+  SMTP transitorio `127.0.0.1:1` responde **502** (usa los datos del formulario sin guardarlos).
+- **Pendiente de verificación visual**: splitters, desplegable del tablero y tamaño de los
+  `ComboBox` en pantalla; el envío real a Gmail/Outlook requiere credenciales del usuario.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.5` y generó
+  `CyberManager-Servidor-1.0.5.exe` (166.576.316 bytes, ~158,9 MB) y
+  `CyberManager-Estacion-1.0.5.exe` (147.552.394 bytes, ~140,7 MB), con payloads x64 y x86.
 
 ---
 

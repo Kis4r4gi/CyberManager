@@ -22,6 +22,7 @@ public sealed class SettingsView : UserControl, IRefreshable
     private readonly Dictionary<string, bool> _checkDefaults = new();
 
     private readonly TextBlock _businessStatus = Kit.Muted("Cargue la configuración para comenzar.");
+    private readonly TextBlock _saveStatus = Kit.Muted("Los cambios se guardan con «Aplicar y guardar».");
     private readonly TextBlock _rateStatus = Kit.Muted("Consultando tasa...");
     private readonly TextBlock _bcvStatus = Kit.Muted("Actualización automática desde el BCV disponible.");
     private readonly TextBlock _rateToday = new() { FontSize = 20, FontWeight = FontWeights.Bold, Foreground = Kit.Brush("AccentBrush") };
@@ -38,13 +39,15 @@ public sealed class SettingsView : UserControl, IRefreshable
     private readonly TextBlock _updateStatus = Kit.Muted("El servidor consulta GitHub automáticamente.");
     private readonly TextBlock _emailStatus = Kit.Muted("El envío del cierre diario por correo está desactivado.");
     private readonly PasswordBox _smtpPassword = new();
+    private bool _clearSmtpPassword;
     private bool _updateBusy;
 
     private readonly Dictionary<string, TextBox> _appearanceTexts = new();
     private readonly Dictionary<string, Border> _appearanceSwatches = new();
-    private readonly TextBlock _appearanceStatus = Kit.Muted("Los cambios se guardan automáticamente en este equipo.");
+    private readonly TextBlock _appearanceStatus = Kit.Muted("Pulse «Aplicar y guardar» para conservar los cambios.");
     private ComboBox _appearancePresetBox = null!;
     private ComboBox _languageBox = null!;
+    private ComboBox _closingFormatBox = null!;
     private Slider _iconSizeSlider = null!;
     private Slider _navFontSlider = null!;
     private Slider _productCardSlider = null!;
@@ -55,8 +58,12 @@ public sealed class SettingsView : UserControl, IRefreshable
     private bool _backupBusy;
     private bool _bcvBusy;
 
-    private readonly DispatcherTimer _businessAutosave = new() { Interval = TimeSpan.FromMilliseconds(800) };
-    private readonly DispatcherTimer _appearanceAutosave = new() { Interval = TimeSpan.FromMilliseconds(800) };
+    private static readonly (string Value, string Label)[] ClosingFormats =
+    {
+        ("ticket80", "Ticket 80 mm (térmico)"),
+        ("a4", "A4 (210 × 297 mm)"),
+        ("carta", "Carta (216 × 279 mm)")
+    };
 
     private List<UserDto> _users = new();
     private List<BackupRow> _backups = new();
@@ -97,29 +104,20 @@ public sealed class SettingsView : UserControl, IRefreshable
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.Children.Add(Kit.PageHeader("Configuración",
             "Datos fiscales, tasa del día, usuarios, apariencia y respaldos de la base de datos.",
+            Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync()),
             Kit.Button("Recargar", "GhostButton", () => _ = Ui.Run(RefreshAsync, "No se pudo cargar la configuración"))));
         Grid.SetRow(tabs, 1);
         root.Children.Add(tabs);
 
-        Content = root;
+        _saveStatus.Margin = new Thickness(0, 8, 0, 0);
+        _saveStatus.TextWrapping = TextWrapping.Wrap;
+        Grid.SetRow(_saveStatus, 2);
+        root.Children.Add(_saveStatus);
 
-        _businessAutosave.Tick += async (_, _) =>
-        {
-            _businessAutosave.Stop();
-            await SaveBusinessAsync();
-        };
-        _appearanceAutosave.Tick += (_, _) =>
-        {
-            _appearanceAutosave.Stop();
-            ApplyAppearance(previewOnly: false);
-        };
-        Unloaded += (_, _) =>
-        {
-            _businessAutosave.Stop();
-            _appearanceAutosave.Stop();
-        };
+        Content = root;
 
         _usersGrid.MouseDoubleClick += (_, _) => EditUser();
         _rateSource.ItemsSource = new List<Option<RateSource>>
@@ -176,6 +174,21 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddText(operation, "TicketCopies", "Copias por ticket (1 a 5)", "1");
         panel.Children.Add(operation);
 
+        var closingFormat = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 10) };
+        _closingFormatBox = new ComboBox
+        {
+            ItemsSource = ClosingFormats.Select(f => new Option<string>(f.Value, f.Label)).ToList(),
+            DisplayMemberPath = nameof(Option<object>.DisplayText),
+            SelectedIndex = 0
+        };
+        closingFormat.Children.Add(Kit.Field("Formato del cierre diario", _closingFormatBox));
+        var closingHint = Kit.Muted(
+            "Ticket 80 mm para impresoras térmicas; A4 o Carta para hojas normales.");
+        closingHint.VerticalAlignment = VerticalAlignment.Bottom;
+        closingHint.Margin = new Thickness(0, 0, 0, 14);
+        closingFormat.Children.Add(closingHint);
+        panel.Children.Add(closingFormat);
+
         AddText(panel, "TicketHeader", "Encabezado del ticket (opcional)",
             "", fullWidth: true);
 
@@ -187,15 +200,14 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddText(panel, "TicketFooter", "Pie de página del ticket",
             "Gracias por su visita. ¡Vuelva pronto!", multiline: true, fullWidth: true);
 
-        var save = Kit.Button("Guardar ahora", "SuccessButton", () => _ = SaveBusinessAsync());
+        var save = Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync());
         save.Padding = new Thickness(16, 11, 16, 11);
         save.Margin = new Thickness(0, 8, 0, 0);
         save.HorizontalAlignment = HorizontalAlignment.Left;
         panel.Children.Add(save);
 
         panel.Children.Add(Description(
-            "Los cambios se guardan automáticamente unos instantes después de editarlos. " +
-            "El botón «Guardar ahora» fuerza el guardado inmediato."));
+            "Los cambios se mantienen como borrador hasta que pulse «Aplicar y guardar»."));
 
         _businessStatus.Margin = new Thickness(0, 10, 0, 0);
         panel.Children.Add(_businessStatus);
@@ -203,12 +215,24 @@ public sealed class SettingsView : UserControl, IRefreshable
         return Scroll(panel);
     }
 
-    private async Task SaveBusinessAsync()
+    /// <summary>Guarda la configuración del servidor y la apariencia local en una sola acción.</summary>
+    private async Task SaveAllAsync()
     {
         if (!_businessLoaded) return;
-        if (_businessSaving)
+        if (_businessSaving) return;
+
+        // Valide la apariencia antes de guardar para no dejar una parte a medias.
+        AppearanceSettings appearance;
+        try
         {
-            ScheduleBusinessAutosave();
+            appearance = ReadAppearance();
+        }
+        catch (Exception ex)
+        {
+            _appearanceStatus.Text = ex.Message;
+            _appearanceStatus.Foreground = Kit.Brush("DangerBrush");
+            _saveStatus.Text = "No se guardó nada: " + ex.Message;
+            _saveStatus.Foreground = Kit.Brush("DangerBrush");
             return;
         }
 
@@ -217,17 +241,31 @@ public sealed class SettingsView : UserControl, IRefreshable
         _businessSaving = true;
         _businessStatus.Text = "Guardando...";
         _businessStatus.Foreground = Kit.Brush("MutedBrush");
+        _saveStatus.Text = "Guardando la configuración...";
+        _saveStatus.Foreground = Kit.Brush("MutedBrush");
 
         try
         {
             await App.Api.SaveSettingsAsync(values);
-            _businessStatus.Text = $"Configuración guardada automáticamente a las {DateTime.Now:HH:mm:ss}.";
+            AppearanceService.Apply(appearance, save: true);
+
+            _clearSmtpPassword = false;
+            _smtpPassword.Password = string.Empty;
+
+            var time = DateTime.Now.ToString("HH:mm:ss");
+            _businessStatus.Text = $"Configuración guardada a las {time}.";
             _businessStatus.Foreground = Kit.Brush("SuccessBrush");
+            _appearanceStatus.Text = $"Apariencia guardada a las {time}.";
+            _appearanceStatus.Foreground = Kit.Brush("SuccessBrush");
+            _saveStatus.Text = $"Configuración y apariencia guardadas a las {time}.";
+            _saveStatus.Foreground = Kit.Brush("SuccessBrush");
         }
         catch (Exception ex)
         {
             _businessStatus.Text = ex.Message;
             _businessStatus.Foreground = Kit.Brush("DangerBrush");
+            _saveStatus.Text = "No se pudo guardar: " + ex.Message;
+            _saveStatus.Foreground = Kit.Brush("DangerBrush");
         }
         finally
         {
@@ -245,19 +283,17 @@ public sealed class SettingsView : UserControl, IRefreshable
         foreach (var (key, check) in _checks)
             values[key] = (check.IsChecked == true).ToString().ToLowerInvariant();
 
+        values["DailyClosingFormat"] =
+            (_closingFormatBox.SelectedItem as Option<string>)?.Value ?? "ticket80";
+
         // La contraseña guardada no se devuelve al cliente. Solo se envía cuando el
         // administrador escribe una nueva; dejarla vacía conserva la existente.
-        if (!string.IsNullOrEmpty(_smtpPassword.Password))
+        if (_clearSmtpPassword)
+            values["SmtpPassword"] = string.Empty;
+        else if (!string.IsNullOrEmpty(_smtpPassword.Password))
             values["SmtpPassword"] = _smtpPassword.Password;
 
         return values;
-    }
-
-    private void ScheduleBusinessAutosave()
-    {
-        if (!_businessLoaded) return;
-        _businessAutosave.Stop();
-        _businessAutosave.Start();
     }
 
     private static string Normalize(string text)
@@ -501,7 +537,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(Kit.Section("Paleta de colores"));
         panel.Children.Add(Description(
             "Elija un tema predefinido o escriba colores hexadecimales (por ejemplo #22D3EE). " +
-            "Los cambios se guardan automáticamente y se aplican a toda la consola de este equipo."));
+            "Los cambios se mantienen como vista previa hasta pulsar «Aplicar y guardar»."));
 
         // ----- Idioma de la consola: solo español e inglés -----
         _languageBox = new ComboBox
@@ -516,12 +552,12 @@ public sealed class SettingsView : UserControl, IRefreshable
         _languageBox.SelectionChanged += (_, _) =>
         {
             if (_appearanceLoading) return;
-            ApplyAppearance(previewOnly: false);
+            MarkAppearanceDirty();
         };
 
         var languageRow = new UniformGrid { Columns = 2, Margin = new Thickness(0, 0, 0, 12) };
         languageRow.Children.Add(Kit.Field("Idioma de la interfaz", _languageBox));
-        languageRow.Children.Add(Kit.Muted("Solo se admiten español e inglés. La consola se actualiza al instante."));
+        languageRow.Children.Add(Kit.Muted("Solo se admiten español e inglés. Se aplica al guardar."));
         panel.Children.Add(languageRow);
 
         var presetRow = new Grid { Margin = new Thickness(0, 0, 0, 12) };
@@ -538,11 +574,11 @@ public sealed class SettingsView : UserControl, IRefreshable
             preset.NavFontSize = _navFontSlider.Value;
             preset.ProductCardScale = _productCardSlider.Value;
             preset.StationCardScale = _stationCardSlider.Value;
-            preset.Language = AppearanceService.Current.Language;
+            preset.Language = (_languageBox.SelectedItem as Option<string>)?.Value
+                              ?? AppearanceService.Current.Language;
             CopyDashboardPreferences(AppearanceService.Current, preset);
             FillAppearance(preset);
             ApplyAppearance(previewOnly: true);
-            ScheduleAppearanceAutosave();
         };
         presetRow.Children.Add(Kit.Field("Tema predefinido", _appearancePresetBox));
 
@@ -575,7 +611,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             if (_appearanceLoading) return;
             ApplyAppearance(previewOnly: true);
-            ScheduleAppearanceAutosave();
         };
         sizes.Children.Add(Kit.Field("Tamaño de iconos (12 a 26)", _iconSizeSlider));
         _navFontSlider = MakeSlider(11, 17, 13);
@@ -583,7 +618,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             if (_appearanceLoading) return;
             ApplyAppearance(previewOnly: true);
-            ScheduleAppearanceAutosave();
         };
         sizes.Children.Add(Kit.Field("Tamaño del texto del menú (11 a 17)", _navFontSlider));
         panel.Children.Add(sizes);
@@ -598,7 +632,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             if (_appearanceLoading) return;
             ApplyAppearance(previewOnly: true);
-            ScheduleAppearanceAutosave();
         };
         cards.Children.Add(Kit.Field("Cuadros de artículos (80 a 160 %)", _productCardSlider));
         _stationCardSlider = MakeSlider(80, 160, 100, 5);
@@ -606,13 +639,12 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             if (_appearanceLoading) return;
             ApplyAppearance(previewOnly: true);
-            ScheduleAppearanceAutosave();
         };
         cards.Children.Add(Kit.Field("Cuadros de terminales (80 a 160 %)", _stationCardSlider));
         panel.Children.Add(cards);
 
         var actions = Kit.HStack(8,
-            Kit.Button("Aplicar y guardar ahora", "SuccessButton", () => ApplyAppearance(previewOnly: false)),
+            Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync()),
             Kit.Button("Restablecer", "DangerButton", ResetAppearance));
         actions.Margin = new Thickness(0, 8, 0, 0);
         panel.Children.Add(actions);
@@ -654,7 +686,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             if (!AppearanceService.IsValid(box.Text)) return;
             swatch.Background = new SolidColorBrush(AppearanceService.Parse(box.Text, Colors.Transparent));
-            ScheduleAppearanceAutosave();
+            MarkAppearanceDirty();
         };
 
         var row = new Grid();
@@ -768,13 +800,11 @@ public sealed class SettingsView : UserControl, IRefreshable
         to.DashboardSearch = from.DashboardSearch;
     }
 
-    private void ScheduleAppearanceAutosave()
+    private void MarkAppearanceDirty()
     {
         if (_appearanceLoading) return;
-        _appearanceStatus.Text = "Guardando cambios de apariencia...";
-        _appearanceStatus.Foreground = Kit.Brush("MutedBrush");
-        _appearanceAutosave.Stop();
-        _appearanceAutosave.Start();
+        _appearanceStatus.Text = "Cambios de apariencia sin guardar. Pulse «Aplicar y guardar».";
+        _appearanceStatus.Foreground = Kit.Brush("WarningBrush");
     }
 
     private void ApplyAppearance(bool previewOnly)
@@ -782,10 +812,13 @@ public sealed class SettingsView : UserControl, IRefreshable
         try
         {
             var settings = ReadAppearance();
+            // El idioma solo cambia al guardar: así una vista previa no reconstruye
+            // la consola ni descarta los demás cambios sin guardar.
+            if (previewOnly) settings.Language = AppearanceService.Current.Language;
             AppearanceService.Apply(settings, save: !previewOnly);
             _appearanceStatus.Text = previewOnly
-                ? "Vista previa aplicada; se guardará automáticamente."
-                : $"Apariencia guardada automáticamente a las {DateTime.Now:HH:mm:ss}.";
+                ? "Vista previa aplicada; pulse «Aplicar y guardar» para conservarla."
+                : $"Apariencia guardada a las {DateTime.Now:HH:mm:ss}.";
             _appearanceStatus.Foreground = Kit.Brush(previewOnly ? "MutedBrush" : "SuccessBrush");
         }
         catch (Exception ex)
@@ -797,18 +830,19 @@ public sealed class SettingsView : UserControl, IRefreshable
 
     private void ResetAppearance()
     {
-        _appearanceAutosave.Stop();
         var defaults = AppearanceSettings.ForPreset("Cyber");
         defaults.NavIconSize = _iconSizeSlider.Value;
         defaults.NavFontSize = _navFontSlider.Value;
         defaults.ProductCardScale = 100;
         defaults.StationCardScale = 100;
-        defaults.Language = AppearanceService.Current.Language;
+        defaults.Language = (_languageBox.SelectedItem as Option<string>)?.Value
+                            ?? AppearanceService.Current.Language;
         CopyDashboardPreferences(AppearanceService.Current, defaults);
         FillAppearance(defaults);
-        AppearanceService.Apply(defaults, save: true);
-        _appearanceStatus.Text = "Apariencia restablecida a los valores originales.";
-        _appearanceStatus.Foreground = Kit.Brush("SuccessBrush");
+        ApplyAppearance(previewOnly: true);
+        _appearanceStatus.Text =
+            "Apariencia restablecida en vista previa. Pulse «Aplicar y guardar» para conservarla.";
+        _appearanceStatus.Foreground = Kit.Brush("WarningBrush");
     }
 
     // ============================================================
@@ -903,13 +937,19 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddText(smtp, "SmtpFromName", "Nombre del remitente", "CyberManager");
         panel.Children.Add(smtp);
 
-        _smtpPassword.PasswordChanged += (_, _) => ScheduleBusinessAutosave();
+        _smtpPassword.PasswordChanged += (_, _) =>
+        {
+            if (_businessSaving) return;
+            if (!string.IsNullOrEmpty(_smtpPassword.Password)) _clearSmtpPassword = false;
+            if (!_businessLoaded) return;
+            _emailStatus.Text = "Cambios sin guardar. Pulse «Aplicar y guardar».";
+            _emailStatus.Foreground = Kit.Brush("WarningBrush");
+        };
         var passwordField = Kit.Field("Contraseña SMTP (deje vacío para conservar la actual)", _smtpPassword);
         passwordField.Margin = new Thickness(0, 0, 16, 10);
         panel.Children.Add(passwordField);
 
-        var clearPassword = Kit.Button("Borrar contraseña guardada", "DangerButton",
-            () => _ = ClearSmtpPasswordAsync());
+        var clearPassword = Kit.Button("Borrar contraseña guardada", "DangerButton", ClearSmtpPassword);
         clearPassword.HorizontalAlignment = HorizontalAlignment.Left;
         clearPassword.Margin = new Thickness(0, 0, 0, 8);
         panel.Children.Add(clearPassword);
@@ -919,7 +959,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(ssl);
 
         var actions = Kit.HStack(8,
-            Kit.Button("Guardar ahora", "SuccessButton", () => _ = SaveBusinessAsync()),
+            Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync()),
             Kit.Button("Enviar correo de prueba", "GhostButton", () => _ = TestEmailAsync()));
         actions.Margin = new Thickness(0, 8, 0, 0);
         panel.Children.Add(actions);
@@ -935,35 +975,37 @@ public sealed class SettingsView : UserControl, IRefreshable
         return Scroll(panel);
     }
 
-    private async Task ClearSmtpPasswordAsync()
+    private void ClearSmtpPassword()
     {
-        try
-        {
-            await App.Api.SaveSettingsAsync(new Dictionary<string, string>
-            {
-                ["SmtpPassword"] = string.Empty
-            });
-            _smtpPassword.Password = string.Empty;
-            _emailStatus.Text = "Contraseña SMTP borrada del servidor.";
-            _emailStatus.Foreground = Kit.Brush("SuccessBrush");
-        }
-        catch (Exception ex)
-        {
-            _emailStatus.Text = ex.Message;
-            _emailStatus.Foreground = Kit.Brush("DangerBrush");
-        }
+        _clearSmtpPassword = true;
+        _smtpPassword.Password = string.Empty;
+        _emailStatus.Text = "La contraseña SMTP se borrará al pulsar «Aplicar y guardar».";
+        _emailStatus.Foreground = Kit.Brush("WarningBrush");
     }
 
     private async Task TestEmailAsync()
     {
-        _emailStatus.Text = "Guardando la configuración y enviando el correo de prueba...";
+        _emailStatus.Text = "Enviando el correo de prueba con los valores actuales del formulario...";
         _emailStatus.Foreground = Kit.Brush("MutedBrush");
 
         try
         {
-            await App.Api.SaveSettingsAsync(CollectBusinessValues());
-            var result = await App.Api.SendTestEmailAsync();
-            _emailStatus.Text = result.Message;
+            var port = int.TryParse(_texts["SmtpPort"].Text, out var parsedPort)
+                ? parsedPort
+                : (int?)null;
+
+            var request = new TestEmailRequest(
+                _texts["DailyReportEmailRecipients"].Text,
+                _texts["SmtpHost"].Text.Trim(),
+                port,
+                _checks["SmtpUseSsl"].IsChecked == true,
+                _texts["SmtpUsername"].Text.Trim(),
+                _smtpPassword.Password,
+                _texts["SmtpFromAddress"].Text.Trim(),
+                _texts["SmtpFromName"].Text.Trim());
+
+            var result = await App.Api.SendTestEmailAsync(request);
+            _emailStatus.Text = result.Message + " (sin guardar los cambios)";
             _emailStatus.Foreground = Kit.Brush("SuccessBrush");
         }
         catch (Exception ex)
@@ -1439,7 +1481,6 @@ public sealed class SettingsView : UserControl, IRefreshable
     public async Task RefreshAsync()
     {
         _businessLoaded = false;
-        _businessAutosave.Stop();
 
         var settings = await App.Api.SettingsAsync();
 
@@ -1454,6 +1495,13 @@ public sealed class SettingsView : UserControl, IRefreshable
                 : _checkDefaults.GetValueOrDefault(key, true);
 
         _smtpPassword.Password = string.Empty;
+        _clearSmtpPassword = false;
+
+        var closingFormat = settings.TryGetValue("DailyClosingFormat", out var formatValue)
+            ? TicketPrinter.NormalizeClosingFormat(formatValue)
+            : "ticket80";
+        _closingFormatBox.SelectedIndex = Math.Max(0,
+            Array.FindIndex(ClosingFormats, f => f.Value == closingFormat));
 
         var emailEnabled = settings.TryGetValue("DailyReportEmailEnabled", out var emailRaw)
                            && bool.TryParse(emailRaw, out var emailParsed) && emailParsed;
@@ -1463,8 +1511,11 @@ public sealed class SettingsView : UserControl, IRefreshable
         _emailStatus.Foreground = Kit.Brush(emailEnabled ? "SuccessBrush" : "MutedBrush");
 
         _businessLoaded = true;
-        _businessStatus.Text = $"Configuración cargada · {settings.Count} claves · autoguardado activo";
+        _businessStatus.Text =
+            $"Configuración cargada · {settings.Count} claves. Los cambios se guardan con «Aplicar y guardar».";
         _businessStatus.Foreground = Kit.Brush("MutedBrush");
+        _saveStatus.Text = "Configuración cargada. Los cambios se guardan con «Aplicar y guardar».";
+        _saveStatus.Foreground = Kit.Brush("MutedBrush");
 
         await LoadRatesAsync();
         await LoadUsersAsync();
@@ -1481,7 +1532,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         var box = multiline ? Kit.Multiline(null, fullWidth ? 72 : 60) : Kit.Input();
         _texts[key] = box;
         _textDefaults[key] = fallback;
-        box.TextChanged += (_, _) => ScheduleBusinessAutosave();
 
         var field = Kit.Field(label, box);
         field.Margin = new Thickness(0, 0, fullWidth ? 0 : 16, 10);
@@ -1498,8 +1548,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         };
         _checks[key] = check;
         _checkDefaults[key] = fallback;
-        check.Checked += (_, _) => ScheduleBusinessAutosave();
-        check.Unchecked += (_, _) => ScheduleBusinessAutosave();
         parent.Children.Add(check);
     }
 

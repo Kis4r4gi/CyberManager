@@ -20,6 +20,7 @@ public static class SettingsKeys
     public const string TicketFooter = "TicketFooter";
     public const string AutoPrintTicket = "AutoPrintTicket";
     public const string TicketCopies = "TicketCopies";
+    public const string DailyClosingFormat = "DailyClosingFormat";
     public const string ScannerAutoAdd = "ScannerAutoAdd";
     public const string WarningMinutes = "WarningMinutes";
     public const string GraceMinutes = "GraceMinutes";

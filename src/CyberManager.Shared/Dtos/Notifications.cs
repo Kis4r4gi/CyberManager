@@ -11,5 +11,16 @@ public sealed record DailyReportEmailResultDto(
     DateTime? SentUtc = null,
     string? Recipients = null);
 
-/// <summary>Correo de prueba. Si no se indica destinatario se usan los configurados.</summary>
-public sealed record TestEmailRequest(string? Recipient = null);
+/// <summary>
+/// Correo de prueba. Si no se indica destinatario se usan los configurados.
+/// Los datos SMTP permiten probar el formulario sin guardarlo en la base de datos.
+/// </summary>
+public sealed record TestEmailRequest(
+    string? Recipient = null,
+    string? SmtpHost = null,
+    int? SmtpPort = null,
+    bool? SmtpUseSsl = null,
+    string? SmtpUsername = null,
+    string? SmtpPassword = null,
+    string? SmtpFromAddress = null,
+    string? SmtpFromName = null);

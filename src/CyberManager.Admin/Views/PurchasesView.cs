@@ -403,7 +403,7 @@ public sealed class PurchaseDialog : FormDialog
         Body.Children.Add(new TextBlock { Text = "ARTÍCULOS", Style = Style("Label"), Margin = new Thickness(0, 4, 0, 8) });
 
         var productOptions = _products.OrderBy(p => p.Name)
-            .Select(p => new Option<ProductDto>(p, $"{p.Name} · stock {p.Stock:N0}")).ToList();
+            .Select(p => new Option<ProductDto>(p, p.Name)).ToList();
 
         var addRow = new Grid();
         addRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });

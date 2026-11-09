@@ -59,9 +59,11 @@
         <!-- ================= Cuerpo ================= -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="228" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="322" />
+                <ColumnDefinition Width="228" MinWidth="170" MaxWidth="420" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="322" MinWidth="220" MaxWidth="520" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
@@ -182,7 +184,7 @@
                 </Grid>
             </Border>
 
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -228,7 +230,7 @@
             </Grid>
 
             <!-- ================= Bitácora de terminales ================= -->
-            <Border Grid.Column="2" Background="{StaticResource SidebarBrush}"
+            <Border Grid.Column="4" Background="{StaticResource SidebarBrush}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -261,6 +263,17 @@
                     </Border>
                 </Grid>
             </Border>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="False" Cursor="SizeWE"
+                          ToolTip="Arrastre para ajustar el ancho del menú lateral" />
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="False" Cursor="SizeWE"
+                          ToolTip="Arrastre para ajustar el ancho de la bitácora" />
         </Grid>
     </Grid>
     </Border>
