@@ -272,10 +272,10 @@ public class EmailService
         if (c.TopProducts.Count > 0)
         {
             html.Append("""
-                  <h3 style="color:#0e7490;margin:18px 0 6px;font-size:15px">Productos más vendidos</h3>
+                  <h3 style="color:#0e7490;margin:18px 0 6px;font-size:15px">Productos vendidos</h3>
                   <table style="width:100%;border-collapse:collapse;font-size:14px">
                 """);
-            foreach (var product in c.TopProducts.Take(10))
+            foreach (var product in c.TopProducts)
                 Row($"{product.Quantity:0.##} × {product.Name}", $"$ {Money(product.Total)}");
             html.Append("</table>");
         }

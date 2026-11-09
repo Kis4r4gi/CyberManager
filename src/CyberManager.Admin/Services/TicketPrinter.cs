@@ -170,8 +170,8 @@ public static class TicketPrinter
         if (closing.TopProducts.Count > 0)
         {
             AddDivider(doc);
-            AddSection(doc, "PRODUCTOS MÁS VENDIDOS");
-            foreach (var product in closing.TopProducts.Take(10))
+            AddSection(doc, "PRODUCTOS VENDIDOS");
+            foreach (var product in closing.TopProducts)
             {
                 AddKV(doc, $"{product.Quantity:0.##} × {product.Name}", $"$ {product.Total:N2}");
             }

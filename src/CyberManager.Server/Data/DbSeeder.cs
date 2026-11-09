@@ -63,6 +63,18 @@ public static class DbSeeder
             );
             CREATE INDEX IF NOT EXISTS "IX_SupplierPayments_SupplierId" ON "SupplierPayments" ("SupplierId");
             CREATE INDEX IF NOT EXISTS "IX_SupplierPayments_DateUtc" ON "SupplierPayments" ("DateUtc");
+
+            CREATE TABLE IF NOT EXISTS "WebFilterRules" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_WebFilterRules" PRIMARY KEY AUTOINCREMENT,
+                "Pattern" TEXT NOT NULL,
+                "Kind" INTEGER NOT NULL,
+                "Active" INTEGER NOT NULL,
+                "Notes" TEXT NULL,
+                "CreatedUtc" TEXT NOT NULL,
+                "UpdatedUtc" TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Pattern" ON "WebFilterRules" ("Pattern");
+            CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Kind" ON "WebFilterRules" ("Kind");
             """);
 
         // Columnas añadidas para el control de consolas de videojuegos.
@@ -117,6 +129,7 @@ public static class DbSeeder
         await SeedRateAsync(db);
         await db.SaveChangesAsync();
         await SeedWallpapersAsync(db);
+        await SeedWebFilterAsync(db);
     }
 
     /// <summary>Versión del paquete de fondos incluido; al cambiarla se vuelve a sembrar.</summary>
@@ -231,8 +244,84 @@ public static class DbSeeder
         await db.SaveChangesAsync();
     }
 
-    private static async Task SeedUsersAsync(AppDbContext db)
+    /// <summary>Versión de la lista inicial de NetFiltroWeb.</summary>
+    private const string BundledWebFilterVersion = "1";
+
+    public static readonly (string Pattern, WebFilterRuleKind Kind, string Notes)[] DefaultWebFilterRules =
     {
+        ("pornhub.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("xvideos.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("xnxx.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("xhamster.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("redtube.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("youporn.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("tube8.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("spankbang.com", WebFilterRuleKind.Domain, "Sitio para adultos"),
+        ("onlyfans.com", WebFilterRuleKind.Domain, "Contenido para adultos"),
+        ("chaturbate.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("livejasmin.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("bongacams.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("stripchat.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("cam4.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("myfreecams.com", WebFilterRuleKind.Domain, "Cámaras para adultos"),
+        ("literotica.com", WebFilterRuleKind.Domain, "Contenido para adultos"),
+        ("adultfriendfinder.com", WebFilterRuleKind.Domain, "Contenido para adultos"),
+        ("porn", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("xxx", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("hentai", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("camsex", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("sexcam", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("escort", WebFilterRuleKind.Keyword, "Palabra prohibida"),
+        ("onlyfans", WebFilterRuleKind.Keyword, "Palabra prohibida")
+    };
+
+    /// <summary>
+    /// Siembra la lista inicial de NetFiltroWeb una sola vez por versión. Si el
+    /// administrador elimina una regla, no se vuelve a agregar automáticamente.
+    /// </summary>
+    private static async Task SeedWebFilterAsync(AppDbContext db)
+    {
+        var version = await db.Settings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Key == SettingsKeys.WebFilterSeedVersion);
+        if (string.Equals(version?.Value, BundledWebFilterVersion, StringComparison.Ordinal))
+            return;
+
+        var existing = await db.WebFilterRules.AsNoTracking()
+            .Select(r => r.Pattern)
+            .ToListAsync();
+        var known = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+        var now = DateTime.UtcNow;
+
+        foreach (var (pattern, kind, notes) in DefaultWebFilterRules)
+        {
+            if (!known.Add(pattern)) continue;
+            db.WebFilterRules.Add(new WebFilterRule
+            {
+                Pattern = pattern,
+                Kind = kind,
+                Active = true,
+                Notes = notes,
+                CreatedUtc = now,
+                UpdatedUtc = now
+            });
+        }
+
+        await db.SaveChangesAsync();
+
+        var setting = await db.Settings.FirstOrDefaultAsync(x => x.Key == SettingsKeys.WebFilterSeedVersion);
+        if (setting is null)
+            db.Settings.Add(new Setting
+            {
+                Key = SettingsKeys.WebFilterSeedVersion,
+                Value = BundledWebFilterVersion
+            });
+        else
+            setting.Value = BundledWebFilterVersion;
+
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task SeedUsersAsync(AppDbContext db)    {
         if (await db.Users.AnyAsync()) return;
 
         var (adminHash, adminSalt) = PasswordHasher.Create("admin123");
@@ -287,7 +376,14 @@ public static class DbSeeder
             [SettingsKeys.WallpaperRotationSeconds] = WallpaperSettings.Invariant(
                 WallpaperSettings.DefaultRotationSeconds),
             [SettingsKeys.WallpaperActiveId] = string.Empty,
-            [SettingsKeys.BundledWallpapersVersion] = string.Empty
+            [SettingsKeys.BundledWallpapersVersion] = string.Empty,
+            [SettingsKeys.SessionBarDescription] = "Sesión activa · consulte su tiempo y consumo",
+            [SettingsKeys.SessionBarScale] = "100",
+            [SettingsKeys.VncViewerPath] = string.Empty,
+            [SettingsKeys.VncDefaultPort] = "5900",
+            [SettingsKeys.WebFilterSeedVersion] = string.Empty,
+            [SettingsKeys.WebFilterProxyEnabled] = "true",
+            [SettingsKeys.WebFilterProxyPort] = "8877"
         };
 
         // Agrega solo las claves nuevas, sin sobrescribir la configuración existente.

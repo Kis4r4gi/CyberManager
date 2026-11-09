@@ -255,11 +255,16 @@
         <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Padding" Value="10,8" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="MinHeight" Value="26" />
         <Setter Property="SelectionBrush" Value="{StaticResource Accent2Brush}" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Style.Triggers>
+            <Trigger Property="AcceptsReturn" Value="True">
+                <Setter Property="VerticalContentAlignment" Value="Top" />
+                <Setter Property="Padding" Value="8,6" />
+            </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                 <Setter Property="BorderThickness" Value="2" />
@@ -273,8 +278,9 @@
         <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
         <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Padding" Value="10,8" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="MinHeight" Value="26" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Style.Triggers>
             <Trigger Property="IsKeyboardFocused" Value="True">

@@ -79,6 +79,8 @@ public sealed class StationActionsDialog : FormDialog
         }
 
         Add("Ver pantalla remota", "BlueButton", "screen");
+        if (station.Status == StationStatus.Offline)
+            Add("Encender equipo (WoL)", "SuccessButton", "wake");
         Add(station.Status == StationStatus.Maintenance ? "Quitar mantenimiento" : "Poner en mantenimiento",
             "GhostButton", "maintenance");
         Add("Bloquear equipo", "GhostButton", "lock");

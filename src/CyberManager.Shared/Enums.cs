@@ -154,6 +154,15 @@ public enum AgentCommandType
     MonitorOn = 16
 }
 
+/// <summary>Tipo de regla del módulo NetFiltroWeb.</summary>
+public enum WebFilterRuleKind
+{
+    /// <summary>Sitio o dominio exacto (bloquea también sus subdominios).</summary>
+    Domain = 0,
+    /// <summary>Palabra clave que se busca en el nombre del sitio.</summary>
+    Keyword = 1
+}
+
 /// <summary>Cómo se muestran los fondos de pantalla en los equipos bloqueados.</summary>
 public enum WallpaperMode
 {

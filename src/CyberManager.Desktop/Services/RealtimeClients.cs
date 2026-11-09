@@ -53,6 +53,12 @@ public sealed class AdminRealtime : IAsyncDisposable
             ? _hub.InvokeAsync("RequestScreen", stationId, maxWidth, quality)
             : Task.CompletedTask;
 
+    /// <summary>Envía un evento de mouse o teclado a la estación (control remoto).</summary>
+    public Task SendRemoteInputAsync(RemoteInputEvent input)
+        => _hub is { State: HubConnectionState.Connected }
+            ? _hub.InvokeAsync("SendRemoteInput", input.StationId, input)
+            : Task.CompletedTask;
+
     public async ValueTask DisposeAsync()
     {
         if (_hub is not null)
@@ -74,6 +80,8 @@ public sealed class StationRealtime : IAsyncDisposable
     public event Action<WallpaperPlaylistDto>? WallpaperChanged;
     public event Action<PromoVideoPlaylistDto>? PromoVideosChanged;
     public event Action<ScreenFrameRequest>? ScreenFrameRequested;
+    public event Action<RemoteInputEvent>? RemoteInputReceived;
+    public event Action<WebFilterPlaylistDto>? WebFilterChanged;
     public event Action<bool>? ConnectionChanged;
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;
@@ -96,6 +104,8 @@ public sealed class StationRealtime : IAsyncDisposable
         _hub.On<WallpaperPlaylistDto>("WallpaperChanged", p => WallpaperChanged?.Invoke(p));
         _hub.On<PromoVideoPlaylistDto>("PromoVideosChanged", p => PromoVideosChanged?.Invoke(p));
         _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
+        _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));
+        _hub.On<WebFilterPlaylistDto>("WebFilterChanged", p => WebFilterChanged?.Invoke(p));
 
         _hub.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         _hub.Reconnected += _ => { ConnectionChanged?.Invoke(true); return Task.CompletedTask; };

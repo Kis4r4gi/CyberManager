@@ -68,6 +68,10 @@ public sealed class SettingsView : UserControl, IRefreshable
     private List<UserDto> _users = new();
     private List<BackupRow> _backups = new();
     private string? _backupFolder;
+    private readonly DataGrid _webFilterGrid;
+    private readonly TextBlock _webFilterStatus = Kit.Muted("Cargando la lista de NetFiltroWeb...");
+    private List<WebFilterRuleDto> _webFilterRules = new();
+    private bool _webFilterBusy;
 
     public SettingsView()
     {
@@ -92,6 +96,12 @@ public sealed class SettingsView : UserControl, IRefreshable
             Kit.Col("Tamaño", nameof(BackupRow.Size), 100),
             Kit.Col("Archivo", nameof(BackupRow.FileName)));
 
+        _webFilterGrid = Kit.Table(
+            Kit.Col("Sitio o palabra", nameof(WebFilterRow.Pattern), 250),
+            Kit.Col("Tipo", nameof(WebFilterRow.Kind), 130),
+            Kit.Col("Estado", nameof(WebFilterRow.Status), 100),
+            Kit.Col("Notas", nameof(WebFilterRow.Notes)));
+
         var tabs = new TabControl { Margin = new Thickness(0, 4, 0, 0) };
         tabs.Items.Add(new TabItem { Header = "Negocio y facturación", Content = BuildBusinessTab() });
         tabs.Items.Add(new TabItem { Header = "Tasa de cambio", Content = BuildRateTab() });
@@ -99,6 +109,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         tabs.Items.Add(new TabItem { Header = "Apariencia", Content = BuildAppearanceTab() });
         tabs.Items.Add(new TabItem { Header = "Respaldos", Content = BuildBackupTab() });
         tabs.Items.Add(new TabItem { Header = "Reportes por correo", Content = BuildEmailTab() });
+        tabs.Items.Add(new TabItem { Header = "Control remoto y filtro", Content = BuildRemoteFilterTab() });
         tabs.Items.Add(new TabItem { Header = "Instalación", Content = BuildInstallTab() });
 
         var root = new Grid();
@@ -1015,9 +1026,152 @@ public sealed class SettingsView : UserControl, IRefreshable
         }
     }
 
-    private static FrameworkElement WithMargin(FrameworkElement element, double left, double top,
-        double right, double bottom)
+    private FrameworkElement BuildRemoteFilterTab()
     {
+        var panel = new StackPanel();
+
+        panel.Children.Add(Kit.Section("Barra flotante del cliente"));
+        panel.Children.Add(Description(
+            "La barra muestra el tiempo y el monto de la sesión sobre el escritorio del cliente. " +
+            "Puede cambiar el texto descriptivo y el tamaño sin reiniciar los equipos."));
+        var bar = new UniformGrid { Columns = 2 };
+        AddText(bar, "SessionBarDescription", "Descripción de la barra",
+            "Sesión activa · consulte su tiempo y consumo");
+        AddText(bar, "SessionBarScale", "Tamaño de la barra (%)", "100");
+        panel.Children.Add(bar);
+
+        panel.Children.Add(Kit.Section("Control remoto VNC"));
+        panel.Children.Add(Description(
+            "El control remoto integrado de «Ver pantalla remota» funciona sin software adicional. " +
+            "Si además usa un servidor VNC en los equipos, indique aquí la ruta del visor para abrirlo " +
+            "con un clic desde la consola."));
+        var vnc = new UniformGrid { Columns = 2 };
+        AddText(vnc, "VncViewerPath", "Ruta del visor VNC (opcional)", "");
+        AddText(vnc, "VncDefaultPort", "Puerto VNC por defecto", "5900");
+        panel.Children.Add(vnc);
+
+        panel.Children.Add(Kit.Section("NetFiltroWeb"));
+        panel.Children.Add(Description(
+            "Lista de sitios y palabras prohibidas. Los equipos descargan la lista automáticamente. " +
+            "Los sitios se bloquean en el archivo hosts; las palabras clave usan el proxy local del agente."));
+        var proxy = new UniformGrid { Columns = 2, Margin = new Thickness(0, 4, 0, 8) };
+        AddCheck(proxy, "WebFilterProxyEnabled",
+            "Activar proxy local para bloquear palabras clave", true);
+        AddText(proxy, "WebFilterProxyPort", "Puerto del proxy local", "8877");
+        panel.Children.Add(proxy);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 6, 0, 8)
+        };
+        buttons.Children.Add(Kit.Button("Agregar regla", "PrimaryButton", AddWebFilterRule));
+        var edit = Kit.Button("Editar", "GhostButton", EditWebFilterRule);
+        edit.Margin = new Thickness(8, 0, 0, 0);
+        buttons.Children.Add(edit);
+        var delete = Kit.Button("Eliminar", "DangerButton", DeleteWebFilterRule);
+        delete.Margin = new Thickness(8, 0, 0, 0);
+        buttons.Children.Add(delete);
+        var restore = Kit.Button("Restaurar lista de fábrica", "GhostButton",
+            () => _ = Ui.Run(RestoreWebFilterAsync, "NetFiltroWeb"));
+        restore.Margin = new Thickness(8, 0, 0, 0);
+        buttons.Children.Add(restore);
+        panel.Children.Add(buttons);
+
+        _webFilterGrid.Height = 280;
+        _webFilterGrid.MouseDoubleClick += (_, _) => EditWebFilterRule();
+        panel.Children.Add(_webFilterGrid);
+
+        _webFilterStatus.Margin = new Thickness(0, 8, 0, 0);
+        _webFilterStatus.TextWrapping = TextWrapping.Wrap;
+        panel.Children.Add(_webFilterStatus);
+
+        var save = Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync());
+        save.Padding = new Thickness(16, 11, 16, 11);
+        save.Margin = new Thickness(0, 12, 0, 0);
+        save.HorizontalAlignment = HorizontalAlignment.Left;
+        panel.Children.Add(save);
+
+        return Scroll(panel);
+    }
+
+    private void AddWebFilterRule()
+    {
+        var dialog = new WebFilterRuleDialog(null) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true || dialog.Result is null) return;
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.SaveWebFilterRuleAsync(null, dialog.Result);
+            await LoadWebFilterAsync();
+        }, "NetFiltroWeb");
+    }
+
+    private void EditWebFilterRule()
+    {
+        if (_webFilterGrid.SelectedItem is not WebFilterRow row)
+        {
+            Ui.Info("Seleccione una regla de la lista.", "NetFiltroWeb");
+            return;
+        }
+
+        var dialog = new WebFilterRuleDialog(row.Source) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true || dialog.Result is null) return;
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.SaveWebFilterRuleAsync(row.Source.Id, dialog.Result);
+            await LoadWebFilterAsync();
+        }, "NetFiltroWeb");
+    }
+
+    private void DeleteWebFilterRule()
+    {
+        if (_webFilterGrid.SelectedItem is not WebFilterRow row)
+        {
+            Ui.Info("Seleccione una regla de la lista.", "NetFiltroWeb");
+            return;
+        }
+
+        if (!Ui.Confirm($"¿Eliminar la regla «{row.Pattern}»?", "NetFiltroWeb")) return;
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteWebFilterRuleAsync(row.Source.Id);
+            await LoadWebFilterAsync();
+        }, "NetFiltroWeb");
+    }
+
+    private async Task RestoreWebFilterAsync()
+    {
+        if (!Ui.Confirm("¿Agregar de nuevo las reglas de fábrica que falten?", "NetFiltroWeb")) return;
+        await App.Api.RestoreWebFilterDefaultsAsync();
+        await LoadWebFilterAsync();
+    }
+
+    private async Task LoadWebFilterAsync()
+    {
+        if (_webFilterBusy) return;
+        _webFilterBusy = true;
+        try
+        {
+            _webFilterRules = await App.Api.WebFilterRulesAsync();
+            _webFilterGrid.ItemsSource = _webFilterRules.Select(r => new WebFilterRow(r)).ToList();
+            var active = _webFilterRules.Count(r => r.Active);
+            _webFilterStatus.Text =
+                $"{_webFilterRules.Count} regla(s) · {active} activa(s). Los equipos se actualizan solos.";
+            _webFilterStatus.Foreground = Kit.Brush("MutedBrush");
+        }
+        catch (Exception ex)
+        {
+            _webFilterStatus.Text = ex.Message;
+            _webFilterStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+        finally
+        {
+            _webFilterBusy = false;
+        }
+    }
+
+    private static FrameworkElement WithMargin(FrameworkElement element, double left, double top,
+        double right, double bottom)    {
         element.Margin = new Thickness(left, top, right, bottom);
         return element;
     }
@@ -1523,6 +1677,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         await LoadUsersAsync();
         await LoadBackupsAsync();
         await LoadUpdateAsync();
+        await LoadWebFilterAsync();
     }
 
     // ============================================================
@@ -1607,6 +1762,67 @@ public sealed class BackupRow
         if (bytes >= 1024L * 1024L) return $"{bytes / 1024d / 1024d:N1} MB";
         if (bytes >= 1024L) return $"{bytes / 1024d:N0} KB";
         return $"{bytes} B";
+    }
+}
+
+public sealed class WebFilterRow
+{
+    public WebFilterRow(WebFilterRuleDto rule)
+    {
+        Source = rule;
+        Pattern = rule.Pattern;
+        Kind = rule.Kind == WebFilterRuleKind.Domain ? "Sitio / dominio" : "Palabra clave";
+        Status = rule.Active ? "Activa" : "Inactiva";
+        Notes = string.IsNullOrWhiteSpace(rule.Notes) ? "—" : rule.Notes!;
+    }
+
+    public WebFilterRuleDto Source { get; }
+    public string Pattern { get; }
+    public string Kind { get; }
+    public string Status { get; }
+    public string Notes { get; }
+}
+
+public sealed class WebFilterRuleDialog : FormDialog
+{
+    private readonly TextBox _pattern;
+    private readonly ComboBox _kindBox;
+    private readonly TextBox _notes;
+    private readonly CheckBox _active;
+
+    public SaveWebFilterRuleRequest? Result { get; private set; }
+
+    public WebFilterRuleDialog(WebFilterRuleDto? rule)
+        : base(rule is null ? "Nueva regla de NetFiltroWeb" : $"Editar «{rule.Pattern}»",
+            "Escriba el sitio (ej. ejemplo.com) o la palabra que desea bloquear.")
+    {
+        _pattern = Add(new TextBox { Text = rule?.Pattern ?? string.Empty }, "Sitio o palabra");
+
+        var options = new[]
+        {
+            new Option<WebFilterRuleKind>(WebFilterRuleKind.Domain, "Sitio / dominio exacto"),
+            new Option<WebFilterRuleKind>(WebFilterRuleKind.Keyword, "Palabra clave")
+        };
+        _kindBox = AddCombo("Tipo de regla", options);
+        _kindBox.SelectedItem = options.First(o => o.Value == (rule?.Kind ?? WebFilterRuleKind.Domain));
+
+        _notes = Add(new TextBox { Text = rule?.Notes ?? string.Empty }, "Notas (opcional)");
+        _active = AddCheck("Regla activa", rule?.Active ?? true);
+    }
+
+    protected override void OnAccept()
+    {
+        if (string.IsNullOrWhiteSpace(_pattern.Text))
+            throw new InvalidOperationException("Indique el sitio o la palabra que desea bloquear.");
+
+        var kind = ((Option<WebFilterRuleKind>)_kindBox.SelectedItem!).Value;
+        Result = new SaveWebFilterRuleRequest(
+            _pattern.Text.Trim(),
+            kind,
+            _active.IsChecked == true,
+            string.IsNullOrWhiteSpace(_notes.Text) ? null : _notes.Text.Trim());
+
+        base.OnAccept();
     }
 }
 

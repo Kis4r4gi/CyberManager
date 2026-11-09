@@ -886,6 +886,17 @@ public sealed class DashboardView : UserControl, IRefreshable
                     break;
                 }
 
+                case "wake":
+                {
+                    if (!Ui.Confirm($"¿Enviar un paquete Wake on LAN para encender {station.Name}?"))
+                        break;
+                    await App.Api.WakeStationAsync(station.Id);
+                    Ui.Info($"Se envió el paquete Wake on LAN a {station.Name}. " +
+                            "El equipo debe tener la función activada en la tarjeta de red.",
+                        "Encendido remoto");
+                    break;
+                }
+
                 case "maintenance":
                 {
                     if (station.SessionId is not null)

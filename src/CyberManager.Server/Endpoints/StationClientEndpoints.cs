@@ -35,13 +35,34 @@ public static class StationClientEndpoints
                 sessionDto = Mappers.ToDto(session, consumption, now);
             }
 
+            var barScale = int.TryParse(await settings.GetAsync(SettingsKeys.SessionBarScale, "100"), out var scale)
+                ? Math.Clamp(scale, 70, 160)
+                : 100;
+
             return Results.Ok(new StationClientStateDto(
                 station.Id, station.Name, station.Zone?.Name, station.IsLocked, station.Status,
                 sessionDto, await rates.GetRateAsync(now),
                 await settings.GetAsync(SettingsKeys.BusinessName, "CyberManager"),
                 await settings.GetAsync(SettingsKeys.LocalCurrencySymbol, "Bs"),
                 await settings.GetAsync(SettingsKeys.TicketFooter),
-                now, await wallpapers.PlaylistAsync(), await promos.PlaylistAsync()));
+                now, await wallpapers.PlaylistAsync(), await promos.PlaylistAsync(),
+                await settings.GetAsync(SettingsKeys.SessionBarDescription),
+                barScale));
+        });
+
+        g.MapGet("/webfilter", async (HttpContext http, AppDbContext db, SettingsService settings) =>
+        {
+            await RequireStationAsync(http, db);
+            var rules = await db.WebFilterRules.AsNoTracking()
+                .Where(r => r.Active)
+                .OrderBy(r => r.Pattern)
+                .Select(r => new WebFilterRuleDto(r.Id, r.Pattern, r.Kind, r.Active, r.Notes,
+                    r.CreatedUtc, r.UpdatedUtc))
+                .ToListAsync();
+            var proxyEnabled = await settings.GetBoolAsync(SettingsKeys.WebFilterProxyEnabled, true);
+            var proxyPort = await settings.GetIntAsync(SettingsKeys.WebFilterProxyPort, 8877);
+            return Results.Ok(new WebFilterPlaylistDto(rules, DateTime.UtcNow, proxyEnabled,
+                Math.Clamp(proxyPort, 1024, 65535)));
         });
 
         g.MapGet("/products", async (HttpContext http, AppDbContext db) =>

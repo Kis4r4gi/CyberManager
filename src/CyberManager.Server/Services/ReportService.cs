@@ -208,7 +208,6 @@ public class ReportService
                 Math.Round(g.Sum(i => i.Quantity), 2), Math.Round(g.Sum(i => i.Total), 2),
                 Money.ToVes(g.Sum(i => i.Total), rate)))
             .OrderByDescending(r => r.Total)
-            .Take(15)
             .ToList();
 
         return new DailyClosingDto(

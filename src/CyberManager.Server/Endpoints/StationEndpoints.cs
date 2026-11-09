@@ -147,6 +147,28 @@ public static class StationEndpoints
             return Results.Ok(new { sent = true });
         });
 
+        g.MapPost("/{id:int}/wake", async (int id, AppDbContext db, RealtimeService realtime) =>
+        {
+            var st = await db.Stations.FirstOrDefaultAsync(s => s.Id == id) ?? throw AppException.NotFound("Equipo");
+
+            var mac = WakeOnLanService.ParseMac(st.MacAddress);
+            if (mac is null)
+                throw new AppException("El equipo no tiene una dirección MAC válida. " +
+                                       "Edite el equipo y capture la MAC para usar Wake on LAN.");
+
+            try
+            {
+                WakeOnLanService.Send(mac, st.IpAddress);
+            }
+            catch (Exception ex)
+            {
+                throw new AppException($"No se pudo enviar el paquete Wake on LAN: {ex.Message}", 500);
+            }
+
+            await realtime.BroadcastEventAsync("WakeOnLan", $"{st.Name}: paquete Wake on LAN enviado");
+            return Results.Ok(new { sent = true, mac = st.MacAddress });
+        }).RequireAuthorization("Admin");
+
         g.MapPost("/{id:int}/maintenance", async (int id, bool enabled, AppDbContext db,
             RealtimeService realtime) =>
         {

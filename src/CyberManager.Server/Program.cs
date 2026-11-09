@@ -176,6 +176,7 @@ app.MapReportEndpoints();
 app.MapNotificationEndpoints();
 app.MapWallpaperEndpoints();
 app.MapPromoVideoEndpoints();
+app.MapWebFilterEndpoints();
 app.MapBackupEndpoints();
 app.MapUpdateEndpoints();
 

@@ -20,4 +20,7 @@ public class StationApi : ApiClient
     public Task<SaleDto> OrderAsync(StationOrderRequest request) => PostAsync<SaleDto>("/api/station/order", request);
     public Task<byte[]> WallpaperFileAsync(int id) => GetBytesAsync($"/api/station/wallpapers/{id}/file");
     public Task<byte[]> PromoVideoFileAsync(int id) => GetBytesAsync($"/api/station/promo-videos/{id}/file");
+
+    /// <summary>Lista activa de NetFiltroWeb que el agente o la pantalla deben aplicar.</summary>
+    public Task<WebFilterPlaylistDto> WebFilterAsync() => GetAsync<WebFilterPlaylistDto>("/api/station/webfilter");
 }

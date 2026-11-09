@@ -41,6 +41,13 @@ public partial class SessionBarWindow : Window
         _baseAt = DateTime.UtcNow;
 
         StationText.Text = state.Name;
+        DescriptionText.Text = string.IsNullOrWhiteSpace(state.SessionBarDescription)
+            ? L.T("Sesión activa")
+            : state.SessionBarDescription!;
+        var scale = Math.Clamp(state.SessionBarScale, 70, 160) / 100d;
+        RootScale.ScaleX = scale;
+        RootScale.ScaleY = scale;
+
         var session = state.Session;
         CustomerText.Text = session?.CustomerName ?? L.T("Sesión activa");
 
@@ -112,6 +119,16 @@ public partial class SessionBarWindow : Window
         WarningText.Visibility = Visibility.Visible;
 
         if (App.State is not null) UpdateState(App.State);
+    }
+
+    /// <summary>Indica que el tiempo mostrado proviene del respaldo local del cliente.</summary>
+    public void ShowRestoredBackup()
+    {
+        _warningText = L.IsEnglish
+            ? "No connection: time restored from the local backup."
+            : "Sin conexión: tiempo restaurado desde el respaldo local.";
+        WarningText.Text = _warningText;
+        WarningText.Visibility = Visibility.Visible;
     }
 
     private void Tick()

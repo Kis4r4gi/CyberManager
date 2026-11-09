@@ -59,7 +59,7 @@ public sealed class DailyClosingDialog : FormDialog
         if (closing.TopProducts.Count > 0)
         {
             AddSeparator();
-            foreach (var product in closing.TopProducts.Take(5))
+            foreach (var product in closing.TopProducts)
                 AddRow($"{product.Quantity:0.##} × {product.Name}", $"$ {product.Total:N2}");
         }
 

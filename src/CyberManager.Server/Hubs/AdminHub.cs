@@ -1,5 +1,6 @@
 using CyberManager.Server.Services;
 using CyberManager.Shared;
+using CyberManager.Shared.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -34,6 +35,10 @@ public class AdminHub : Hub
     /// <summary>Solicita una captura de pantalla de un equipo para el visualizador remoto.</summary>
     public Task RequestScreen(int stationId, int maxWidth, int quality)
         => _realtime.RequestScreenAsync(stationId, maxWidth, quality);
+
+    /// <summary>Reenvía un evento de mouse o teclado a la estación seleccionada.</summary>
+    public Task SendRemoteInput(int stationId, RemoteInputEvent input)
+        => _realtime.SendRemoteInputAsync(stationId, input);
 
     public Task Ping() => Clients.Caller.SendAsync("Pong", DateTime.UtcNow);
 }

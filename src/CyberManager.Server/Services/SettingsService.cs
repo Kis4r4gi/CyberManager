@@ -52,6 +52,20 @@ public static class SettingsKeys
     public const string WallpaperActiveId = WallpaperSettings.ActiveId;
     /// <summary>Versión del paquete de fondos incluido con el instalador.</summary>
     public const string BundledWallpapersVersion = "BundledWallpapersVersion";
+    /// <summary>Texto descriptivo que muestra la barra flotante del cliente.</summary>
+    public const string SessionBarDescription = "SessionBarDescription";
+    /// <summary>Escala de la barra flotante del cliente en porcentaje (70 a 160).</summary>
+    public const string SessionBarScale = "SessionBarScale";
+    /// <summary>Ruta del visor VNC externo (opcional).</summary>
+    public const string VncViewerPath = "VncViewerPath";
+    /// <summary>Puerto VNC por defecto para los equipos.</summary>
+    public const string VncDefaultPort = "VncDefaultPort";
+    /// <summary>Versión de la lista inicial de NetFiltroWeb.</summary>
+    public const string WebFilterSeedVersion = "WebFilterSeedVersion";
+    /// <summary>Activa el proxy local del agente para aplicar reglas por palabra clave.</summary>
+    public const string WebFilterProxyEnabled = "WebFilterProxyEnabled";
+    /// <summary>Puerto del proxy local de NetFiltroWeb.</summary>
+    public const string WebFilterProxyPort = "WebFilterProxyPort";
 }
 
 public class SettingsService

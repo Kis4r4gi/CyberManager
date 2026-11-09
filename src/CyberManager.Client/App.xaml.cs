@@ -87,6 +87,7 @@ public partial class App : Application
         Realtime.WallpaperChanged += OnWallpaperChanged;
         Realtime.PromoVideosChanged += OnPromoVideosChanged;
         Realtime.ScreenFrameRequested += OnScreenFrameRequested;
+        Realtime.RemoteInputReceived += OnRemoteInputReceived;
 
         try
         {
@@ -118,6 +119,7 @@ public partial class App : Application
             Realtime.WallpaperChanged -= OnWallpaperChanged;
             Realtime.PromoVideosChanged -= OnPromoVideosChanged;
             Realtime.ScreenFrameRequested -= OnScreenFrameRequested;
+            Realtime.RemoteInputReceived -= OnRemoteInputReceived;
             await Realtime.DisposeAsync();
             Realtime = null;
         }
@@ -151,11 +153,23 @@ public partial class App : Application
             var state = await Api.StateAsync();
             State = state;
             ApplyState(state);
+            SessionBackupService.Save(state);
             await SendHeartbeatAsync();
         }
         catch
         {
-            // Sin conexión con el servidor: se mantiene el último estado conocido.
+            // Sin conexión con el servidor: si el equipo acaba de iniciar, se
+            // restaura el último tiempo guardado para no perder la sesión.
+            if (State is null)
+            {
+                var restored = SessionBackupService.TryRestore(Config.StationId);
+                if (restored is not null)
+                {
+                    State = restored;
+                    ApplyState(restored);
+                    _barWindow?.ShowRestoredBackup();
+                }
+            }
         }
 
         if (Realtime is not null && !Realtime.IsConnected &&
@@ -391,6 +405,13 @@ public partial class App : Application
         {
             // Si la conexión se perdió, la consola mostrará el error y podrá reintentar.
         }
+    }
+
+    /// <summary>Inyecta el mouse o teclado que envía el control remoto de administración.</summary>
+    private void OnRemoteInputReceived(RemoteInputEvent input)
+    {
+        if (input.StationId != Config.StationId) return;
+        Dispatcher.BeginInvoke(() => RemoteInputInjector.Handle(input));
     }
 
     private void OnSessionWarning(SessionWarningEvent warning)

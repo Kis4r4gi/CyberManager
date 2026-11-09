@@ -49,6 +49,19 @@ public class RealtimeService
             new RealtimeEvent("PromoVideosChanged", "Videos promocionales actualizados", playlist));
     }
 
+    /// <summary>Envía la lista actualizada de NetFiltroWeb a las estaciones y a la consola.</summary>
+    public async Task WebFilterChangedAsync(WebFilterPlaylistDto playlist)
+    {
+        await _station.Clients.All.SendAsync("WebFilterChanged", playlist);
+        await _agent.Clients.All.SendAsync("WebFilterChanged", playlist);
+        await _admin.Clients.All.SendAsync("Event",
+            new RealtimeEvent("WebFilterChanged", "Lista de NetFiltroWeb actualizada", playlist));
+    }
+
+    /// <summary>Reenvía un evento de mouse o teclado a la estación seleccionada.</summary>
+    public Task SendRemoteInputAsync(int stationId, RemoteInputEvent input)
+        => _station.Clients.Group($"station-{stationId}").SendAsync("RemoteInput", input);
+
     /// <summary>Avisa a las consolas que hay una versión nueva lista para descargar.</summary>
     public Task UpdateAvailableAsync(UpdateInfoDto update)
         => _admin.Clients.All.SendAsync("UpdateAvailable", update);

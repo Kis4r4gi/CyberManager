@@ -40,6 +40,7 @@ public class AppDbContext : DbContext
     public DbSet<InvoiceSequence> InvoiceSequences => Set<InvoiceSequence>();
     public DbSet<Wallpaper> Wallpapers => Set<Wallpaper>();
     public DbSet<PromoVideo> PromoVideos => Set<PromoVideo>();
+    public DbSet<WebFilterRule> WebFilterRules => Set<WebFilterRule>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -102,5 +103,7 @@ public class AppDbContext : DbContext
         b.Entity<Wallpaper>().HasIndex(x => x.SortOrder);
         b.Entity<PromoVideo>().HasIndex(x => x.SortOrder);
         b.Entity<SupplierPayment>().HasIndex(x => x.DateUtc);
+        b.Entity<WebFilterRule>().HasIndex(x => x.Pattern);
+        b.Entity<WebFilterRule>().HasIndex(x => x.Kind);
     }
 }

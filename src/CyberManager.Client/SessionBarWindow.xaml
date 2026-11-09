@@ -6,7 +6,10 @@
         Topmost="True" ShowInTaskbar="False" SizeToContent="WidthAndHeight"
         ResizeMode="NoResize" WindowStartupLocation="Manual" ShowActivated="False">
 
-    <Grid>
+    <Grid x:Name="RootGrid" RenderTransformOrigin="0.5,0">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
+        </Grid.LayoutTransform>
         <Border Background="#F20F172A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                 CornerRadius="14" Padding="16,10">
             <Border.Effect>
@@ -16,6 +19,9 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
                     <TextBlock x:Name="StationText" Text="PC-01" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock x:Name="DescriptionText" Text="Sesión activa" FontSize="10.5"
+                               Foreground="{StaticResource MutedBrush}" MaxWidth="260"
+                               TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="CustomerText" Text="Sesión activa" Style="{StaticResource Muted}" />
                 </StackPanel>
 

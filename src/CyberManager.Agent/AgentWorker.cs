@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Json;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -8,16 +9,22 @@ namespace CyberManager.Agent;
 
 public class AgentWorker : BackgroundService
 {
+    private static readonly HttpClient FilterHttp = new() { Timeout = TimeSpan.FromSeconds(12) };
+
     private readonly AgentOptions _options;
     private readonly ILogger<AgentWorker> _log;
+    private readonly WebFilterService _filter;
     private readonly SystemMetrics _metrics = new();
     private HubConnection? _hub;
     private string _state = "locked";
+    private DateTime _lastFilterUpdate = DateTime.MinValue;
 
-    public AgentWorker(IOptions<AgentOptions> options, ILogger<AgentWorker> log)
+    public AgentWorker(IOptions<AgentOptions> options, ILogger<AgentWorker> log,
+        ILogger<WebFilterService> filterLog)
     {
         _options = options.Value;
         _log = log;
+        _filter = new WebFilterService(filterLog);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,6 +48,12 @@ public class AgentWorker : BackgroundService
 
                 if (_hub is { State: HubConnectionState.Connected })
                     await SendHeartbeatAsync(stoppingToken);
+
+                if (DateTime.UtcNow - _lastFilterUpdate > TimeSpan.FromSeconds(60))
+                {
+                    _lastFilterUpdate = DateTime.UtcNow;
+                    await UpdateWebFilterAsync(stoppingToken);
+                }
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -57,6 +70,8 @@ public class AgentWorker : BackgroundService
 
         if (_hub is not null)
             await _hub.DisposeAsync();
+
+        _filter.Dispose();
     }
 
     private async Task ConnectAsync(CancellationToken ct)
@@ -70,6 +85,11 @@ public class AgentWorker : BackgroundService
             .Build();
 
         _hub.On<AgentCommand>("Command", command => HandleCommandAsync(command));
+        _hub.On<WebFilterPlaylistDto>("WebFilterChanged", playlist =>
+        {
+            _filter.Apply(playlist);
+            return Task.CompletedTask;
+        });
         _hub.Reconnected += _ => { _log.LogInformation("Reconectado al servidor"); return Task.CompletedTask; };
         _hub.Closed += ex =>
         {
@@ -79,6 +99,29 @@ public class AgentWorker : BackgroundService
 
         await _hub.StartAsync(ct);
         _log.LogInformation("Conectado al servidor como equipo {StationId}", _options.StationId);
+    }
+
+    /// <summary>Descarga la lista de NetFiltroWeb y la aplica en el equipo.</summary>
+    private async Task UpdateWebFilterAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"{_options.ServerUrl.TrimEnd('/')}/api/station/webfilter");
+            request.Headers.Add("X-Station-Id", _options.StationId.ToString());
+            request.Headers.Add("X-Station-Token", _options.Token);
+
+            using var response = await FilterHttp.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return;
+
+            var playlist = await response.Content.ReadFromJsonAsync<WebFilterPlaylistDto>(ct);
+            if (playlist is not null) _filter.Apply(playlist);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "NetFiltroWeb: no se pudo descargar la lista");
+        }
     }
 
     private async Task SendHeartbeatAsync(CancellationToken ct)

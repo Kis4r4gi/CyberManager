@@ -39,6 +39,10 @@ public class CyberApi : ApiClient
     public Task<StationDto> MaintenanceAsync(int stationId, bool enabled)
         => PostAsync<StationDto>($"/api/stations/{stationId}/maintenance?enabled={enabled.ToString().ToLower()}", new { });
 
+    /// <summary>Envía un paquete Wake on LAN al equipo (requiere MAC configurada).</summary>
+    public Task WakeStationAsync(int stationId)
+        => PostAsync($"/api/stations/{stationId}/wake", new { });
+
     public Task<StationDto> SaveStationAsync(int? id, SaveStationRequest req)
         => id is int sid ? PutAsync<StationDto>($"/api/stations/{sid}", req) : PostAsync<StationDto>("/api/stations", req);
 
@@ -214,6 +218,20 @@ public class CyberApi : ApiClient
 
     public Task<PromoVideoPlaylistDto> RefreshPromoVideosAsync()
         => PostAsync<PromoVideoPlaylistDto>("/api/promo-videos/refresh", new { });
+
+    // ---- NetFiltroWeb ----
+    public Task<List<WebFilterRuleDto>> WebFilterRulesAsync()
+        => GetAsync<List<WebFilterRuleDto>>("/api/webfilter");
+
+    public Task<WebFilterRuleDto> SaveWebFilterRuleAsync(int? id, SaveWebFilterRuleRequest req)
+        => id is int rid
+            ? PutAsync<WebFilterRuleDto>($"/api/webfilter/{rid}", req)
+            : PostAsync<WebFilterRuleDto>("/api/webfilter", req);
+
+    public Task DeleteWebFilterRuleAsync(int id) => DeleteAsync($"/api/webfilter/{id}");
+
+    public Task<object> RestoreWebFilterDefaultsAsync()
+        => PostAsync<object>("/api/webfilter/restore", new { });
 
     // ---- respaldos de la base de datos ----
     public Task<BackupListDto> BackupsAsync() => GetAsync<BackupListDto>("/api/backups");
