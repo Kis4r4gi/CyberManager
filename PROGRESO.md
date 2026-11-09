@@ -530,6 +530,12 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   actualiza `latestVersion` a `1.0.5` y que una consulta posterior a `cached=true` conserva ese
   resultado. `dotnet build CyberManager.sln` terminó con **0 errores y 0 advertencias**.
 - **Pendiente de verificación visual**: el texto de la barra de título en pantalla.
+- **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.6` y generó
+  `CyberManager-Servidor-1.0.6.exe` (166.581.814 bytes, ~158,9 MB) y
+  `CyberManager-Estacion-1.0.6.exe` (147.536.533 bytes, ~140,7 MB), con payloads x64 y x86.
+- Release `v1.0.6` publicada con ambos instaladores en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.6> el `2026-11-09T18:13:34Z`;
+  el recordatorio de 2 horas quedará para `2026-11-09T20:13:34Z`.
 
 ---
 
