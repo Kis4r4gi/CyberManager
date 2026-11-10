@@ -684,7 +684,7 @@ alrededor de la ventana, de modo que los límites de paneles y tarjetas se disti
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,
 **Maximizar/Restaurar** y **Cerrar** son los del sistema y siempre están visibles; en Windows 10/11
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
-instalada (por ejemplo, `CyberManager · Administración · v1.0.9`). La ventana se encuadra
+instalada (por ejemplo, `CyberManager · Administración · v1.0.11`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
 reajusta al cambiar de monitor o de escala (DPI).
 
