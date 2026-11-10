@@ -700,6 +700,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
     SHA-256 `504550C679AF3589847E4BFF88644D128D9ED716DC2784478252D3BB09EDD1B0`.
   - `artifacts\CyberManager-Estacion-1.0.11.exe` — 147.584.297 bytes (~140,7 MB),
     SHA-256 `E03D4ED0D1CB681688F14002020EAE5E5DD4A5184F2923B507765E9222BB2377`.
+- **Instalación local actualizada**: se ejecutó `CyberManager-Servidor-1.0.11.exe` en modo silencioso
+  sobre `C:\CyberManager\Servidor` (antes 1.0.9). El instalador detuvo el servidor, reemplazó los
+  archivos y lo reinició: proceso activo, puerto 5080 escuchando, tarea `CyberManagerServer` en
+  ejecución y `GET /api/health` → `{"status":"ok"}`.
 - **Pendiente de verificación real**: instalación con UAC, firewall, servicio del agente,
   desinstalación y control remoto contra una estación física.
 
