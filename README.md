@@ -97,7 +97,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   «Desbloquear entrada») y cerrar un programa por nombre de proceso.
 - **Control remoto de escritorio**: desde «Ver pantalla remota» active **Control remoto** para
   enviar el mouse y el teclado de la consola al equipo, incluidas las teclas Ctrl, Shift y Alt.
-  Si el equipo tiene un servidor VNC instalado, **Abrir VNC** lanza el visor configurado.
+  **Abrir VNC** lanza el visor de TightVNC (se detecta automáticamente) o el visor configurado.
+  El instalador de estación puede instalar TightVNC opcionalmente, con contraseña, puerto y
+  Firewall limitado a la red local.
 - **Barra de sesión configurable**: el cliente muestra el tiempo y el monto a cancelar en una
   ventana flotante; el administrador define el texto descriptivo y el tamaño (70–160 %) desde
   *Configuración → Control remoto y filtro*.
@@ -424,7 +426,9 @@ administración** en `C:\CyberManager\Servidor`.
      `CyberManagerServer` (SYSTEM, al inicio) y arranca el servidor.
    - **Abrir el puerto 5080 en el Firewall de Windows**: regla de entrada TCP para todos los
      perfiles de red (Windows suele clasificar como «Pública» la red del local).
-3. Al finalizar puede abrir la consola de administración.
+3. Al finalizar puede abrir la consola de administración. La página final también ofrece la casilla
+   **Iniciar el servidor ahora**, que deja el servicio activo sin abrir ventanas ni duplicar la
+   instancia si ya estaba en ejecución.
 
 El acceso directo principal **CyberManager** usa `Server\CyberManager.exe --launch-console`: inicia
 el servidor en segundo plano si aún no está activo, espera a que responda y abre la consola. También
@@ -473,18 +477,18 @@ desinstalador de cada componente en **Aplicaciones instaladas** de Windows. Cada
 ## Avisos de nuevas versiones
 
 El servidor consulta **GitHub Releases** una sola vez, al abrir la consola de administración. Si
-detecta una versión más reciente que la instalada, muestra un aviso en la parte superior de la
-consola cuando ya transcurrieron las **2 horas de espera** desde la publicación (el tiempo es
-configurable). El aviso permite abrir la página de la versión o posponerlo hasta la siguiente. No
-hay consultas periódicas: la comprobación solo se repite al volver a abrir el programa o al pulsar
-**Buscar actualizaciones ahora**.
+detecta una versión más reciente que la instalada y ya transcurrieron las **2 horas de espera**
+desde la publicación (el tiempo es configurable), muestra una ventana que pregunta si desea
+actualizar, con botones **Sí** y **No**. **Sí** abre la página de versiones del proyecto en GitHub;
+**No** oculta el aviso para esa versión. No hay consultas periódicas: la comprobación solo se repite
+al volver a abrir el programa o al pulsar **Buscar actualizaciones ahora**.
 
 - Se configura en **Configuración → Instalación → Actualizaciones**.
-- **Avisar cuando haya una nueva versión disponible**: activa o desactiva el recordatorio.
+- **Avisar cuando haya una nueva versión disponible**: activa o desactiva el aviso.
 - **Horas de espera después de la publicación**: 2 por defecto; puede ajustarse o ponerse en 0.
 - **Buscar actualizaciones ahora**: fuerza una consulta inmediata a GitHub.
-- **Recordar luego** oculta el aviso de esa versión concreta. Volverá a aparecer cuando se publique
-  una versión más nueva.
+- **No** en la ventana de actualización oculta el aviso de esa versión concreta. Volverá a aparecer
+  cuando se publique una versión más nueva.
 
 El servidor guarda el resultado en memoria y no satura la API de GitHub. La consulta no requiere
 autenticación ni envía datos del negocio: solo lee las versiones públicas del repositorio.
@@ -940,20 +944,46 @@ remoto** para enviar el mouse y el teclado de la consola al equipo:
   cliente; para operar el escritorio de Windows con otra cuenta de usuario, use VNC o Escritorio
   remoto.
 
-### VNC externo (opcional)
+### VNC externo con TightVNC (opcional)
 
-Si los equipos tienen un servidor VNC instalado (TightVNC, UltraVNC, RealVNC, etc.), la consola
-puede abrir el visor con un clic:
+El control remoto integrado no requiere software adicional, pero no puede operar la pantalla
+de inicio de sesión de Windows ni cambiar de cuenta. Para esos casos, CyberManager puede
+instalar **TightVNC 2.8.90** como componente opcional.
 
-1. Instale y configure el servidor VNC en cada estación (fuera de CyberManager).
-2. En *Configuración → Control remoto y filtro* indique la **ruta del visor VNC**
-   (`VncViewerPath`, por ejemplo `C:\Program Files\TightVNC\tvnviewer.exe`) y el **puerto VNC por
-   defecto** (`VncDefaultPort`, 5900).
+**En cada estación**
+
+1. Ejecute el instalador de estación y marque **Instalar TightVNC (servidor VNC)** en la
+   sección **Control remoto (opcional)**.
+2. Defina una contraseña de **4 a 8 caracteres** y el **puerto VNC** (1024–65535). La
+   contraseña la guarda cifrada el instalador de TightVNC.
+3. El instalador registra el servicio `tvnserver`, lo inicia y crea la regla de Firewall
+   `CyberManager VNC (TightVNC)` limitada a **Dominio/Privado** y a la **subred local**.
+4. El acceso directo **Configurar servidor VNC** abre la configuración de TightVNC y
+   actualiza la regla de Firewall al puerto actual.
+
+**En el servidor**
+
+1. Ejecute el instalador del servidor y marque **Instalar el visor TightVNC**.
+2. En *Configuración → Control remoto y filtro* puede dejar vacía la **ruta del visor**:
+   la consola detecta `tvnviewer.exe` en `C:\Program Files\TightVNC` o
+   `C:\Program Files (x86)\TightVNC`.
 3. En la ventana de pantalla remota pulse **Abrir VNC**. Se ejecutará
-   `visor.exe <IP del equipo>:<puerto>`.
+   `tvnviewer.exe <IP del equipo>::<puerto>`.
 
-La IP se toma de la ficha del equipo (*Equipos → Editar*), por lo que conviene asignar una IP fija
-o una reserva DHCP. CyberManager no instala ni configura el servidor VNC.
+La IP se toma de la ficha del equipo (*Equipos → Editar*), por lo que conviene asignar una IP
+fija o una reserva DHCP. Si usa otro visor VNC, indique su ruta en la configuración y ajuste
+el puerto.
+
+**Seguridad y licencia**
+
+- VNC clásico usa una contraseña de máximo 8 caracteres y cifrado débil. Use VNC solo en la
+  red local y nunca exponga el puerto a Internet.
+- TightVNC se distribuye como **programa separado bajo GPLv2**. Consulte
+  [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) y
+  [`LICENSE-TightVNC-GPLv2.txt`](LICENSE-TightVNC-GPLv2.txt).
+- La desinstalación solo quita TightVNC si lo instaló CyberManager y ningún otro componente
+  lo sigue usando. El marcador compartido es
+  `%ProgramData%\CyberManager\vnc-componentes.txt`.
 
 ### Wake on LAN
 
@@ -1280,5 +1310,10 @@ flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
 Este proyecto se distribuye bajo la licencia **MIT**. Puede usarlo, modificarlo y redistribuirlo,
 incluso comercialmente, conservando el aviso de copyright. Consulte el archivo
 [`LICENSE`](LICENSE) para el texto completo.
+
+Los instaladores pueden incluir **TightVNC 2.8.90** como programa separado bajo **GPLv2**.
+Consulte [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) y
+[`LICENSE-TightVNC-GPLv2.txt`](LICENSE-TightVNC-GPLv2.txt) para los avisos, hashes y enlaces
+al código fuente.
 ---
 

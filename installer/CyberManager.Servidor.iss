@@ -56,6 +56,8 @@ spanish.Firewall=Permitir el puerto 5080 en el Firewall de Windows
 english.Firewall=Allow port 5080 through Windows Firewall
 spanish.OpenConsole=Abrir la consola de administración
 english.OpenConsole=Open the administration console
+spanish.StartServer=Iniciar el servidor ahora
+english.StartServer=Start the server now
 spanish.Configuring=Configurando el servidor...
 english.Configuring=Configuring the server...
 spanish.InstallingArch64=Se instalará la versión de 64 bits, adecuada para este equipo.
@@ -70,12 +72,19 @@ spanish.InstallCancelled=La instalación se canceló para no interrumpir la oper
 english.InstallCancelled=The installation was cancelled to avoid interrupting the current operation.
 spanish.UninstallAll=Desinstalar todo CyberManager
 english.UninstallAll=Uninstall all CyberManager
+spanish.RemoteGroup=Control remoto (opcional):
+english.RemoteGroup=Remote control (optional):
+spanish.InstallVncViewer=Instalar el visor TightVNC (GPLv2) para abrir VNC desde la consola
+english.InstallVncViewer=Install the TightVNC viewer (GPLv2) to open VNC from the console
+spanish.InstallingVncViewer=Instalando el visor TightVNC...
+english.InstallingVncViewer=Installing the TightVNC viewer...
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:ShortcutsGroup}"
 Name: "startupadmin"; Description: "{cm:StartupAdmin}"; GroupDescription: "{cm:StartupGroup}"; Flags: unchecked
 Name: "serverstartup"; Description: "{cm:ServerStartup}"; GroupDescription: "{cm:StartupGroup}"
 Name: "firewall"; Description: "{cm:Firewall}"; GroupDescription: "{cm:FirewallGroup}"
+Name: "vncviewer"; Description: "{cm:InstallVncViewer}"; GroupDescription: "{cm:RemoteGroup}"; Flags: unchecked
 
 [Files]
 Source: "{#MyDistX64}\Server\*"; DestDir: "{app}\Server"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsX64InstallMode
@@ -94,6 +103,12 @@ Source: "{#MyDistX86}\Server\CyberManager.Server.exe"; DestDir: "{app}\Server"; 
 ; uninsneveruninstall evita que el desinstalador de un componente borre el del otro.
 Source: "{#MyDistX64}\Uninstaller\*"; DestDir: "{commonappdata}\CyberManager"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall; Check: IsX64InstallMode
 Source: "{#MyDistX86}\Uninstaller\*"; DestDir: "{commonappdata}\CyberManager"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall; Check: IsX86InstallMode
+; TightVNC se distribuye como programa separado (GPLv2). El servidor solo instala el
+; visor para abrir VNC desde la consola; el servidor VNC se instala en las estaciones.
+Source: "vnc\tightvnc-2.8.90-gpl-setup-64bit.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion; Tasks: vncviewer; Check: IsX64InstallMode
+Source: "vnc\tightvnc-2.8.90-gpl-setup-32bit.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion; Tasks: vncviewer; Check: IsX86InstallMode
+Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion; Tasks: vncviewer
+Source: "..\LICENSE-TightVNC-GPLv2.txt"; DestDir: "{app}"; Flags: ignoreversion; Tasks: vncviewer
 
 [InstallDelete]
 ; Al reinstalar con la otra arquitectura, elimina los binarios nativos que no
@@ -119,6 +134,13 @@ Name: "{commonstartup}\CyberManager"; Filename: "{app}\Server\CyberManager.exe";
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-servidor.ps1"" -RegistrarTarea -AbrirFirewall"; StatusMsg: "{cm:Configuring}"; Flags: runhidden waituntilterminated; Tasks: serverstartup or firewall
+; Visor TightVNC opcional: solo se instala si se marca la tarea de control remoto.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Viewer -Component servidor -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-64bit.msi"""; StatusMsg: "{cm:InstallingVncViewer}"; Flags: runhidden waituntilterminated; Tasks: vncviewer; Check: IsX64InstallMode
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Viewer -Component servidor -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-32bit.msi"""; StatusMsg: "{cm:InstallingVncViewer}"; Flags: runhidden waituntilterminated; Tasks: vncviewer; Check: IsX86InstallMode
+; Casilla de la página final: deja el servidor activo sin abrir la consola.
+; El lanzador comprueba /api/health y espera la respuesta; así, si también se marcó
+; «Abrir la consola», esta no inicia una segunda instancia del servidor.
+Filename: "{app}\Server\CyberManager.exe"; Parameters: "--start-server"; Description: "{cm:StartServer}"; WorkingDir: "{app}\Server"; Flags: runhidden waituntilterminated postinstall skipifsilent; Check: ShouldStartServer
 Filename: "{app}\Server\CyberManager.exe"; Parameters: "--launch-console"; Description: "{cm:OpenConsole}"; WorkingDir: "{app}\Server"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: ShouldOpenConsole
 
 [UninstallRun]
@@ -222,6 +244,13 @@ function ShouldOpenConsole(): Boolean;
 begin
   // Si algo estaba en ejecución se reinicia en ssDone; así no se abren dos consolas.
   Result := not (ServerWasRunning or ConsoleWasRunning);
+end;
+
+function ShouldStartServer(): Boolean;
+begin
+  // Si el servidor ya estaba en ejecución, ssDone lo reinicia; la casilla sobra.
+  // En una instalación nueva aparece marcada por defecto para dejar el servicio activo.
+  Result := not ServerWasRunning;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

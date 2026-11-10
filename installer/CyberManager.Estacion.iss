@@ -66,10 +66,35 @@ spanish.InstallCancelled=La instalación se canceló para no interrumpir la sesi
 english.InstallCancelled=The installation was cancelled to avoid interrupting the current session.
 spanish.UninstallAll=Desinstalar todo CyberManager
 english.UninstallAll=Uninstall all CyberManager
+spanish.RemoteGroup=Control remoto (opcional):
+english.RemoteGroup=Remote control (optional):
+spanish.InstallVncServer=Instalar TightVNC (servidor VNC) para control remoto
+english.InstallVncServer=Install TightVNC (VNC server) for remote control
+spanish.VncPageTitle=Servidor VNC (TightVNC)
+english.VncPageTitle=VNC server (TightVNC)
+spanish.VncPageDescription=Defina la contraseña y el puerto del servidor VNC. El acceso se limita a la red local.
+english.VncPageDescription=Set the VNC server password and port. Access is limited to the local network.
+spanish.VncPageSubtitle=La contraseña admite de 4 a 8 caracteres (limitación de VNC). El puerto debe estar entre 1024 y 65535. TightVNC se distribuye como programa separado bajo GPLv2; consulte THIRD-PARTY-NOTICES.md y LICENSE-TightVNC-GPLv2.txt en la carpeta de instalación.
+english.VncPageSubtitle=The password allows 4 to 8 characters (VNC limitation). The port must be between 1024 and 65535. TightVNC is distributed as a separate program under GPLv2; see THIRD-PARTY-NOTICES.md and LICENSE-TightVNC-GPLv2.txt in the installation folder.
+spanish.VncPassword=Contraseña VNC
+english.VncPassword=VNC password
+spanish.VncPort=Puerto VNC
+english.VncPort=VNC port
+spanish.VncPasswordInvalid=La contraseña VNC debe tener entre 4 y 8 caracteres.
+english.VncPasswordInvalid=The VNC password must be 4 to 8 characters long.
+spanish.VncPasswordAscii=Use solo letras, números y símbolos sin espacios ni comillas (ASCII) en la contraseña VNC.
+english.VncPasswordAscii=Use only letters, numbers and symbols without spaces or quotes (ASCII) in the VNC password.
+spanish.VncPortInvalid=El puerto VNC debe ser un número entre 1024 y 65535.
+english.VncPortInvalid=The VNC port must be a number between 1024 and 65535.
+spanish.InstallingVnc=Instalando y configurando TightVNC...
+english.InstallingVnc=Installing and configuring TightVNC...
+spanish.VncConfigShortcut=Configurar servidor VNC
+english.VncConfigShortcut=Configure VNC server
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:ShortcutsGroup}"
 Name: "startupclient"; Description: "{cm:StartupClient}"; GroupDescription: "{cm:StartupGroup}"
+Name: "vncserver"; Description: "{cm:InstallVncServer}"; GroupDescription: "{cm:RemoteGroup}"; Flags: unchecked
 
 [Files]
 Source: "{#MyDistX64}\Client\*"; DestDir: "{app}\Client"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsX64InstallMode
@@ -84,6 +109,12 @@ Source: "{#MyDistX86}\README.md"; DestDir: "{app}"; Flags: ignoreversion isreadm
 ; uninsneveruninstall evita que el desinstalador de un componente borre el del otro.
 Source: "{#MyDistX64}\Uninstaller\*"; DestDir: "{commonappdata}\CyberManager"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall; Check: IsX64InstallMode
 Source: "{#MyDistX86}\Uninstaller\*"; DestDir: "{commonappdata}\CyberManager"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall; Check: IsX86InstallMode
+; TightVNC se distribuye como programa separado (GPLv2) y solo se copia si se marca
+; la tarea de control remoto. El MSI se guarda para poder desinstalarlo después.
+Source: "vnc\tightvnc-2.8.90-gpl-setup-64bit.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion; Tasks: vncserver; Check: IsX64InstallMode
+Source: "vnc\tightvnc-2.8.90-gpl-setup-32bit.msi"; DestDir: "{app}\vnc"; Flags: ignoreversion; Tasks: vncserver; Check: IsX86InstallMode
+Source: "..\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion; Tasks: vncserver
+Source: "..\LICENSE-TightVNC-GPLv2.txt"; DestDir: "{app}"; Flags: ignoreversion; Tasks: vncserver
 
 [InstallDelete]
 ; Al reinstalar con la otra arquitectura, elimina los binarios nativos que no
@@ -100,6 +131,7 @@ Type: files; Name: "{app}\Agent\mscordaccore_amd64_*.dll"; Check: IsX86InstallMo
 [Icons]
 Name: "{group}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager.Client.exe"; WorkingDir: "{app}\Client"
 Name: "{group}\Configurar agente de estación"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-agente.ps1"""
+Name: "{group}\{cm:VncConfigShortcut}"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-vnc.ps1"""; WorkingDir: "{app}"; Check: ShouldCreateVncShortcut
 Name: "{group}\Carpeta de instalación"; Filename: "{app}"
 Name: "{group}\{cm:UninstallAll}"; Filename: "{commonappdata}\CyberManager\CyberManager.Uninstaller.exe"
 Name: "{group}\Desinstalar CyberManager Estación"; Filename: "{uninstallexe}"
@@ -107,6 +139,10 @@ Name: "{autodesktop}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager
 Name: "{commonstartup}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager.Client.exe"; WorkingDir: "{app}\Client"; Tasks: startupclient
 
 [Run]
+; Instala TightVNC en modo silencioso si se marcó la tarea de control remoto. La
+; contraseña se pasa en un archivo temporal para no exponerla en la línea de comandos.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Server -Component estacion -Port {code:GetVncPort} -PasswordFile ""{tmp}\cybermanager-vnc.pwd"" -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-64bit.msi"""; StatusMsg: "{cm:InstallingVnc}"; Flags: runhidden waituntilterminated; Check: ShouldInstallVncServer and IsX64InstallMode
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Server -Component estacion -Port {code:GetVncPort} -PasswordFile ""{tmp}\cybermanager-vnc.pwd"" -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-32bit.msi"""; StatusMsg: "{cm:InstallingVnc}"; Flags: runhidden waituntilterminated; Check: ShouldInstallVncServer and IsX86InstallMode
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-agente.ps1"""; Description: "{cm:ConfigureAgent}"; StatusMsg: "{cm:OpeningAgent}"; Flags: postinstall nowait skipifsilent
 Filename: "{app}\Client\CyberManager.Client.exe"; Description: "{cm:OpenClient}"; WorkingDir: "{app}\Client"; Flags: nowait postinstall skipifsilent; Check: ShouldOpenClient
 
@@ -117,6 +153,9 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile
 var
   ClientWasRunning: Boolean;
   AgentWasRunning: Boolean;
+  VncPage: TInputQueryWizardPage;
+  VncPassword: String;
+  VncPort: Integer;
 
 function IsX64InstallMode(): Boolean;
 begin
@@ -163,6 +202,83 @@ begin
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
+function IsVncServerInstalled(): Boolean;
+begin
+  Result := FileExists(ExpandConstant('{commonpf}\TightVNC\tvnserver.exe')) or
+            FileExists(ExpandConstant('{commonpf32}\TightVNC\tvnserver.exe'));
+end;
+
+function ShouldCreateVncShortcut(): Boolean;
+begin
+  // La tarea se instala en [Run], después de [Icons]; por eso también se comprueba
+  // la tarea y no solo si TightVNC ya está presente.
+  Result := WizardIsTaskSelected('vncserver') or IsVncServerInstalled();
+end;
+
+function ShouldInstallVncServer(): Boolean;
+begin
+  // En modo silencioso no hay página de contraseña: la tarea se omite para no
+  // instalar un servidor VNC sin contraseña.
+  Result := WizardIsTaskSelected('vncserver') and (Length(VncPassword) >= 4);
+end;
+
+function GetVncPort(Param: String): String;
+begin
+  Result := IntToStr(VncPort);
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if PageID = VncPage.ID then
+    Result := not WizardIsTaskSelected('vncserver');
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  PortText: String;
+  I: Integer;
+begin
+  Result := True;
+  if CurPageID <> VncPage.ID then Exit;
+
+  VncPassword := Trim(VncPage.Values[0]);
+  if (Length(VncPassword) < 4) or (Length(VncPassword) > 8) then
+  begin
+    MsgBox(ExpandConstant('{cm:VncPasswordInvalid}'), mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  for I := 1 to Length(VncPassword) do
+  begin
+    if (Ord(VncPassword[I]) < 33) or (Ord(VncPassword[I]) > 126) or
+       (VncPassword[I] = '"') then
+    begin
+      MsgBox(ExpandConstant('{cm:VncPasswordAscii}'), mbError, MB_OK);
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  PortText := Trim(VncPage.Values[1]);
+  VncPort := StrToIntDef(PortText, 0);
+  if (VncPort < 1024) or (VncPort > 65535) then
+  begin
+    MsgBox(ExpandConstant('{cm:VncPortInvalid}'), mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
+  // El script de instalación lee la contraseña de este archivo temporal y lo borra.
+  if not SaveStringToFile(ExpandConstant('{tmp}\cybermanager-vnc.pwd'), VncPassword, False) then
+  begin
+    MsgBox('No se pudo preparar la contraseña de VNC. Verifique el espacio temporal.',
+      mbError, MB_OK);
+    Result := False;
+  end;
+end;
+
 // Inno Setup llama a esta función antes de copiar los archivos. Si el usuario no
 // acepta cerrar el cliente, se devuelve un mensaje y la instalación se cancela.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -204,6 +320,9 @@ begin
   // ssDone se ejecuta después de [Run], cuando el agente ya fue configurado.
   if CurStep <> ssDone then Exit;
 
+  // El script de VNC ya borra el archivo, pero se limpia también si falló o se omitió.
+  DeleteFile(ExpandConstant('{tmp}\cybermanager-vnc.pwd'));
+
   if AgentWasRunning then
     StartAgentService;
 
@@ -216,6 +335,9 @@ procedure InitializeWizard();
 var
   ArchInfo: String;
 begin
+  VncPassword := '';
+  VncPort := 5900;
+
   if Is64BitInstallMode then
     ArchInfo := ExpandConstant('{cm:InstallingArch64}')
   else
@@ -223,5 +345,16 @@ begin
 
   WizardForm.WelcomeLabel2.Caption :=
     WizardForm.WelcomeLabel2.Caption + #13#10#13#10 + ArchInfo;
+
+  // Página de contraseña y puerto del servidor VNC; solo aparece si se marca la tarea.
+  VncPage := CreateInputQueryPage(wpSelectTasks,
+    ExpandConstant('{cm:VncPageTitle}'),
+    ExpandConstant('{cm:VncPageDescription}'),
+    ExpandConstant('{cm:VncPageSubtitle}'));
+  VncPage.Add(ExpandConstant('{cm:VncPassword}'), True);
+  VncPage.Add(ExpandConstant('{cm:VncPort}'), False);
+  VncPage.Values[0] := '';
+  VncPage.Values[1] := '5900';
+
   Log('Modo de instalación: ' + ArchInfo);
 end;

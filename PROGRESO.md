@@ -200,13 +200,13 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 - **Aviso de nueva versión**: `UpdateService` consulta las versiones publicadas en
   `Kis4r4gi/CyberManager` y guarda el resultado en memoria durante 10 minutos para no agotar el
-  límite de la API de GitHub. `UpdateReminderWorker` revisa cada 15 minutos y, cuando la versión
-  más reciente supera la instalada y han pasado las horas de espera, envía el evento SignalR
-  `UpdateAvailable` a las consolas.
+  límite de la API de GitHub. La consola consulta GitHub **una sola vez, al abrirse**, y si la
+  versión más reciente supera la instalada y ya pasaron las horas de espera, muestra una ventana
+  con botones **Sí** y **No**. **Sí** abre la página de versiones del proyecto en GitHub; **No**
+  oculta el aviso para esa versión.
 - **Espera de 2 horas**: las claves `UpdateReminderEnabled` (activado), `UpdateReminderDelayHours`
-  (2) y `UpdateReminderDismissedVersion` controlan el aviso. El recordatorio aparece en una barra
-  superior de la consola con «Ver novedades» y «Recordar luego»; el segundo oculta esa versión
-  hasta la próxima.
+  (2) y `UpdateReminderDismissedVersion` controlan el aviso. No hay comprobaciones periódicas ni
+  consultas en segundo plano.
 - **Configuración**: **Configuración → Instalación → Actualizaciones** permite activar/desactivar,
   cambiar la espera, consultar GitHub inmediatamente y ver la fecha en que aparecerá el aviso.
 - **API**: `GET /api/updates/latest?refresh=true|false` y `POST /api/updates/dismiss`. Solo lectura
@@ -704,8 +704,68 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   sobre `C:\CyberManager\Servidor` (antes 1.0.9). El instalador detuvo el servidor, reemplazó los
   archivos y lo reinició: proceso activo, puerto 5080 escuchando, tarea `CyberManagerServer` en
   ejecución y `GET /api/health` → `{"status":"ok"}`.
+- **Casilla «Iniciar el servidor ahora» (preparada, pendiente de recompilar)**: la página final del
+  instalador de servidor incluye una casilla junto al README que ejecuta
+  `CyberManager.exe --start-server`. El lanzador comprueba `/api/health`, espera la respuesta y no
+  duplica la instancia ni abre ventanas; `ShouldStartServer` la oculta si el servidor ya estaba en
+  ejecución. No forma parte de los instaladores 1.0.11 ya publicados.
+- **Aviso de actualización con ventana Sí/No (preparado, pendiente de recompilar)**: al abrir la
+  consola se consulta GitHub una sola vez; si hay una versión nueva y ya pasó la espera, aparece
+  una ventana con **Sí** y **No**. **Sí** abre `https://github.com/Kis4r4gi/CyberManager/releases`;
+  **No** oculta el aviso para esa versión. Se retiró la barra superior y la comprobación duplicada
+  del tablero. No forma parte de los instaladores 1.0.11 ya publicados.
 - **Pendiente de verificación real**: instalación con UAC, firewall, servicio del agente,
   desinstalación y control remoto contra una estación física.
+
+### TightVNC opcional en estaciones (1.0.12, 2026-11-10)
+
+- **Componente opcional**: el instalador de estación agrega la tarea **Instalar TightVNC
+  (servidor VNC)** en el grupo **Control remoto (opcional)**. El instalador del servidor agrega
+  la tarea **Instalar el visor TightVNC**. Ambas están desmarcadas por defecto.
+- **Página de configuración**: si se marca la tarea de estación, aparece una página con
+  contraseña (4–8 caracteres ASCII) y puerto (1024–65535). La contraseña se escribe en un archivo
+  temporal, se pasa a `instalar-vnc.ps1` y se borra al terminar; no aparece en la línea de
+  comandos. En modo silencioso la tarea se omite para no instalar un VNC sin contraseña.
+- **Instalación silenciosa**: `installer\scripts\instalar-vnc.ps1` usa los MSI oficiales de
+  TightVNC 2.8.90 con `ADDLOCAL=Server` o `Viewer`, registra el servicio `tvnserver`, aplica
+  `VALUE_OF_PASSWORD`, `VALUE_OF_RFBPORT`, `SERVER_ALLOW_SAS` y desactiva las excepciones de
+  Firewall del MSI.
+- **Firewall**: regla `CyberManager VNC (TightVNC)`, TCP, puerto configurable, perfiles
+  `Domain,Private` y `RemoteAddress LocalSubnet`. Nunca se abre a Internet.
+- **Acceso directo**: **Configurar servidor VNC** ejecuta
+  `installer\scripts\configurar-vnc.ps1`, que se autoeleva, actualiza la regla de Firewall con
+  el puerto leído de `HKLM\SOFTWARE\TightVNC\Server\RfbPort` y abre
+  `tvnserver.exe -controlservice` (o `-configservice` si el servicio no responde).
+- **Visor integrado**: `ScreenViewerWindow.OpenVncAsync` detecta automáticamente
+  `tvnviewer.exe` en `Program Files\TightVNC` o `Program Files (x86)\TightVNC` cuando
+  `VncViewerPath` está vacío o no existe, y usa `IP::puerto` (doble dos puntos) para el puerto
+  RFB explícito. `SettingsView` documenta la detección automática.
+- **Desinstalación compartida**: `desinstalar-servicios.ps1` invoca
+  `instalar-vnc.ps1 -Action Uninstall -Component estacion|servidor`. El marcador
+  `%ProgramData%\CyberManager\vnc-componentes.txt` evita borrar TightVNC si el otro componente
+  todavía lo usa. Si el equipo ya tenía TightVNC antes de CyberManager, no se desinstala.
+- **Licencia**: TightVNC se distribuye como programa separado bajo GPLv2. Se agregaron
+  `THIRD-PARTY-NOTICES.md`, `LICENSE-TightVNC-GPLv2.txt`, los hashes SHA-256 de los MSI y del
+  código fuente, y `scripts\download-tightvnc.ps1` (verifica tamaño y hash; `-IncludeSource`
+  descarga el código fuente).
+- **Compilación**: `scripts\build-installer.ps1` llama a `download-tightvnc.ps1` antes de
+  compilar los instaladores y falla con un mensaje claro si faltan los MSI. `installer\vnc\` está
+  en `.gitignore`; los binarios no se versionan. `-SkipVncDownload` reutiliza los MSI locales.
+- **Verificación de propiedades MSI (2026-11-10)**: se abrieron los MSI 2.8.90 x64 y x86 con
+  Windows Installer y se confirmó la tabla `Property` (`SET_PASSWORD`, `SET_RFBPORT`,
+  `SET_USEVNCAUTHENTICATION`, `SET_ACCEPTRFBCONNECTIONS`, `VALUE_OF_RFBPORT`,
+  `VALUE_OF_USEVNCAUTHENTICATION`, `VALUE_OF_ACCEPTRFBCONNECTIONS`,
+  `SERVER_REGISTER_AS_SERVICE`, `SERVER_SERVICE_ONLY`, `SERVER_ALLOW_SAS`,
+  `SERVER_ADD_FIREWALL_EXCEPTION`, `VIEWER_ADD_FIREWALL_EXCEPTION`,
+  `VIEWER_ASSOCIATE_VNC_EXTENSION`). `VALUE_OF_PASSWORD` no está en la tabla `Property` porque la
+  lee una acción personalizada, pero la cadena sí existe en el binario del MSI: se pasa en la
+  línea de comandos y el instalador la aplica. `build-installer.ps1` compila ambos `.iss` en una
+  carpeta temporal (`CyberManager-Estacion-1.0.11.exe` y `CyberManager-Servidor-1.0.11.exe`) sin
+  tocar `artifacts`. La sintaxis de los cinco scripts de PowerShell también quedó validada.
+- **Pendiente de verificación real**: instalar TightVNC en una estación x64 y x86, comprobar el
+  servicio y la contraseña, abrir VNC desde la consola, cambiar el puerto y verificar la regla de
+  Firewall, y desinstalar estación/servidor en distinto orden para validar el marcador compartido.
+  También queda pendiente regenerar los instaladores 1.0.12 y publicar la release.
 
 ---
 
@@ -727,6 +787,13 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -NoB
 
 # Recompilar los instaladores con dist\x64 y dist\x86 existentes (sin subir versión)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -SkipPublish
+
+# Descargar y verificar los MSI de TightVNC (build-installer lo hace automáticamente)
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\download-tightvnc.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\download-tightvnc.ps1 -IncludeSource
+
+# Reutilizar los MSI de TightVNC ya descargados
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -SkipVncDownload
 
 # Publicación de diagnóstico de una sola arquitectura (sin instalador; sube la versión)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Architecture x64 -SkipInstaller -NoBump

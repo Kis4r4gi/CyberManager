@@ -371,9 +371,25 @@ public sealed class ScreenViewerWindow : Window
             settings.TryGetValue("VncViewerPath", out var viewer);
             var port = settings.TryGetValue("VncDefaultPort", out var text) && int.TryParse(text, out var p) ? p : 5900;
 
+            // Si no hay ruta configurada, se busca el visor de TightVNC instalado por el
+            // instalador del servidor. Así «Abrir VNC» funciona sin configuración manual.
             if (string.IsNullOrWhiteSpace(viewer) || !File.Exists(viewer))
             {
-                Ui.Info("Configure la ruta del visor VNC en Configuración › Control remoto.\n\n" +
+                var candidates = new[]
+                {
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "TightVNC", "tvnviewer.exe"),
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                        "TightVNC", "tvnviewer.exe")
+                };
+
+                viewer = candidates.FirstOrDefault(File.Exists);
+            }
+
+            if (string.IsNullOrWhiteSpace(viewer) || !File.Exists(viewer))
+            {
+                Ui.Info("No se encontró el visor VNC. Instale el visor TightVNC desde el instalador " +
+                        "del servidor o indique su ruta en Configuración › Control remoto.\n\n" +
                         "El control remoto integrado de esta ventana funciona sin software adicional.",
                     "Visor VNC no configurado");
                 return;
@@ -388,10 +404,11 @@ public sealed class ScreenViewerWindow : Window
                 return;
             }
 
+            // TightVNC usa host::puerto (doble dos puntos) para un puerto RFB explícito.
             Process.Start(new ProcessStartInfo
             {
                 FileName = viewer,
-                Arguments = $"{station.IpAddress}:{port}",
+                Arguments = $"{station.IpAddress}::{port}",
                 UseShellExecute = true
             });
         }

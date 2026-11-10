@@ -4,6 +4,9 @@ obj/
 dist/
 artifacts/
 
+# Instaladores de TightVNC (se descargan con scripts\download-tightvnc.ps1)
+installer/vnc/
+
 # Base de datos local (se crea con datos de demostración al arrancar)
 *.db
 *.db-shm

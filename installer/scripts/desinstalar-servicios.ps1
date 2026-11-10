@@ -19,10 +19,22 @@ param(
 $ErrorActionPreference = "SilentlyContinue"
 $todo = -not ($Servidor -or $Agente)
 
+function Uninstall-CyberManagerVnc([string]$Component) {
+    $script = Join-Path $PSScriptRoot "instalar-vnc.ps1"
+    if (-not (Test-Path $script)) { return }
+
+    Write-Host "==> Liberando TightVNC ($Component)..." -ForegroundColor Cyan
+    # Se ejecuta en un proceso aparte porque instalar-vnc.ps1 termina con exit.
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script `
+        -Action Uninstall -Component $Component | Out-Host
+}
+
 Write-Host "==> Deteniendo servicios de CyberManager..." -ForegroundColor Cyan
 
 # ---------- Agente ----------
 if ($Agente -or $todo) {
+    Uninstall-CyberManagerVnc "estacion"
+
     $agent = Get-Service -Name "CyberManagerAgent" -ErrorAction SilentlyContinue
     if ($agent) {
         if ($agent.Status -ne "Stopped") {
@@ -43,6 +55,8 @@ if ($Agente -or $todo) {
 
 # ---------- Servidor ----------
 if ($Servidor -or $todo) {
+    Uninstall-CyberManagerVnc "servidor"
+
     $task = Get-ScheduledTask -TaskName "CyberManagerServer" -ErrorAction SilentlyContinue
     if ($task) {
         Stop-ScheduledTask -TaskName "CyberManagerServer"

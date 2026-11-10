@@ -36,6 +36,14 @@
 .PARAMETER Clean
     Al terminar, elimina las carpetas bin y obj de los proyectos para reducir el tamaño en disco.
 
+.PARAMETER SkipVncDownload
+    Usa los MSI de TightVNC que ya estén en installer\vnc sin descargarlos. Si faltan,
+    la compilación de los instaladores falla con un mensaje que indica cómo obtenerlos.
+
+.PARAMETER IncludeVncSource
+    También descarga el código fuente GPL de TightVNC en installer\vnc. Útil para adjuntarlo
+    a la release y cumplir con la distribución del código fuente.
+
 .EXAMPLE
     .\scripts\build-installer.ps1
 
@@ -55,7 +63,9 @@ param(
     [switch]$SkipPublish,
     [switch]$SkipInstaller,
     [switch]$InstallInnoSetup,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$SkipVncDownload,
+    [switch]$IncludeVncSource
 )
 
 $ErrorActionPreference = "Stop"
@@ -283,6 +293,34 @@ else {
         New-Item -ItemType Directory -Force -Path $scriptsTarget | Out-Null
         Copy-Item -Path (Join-Path $installerDir "scripts\*") -Destination $scriptsTarget -Recurse -Force
         Copy-Item -Path (Join-Path $repoRoot "README.md") -Destination $distArch -Force
+    }
+}
+
+if (-not $SkipInstaller) {
+    # TightVNC se incluye como programa separado (GPLv2). Los MSI no se versionan:
+    # se descargan y verifican antes de compilar los instaladores.
+    $vncDir = Join-Path $installerDir "vnc"
+    if (-not $SkipVncDownload) {
+        $downloadScript = Join-Path $PSScriptRoot "download-tightvnc.ps1"
+        if (-not (Test-Path $downloadScript)) {
+            throw "No se encontró $downloadScript."
+        }
+
+        Write-Step "Descargando y verificando los instaladores de TightVNC..."
+        $downloadArgs = @("-Destination", $vncDir)
+        if ($IncludeVncSource) { $downloadArgs += "-IncludeSource" }
+
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $downloadScript @downloadArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudieron descargar los MSI de TightVNC."
+        }
+    }
+
+    foreach ($msi in @("tightvnc-2.8.90-gpl-setup-64bit.msi", "tightvnc-2.8.90-gpl-setup-32bit.msi")) {
+        $path = Join-Path $vncDir $msi
+        if (-not (Test-Path $path)) {
+            throw "Falta $msi en $vncDir. Ejecute scripts\download-tightvnc.ps1 o quite -SkipVncDownload."
+        }
     }
 }
 

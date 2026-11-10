@@ -1077,8 +1077,9 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(Kit.Section("Control remoto VNC"));
         panel.Children.Add(Description(
             "El control remoto integrado de «Ver pantalla remota» funciona sin software adicional. " +
-            "Si además usa un servidor VNC en los equipos, indique aquí la ruta del visor para abrirlo " +
-            "con un clic desde la consola."));
+            "Si instaló TightVNC con el instalador, la consola detecta el visor automáticamente; " +
+            "también puede indicar aquí una ruta personalizada. El puerto debe coincidir con el " +
+            "configurado en la estación y el Firewall solo permite la red local."));
         var vnc = new UniformGrid { Columns = 2 };
         AddText(vnc, "VncViewerPath", "Ruta del visor VNC (opcional)", "");
         AddText(vnc, "VncDefaultPort", "Puerto VNC por defecto", "5900");
@@ -1433,8 +1434,9 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(Kit.Section("Actualizaciones"));
         panel.Children.Add(Description(
             "CyberManager consulta las versiones publicadas en GitHub una sola vez, al abrir la consola. " +
-            "Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior. " +
-            "Use «Buscar actualizaciones ahora» si desea comprobarlo manualmente."));
+            "Cuando aparece una versión nueva, la consola pregunta si desea actualizar y, si acepta, " +
+            "abre la página de versiones del proyecto. Use «Buscar actualizaciones ahora» si desea " +
+            "comprobarlo manualmente."));
 
         var reminder = new UniformGrid { Columns = 1 };
         AddCheck(reminder, "UpdateReminderEnabled",
@@ -1462,8 +1464,8 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         panel.Children.Add(Description(
             "El aviso aparece al abrir la consola una vez transcurridas las horas de espera " +
-            "(2 por defecto). Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese " +
-            "aviso hasta la próxima versión."));
+            "(2 por defecto). Puede desactivarlo o cambiar la espera; al responder «No» se oculta " +
+            "ese aviso hasta la próxima versión."));
 
         panel.Children.Add(Kit.Section("Desinstalación"));
         panel.Children.Add(Description(
@@ -1666,7 +1668,7 @@ public sealed class SettingsView : UserControl, IRefreshable
         }
         else if (info.IsReminderDue)
         {
-            _updateStatus.Text = L.T("El aviso ya se muestra en la parte superior de la consola.");
+            _updateStatus.Text = L.T("El aviso se muestra al abrir la consola.");
         }
         else if (info.ReminderAtUtc is DateTime reminderAt)
         {
