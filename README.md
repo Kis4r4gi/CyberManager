@@ -1278,3 +1278,5 @@ flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
 Este proyecto se distribuye bajo la licencia **MIT**. Puede usarlo, modificarlo y redistribuirlo,
 incluso comercialmente, conservando el aviso de copyright. Consulte el archivo
 [`LICENSE`](LICENSE) para el texto completo.
+---
+
