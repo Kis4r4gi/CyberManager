@@ -1489,9 +1489,25 @@ public sealed class SettingsView : UserControl, IRefreshable
                    "3. Registre la tasa del día y abra la caja antes de cobrar.\n" +
                    "4. Registre cada equipo y copie su ID y token en la configuración del cliente.\n" +
                    "5. Instale el agente como servicio en cada PC para las órdenes de energía.\n" +
-                   "6. Configure el cliente para iniciar sesión automáticamente con Windows (modo kiosco)."
+                   "6. Configure el número máximo de equipos permitidos en esta consola."
         };
         panel.Children.Add(steps);
+
+        panel.Children.Add(Kit.Section("Límite de equipos"));
+        panel.Children.Add(Description(
+            "Número máximo de equipos que pueden registrarse en el servidor. " +
+            "Si el límite se alcanza, no se podrán agregar más equipos hasta aumentar el límite o desactivar algunos."));
+        var maxStationsGrid = new UniformGrid { Columns = 2 };
+        var maxStationsBox = new TextBox
+        {
+            Text = "10",
+            Width = 100,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            ToolTip = "Número máximo de equipos (estaciones) permitidos en el servidor"
+        };
+        AddText(maxStationsGrid, "MaxStations", "Máximo de equipos", "10");
+        maxStationsGrid.Children.Add(maxStationsBox);
+        panel.Children.Add(maxStationsGrid);
 
         panel.Children.Add(Kit.Section("Datos de conexión del servidor"));
         AddCode(panel, "URL del servidor en esta consola", App.ServerUrl);

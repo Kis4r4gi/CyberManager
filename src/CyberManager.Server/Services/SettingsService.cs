@@ -29,7 +29,7 @@ public static class SettingsKeys
     public const string PrinterName = "PrinterName";
     /// <summary>Impresora para cierres, reportes y documentos de trabajo.</summary>
     public const string WorkPrinterName = "WorkPrinterName";
-    public const string KioskMode = "KioskMode";
+    public const string MaxStations = "MaxStations";
     public const string InvoicePrefix = "InvoicePrefix";
     public const string ControlNumberStart = "ControlNumberStart";
     public const string BackupAutoEnabled = "BackupAutoEnabled";

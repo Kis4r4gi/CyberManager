@@ -367,7 +367,7 @@ public static class DbSeeder
             [SettingsKeys.AllowPostpaid] = "true",
             [SettingsKeys.PrinterName] = "",
             [SettingsKeys.WorkPrinterName] = "",
-            [SettingsKeys.KioskMode] = "false",
+            [SettingsKeys.MaxStations] = "10",
             [SettingsKeys.InvoicePrefix] = "00",
             [SettingsKeys.BackupAutoEnabled] = "true",
             [SettingsKeys.BackupIntervalHours] = "24",

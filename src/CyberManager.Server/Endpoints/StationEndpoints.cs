@@ -31,6 +31,15 @@ public static class StationEndpoints
             if (await db.Stations.AnyAsync(s => s.Name == req.Name))
                 throw new AppException("Ya existe un equipo con ese nombre.", 409);
 
+            // Verificar límite máximo de equipos configurado
+            var maxStationsSetting = await db.Settings.FirstOrDefaultAsync(s => s.Key == SettingsKeys.MaxStations);
+            if (maxStationsSetting is not null && int.TryParse(maxStationsSetting.Value, out var max))
+            {
+                var currentCount = await db.Stations.CountAsync(s => s.Active);
+                if (currentCount >= max)
+                    throw new AppException($"No se pueden agregar más equipos. Límite actual: {max} equipos.", 409);
+            }
+
             var st = new Station
             {
                 Name = req.Name, IpAddress = req.IpAddress, MacAddress = req.MacAddress,
