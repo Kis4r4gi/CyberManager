@@ -506,8 +506,8 @@ public static class L
             // ---------- Actualizaciones ----------
             ["Versión"] = "Version",
             ["Nueva versión disponible"] = "New version available",
-            ["Ver novedades"] = "View release",
-            ["Recordar luego"] = "Remind me later",
+            ["Hay una nueva versión disponible:"] = "A new version is available:",
+            ["¿Desea actualizar ahora?"] = "Do you want to update now?",
             ["Versión publicada:"] = "Published:",
             ["Actualización disponible"] = "Update available",
             ["Actualización"] = "Update",
@@ -524,12 +524,11 @@ public static class L
                 "New version reminders are disabled.",
             ["Aviso oculto para esta versión. Se mostrará con la próxima."] =
                 "Reminder hidden for this version. It will show again for the next one.",
-            ["El aviso ya se muestra en la parte superior de la consola."] =
-                "The reminder is already shown at the top of the console.",
+            ["El aviso se muestra al abrir la consola."] =
+                "The reminder is shown when the console opens.",
             ["El aviso aparecerá el"] = "The reminder will appear on",
             ["El aviso aparecerá cuando GitHub informe la fecha de publicación."] =
                 "The reminder will appear once GitHub reports the release date.",
-            ["No se pudo ocultar el aviso"] = "Could not hide the reminder",
             ["Avisar cuando haya una nueva versión disponible"] =
                 "Notify when a new version is available",
             ["Horas de espera después de la publicación"] =
@@ -538,10 +537,10 @@ public static class L
             ["Consultando GitHub..."] = "Checking GitHub...",
             ["El servidor consulta GitHub automáticamente."] =
                 "The server checks GitHub automatically.",
-            ["El servidor consulta las versiones publicadas en GitHub cada 15 minutos. Cuando aparece una versión nueva, la consola muestra un recordatorio en la parte superior."] =
-                "The server checks the versions published on GitHub every 15 minutes. When a new version appears, the console shows a reminder at the top.",
-            ["El aviso aparece 2 horas después de publicada una versión, por defecto. Puede desactivarlo o cambiar la espera; «Recordar luego» oculta ese aviso hasta la próxima versión."] =
-                "The reminder appears 2 hours after a version is published, by default. You can disable it or change the wait; “Remind me later” hides that reminder until the next version.",
+            ["CyberManager consulta las versiones publicadas en GitHub una sola vez, al abrir la consola. Cuando aparece una versión nueva, la consola pregunta si desea actualizar y, si acepta, abre la página de versiones del proyecto. Use «Buscar actualizaciones ahora» si desea comprobarlo manualmente."] =
+                "CyberManager checks the versions published on GitHub only once, when the console opens. When a new version appears, the console asks whether to update and, if accepted, opens the project's releases page. Use “Check for updates now” to check manually.",
+            ["El aviso aparece al abrir la consola una vez transcurridas las horas de espera (2 por defecto). Puede desactivarlo o cambiar la espera; al responder «No» se oculta ese aviso hasta la próxima versión."] =
+                "The reminder appears when the console opens, once the waiting hours have passed (2 by default). You can disable it or change the wait; answering “No” hides that reminder until the next version.",
 
             // ---------- Descripciones emergentes de los botones ----------
             ["Movimiento"] = "Movement",

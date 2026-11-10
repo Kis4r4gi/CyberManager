@@ -30,7 +30,6 @@ public partial class MainWindow : Window
     private string _current = "dashboard";
     private bool? _connected;
     private AppLanguage _language = L.Language;
-    private UpdateInfoDto? _update;
 
     public MainWindow()
     {
@@ -79,9 +78,6 @@ public partial class MainWindow : Window
         LogColumn.Width = new GridLength(0);
         LogColumn.MinWidth = 0;
         LogColumn.MaxWidth = 0;
-
-        // El aviso de actualizaciones solo interesa al administrador.
-        UpdateBanner.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>Muestra el nombre y la versión del software en la barra de título de Windows.</summary>
@@ -152,7 +148,6 @@ public partial class MainWindow : Window
         UpdateWindowTitle();
         UpdateRoleText();
         ConnectionText.Text = L.T(ConnectionText.Text);
-        if (_update is not null) ApplyUpdate(_update);
         _views.Clear();
         Navigate(_current);
     }
@@ -170,14 +165,13 @@ public partial class MainWindow : Window
         _headerTimer.Start();
 
         // La consulta de actualizaciones se hace una sola vez, al abrir la consola.
-        _ = RefreshUpdateBannerAsync(force: true);
+        _ = CheckForUpdatesOnStartupAsync();
 
         if (App.Realtime is not null)
         {
             App.Realtime.ConnectionChanged += OnConnectionChanged;
             App.Realtime.EventReceived += OnRealtimeEvent;
             App.Realtime.StationStateChanged += OnRealtimeStationState;
-            App.Realtime.UpdateAvailable += OnUpdateAvailable;
             OnConnectionChanged(App.Realtime.IsConnected);
         }
     }
@@ -194,7 +188,6 @@ public partial class MainWindow : Window
             App.Realtime.ConnectionChanged -= OnConnectionChanged;
             App.Realtime.EventReceived -= OnRealtimeEvent;
             App.Realtime.StationStateChanged -= OnRealtimeStationState;
-            App.Realtime.UpdateAvailable -= OnUpdateAvailable;
         }
 
         await App.DisposeRealtimeAsync();
@@ -298,74 +291,66 @@ public partial class MainWindow : Window
 
     // ===================== Aviso de nueva versión =====================
 
-    private async Task RefreshUpdateBannerAsync(bool force = false)
+    /// <summary>
+    /// Consulta GitHub una sola vez al abrir la consola y, si ya corresponde el
+    /// recordatorio, pregunta si se desea actualizar. «Sí» abre la página de
+    /// versiones del proyecto; «No» oculta el aviso para esa versión.
+    /// </summary>
+    private async Task CheckForUpdatesOnStartupAsync()
     {
+        if (IsCashier) return;
+
+        UpdateInfoDto info;
         try
         {
-            ApplyUpdate(await App.Api.LatestUpdateAsync(force));
+            info = await App.Api.LatestUpdateAsync(refresh: true);
         }
         catch
         {
-            // Un fallo del aviso no debe marcar la consola como desconectada.
-        }
-    }
-
-    private void ApplyUpdate(UpdateInfoDto info)
-    {
-        _update = info;
-
-        if (IsCashier)
-        {
-            UpdateBanner.Visibility = Visibility.Collapsed;
+            // Un fallo de red no debe afectar la apertura de la consola.
             return;
         }
 
-        if (!info.IsReminderDue || string.IsNullOrWhiteSpace(info.LatestVersion))
+        // Si la consola se cerró mientras se consultaba GitHub, no mostrar el aviso.
+        if (!IsVisible) return;
+
+        if (!info.IsReminderDue || string.IsNullOrWhiteSpace(info.LatestVersion)) return;
+
+        var message =
+            $"{L.T("Hay una nueva versión disponible:")} {info.LatestVersion}" +
+            Environment.NewLine + Environment.NewLine +
+            $"{L.T("Versión instalada:")} {info.CurrentVersion}" +
+            Environment.NewLine + Environment.NewLine +
+            L.T("¿Desea actualizar ahora?");
+
+        var result = MessageBox.Show(this, message, L.T("Actualización disponible"),
+            MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+
+        if (result == MessageBoxResult.Yes)
         {
-            UpdateBanner.Visibility = Visibility.Collapsed;
+            OpenReleasesPage();
             return;
         }
 
-        UpdateTitle.Text = $"{L.T("Nueva versión disponible")}: {info.LatestVersion}";
-
-        var published = info.PublishedUtc?.ToLocalTime();
-        UpdateText.Text = published is DateTime date
-            ? $"{L.T("Versión publicada:")} {date:dd/MM/yyyy HH:mm} · " +
-              $"{L.T("Versión instalada:")} {info.CurrentVersion}"
-            : $"{L.T("Versión instalada:")} {info.CurrentVersion}";
-
-        UpdateBanner.Visibility = Visibility.Visible;
+        // «No» oculta el aviso de esta versión hasta que se publique otra.
+        try { await App.Api.DismissUpdateAsync(info.LatestVersion); }
+        catch { /* el aviso se volverá a mostrar en la próxima apertura */ }
     }
 
-    private void OnUpdateAvailable(UpdateInfoDto update) => Dispatcher.BeginInvoke(() =>
+    private void OpenReleasesPage()
     {
-        ApplyUpdate(update);
-        AddLog(L.T("Actualización disponible"),
-            $"{L.T("Versión")} {update.LatestVersion} · {L.T("Versión instalada:")} {update.CurrentVersion}",
-            "#22D3EE");
-    });
-
-    private void OpenUpdate_Click(object sender, RoutedEventArgs e)
-    {
-        var url = _update?.ReleaseUrl;
-        if (string.IsNullOrWhiteSpace(url)) return;
-
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = AppInfo.ReleasesUrl,
+                UseShellExecute = true
+            });
         }
         catch (Exception ex)
         {
             Ui.Error(ex.Message, L.T("Actualización"));
         }
-    }
-
-    private void DismissUpdate_Click(object sender, RoutedEventArgs e)
-    {
-        if (_update?.LatestVersion is not string version) return;
-
-        _ = Ui.Run(async () => ApplyUpdate(await App.Api.DismissUpdateAsync(version)),
-            L.T("No se pudo ocultar el aviso"));
     }
 
     // ===================== Bitácora de terminales =====================

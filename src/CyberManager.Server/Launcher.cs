@@ -4,20 +4,25 @@ using System.Reflection;
 namespace CyberManager.Server;
 
 /// <summary>
-/// Lanzador único de CyberManager. Cuando se inicia con <c>--launch-console</c>,
-/// deja el servidor ejecutándose en segundo plano y abre la consola de administración.
+/// Lanzador único de CyberManager. Con <c>--launch-console</c> deja el servidor
+/// ejecutándose en segundo plano y abre la consola de administración; con
+/// <c>--start-server</c> solo inicia el servidor, sin abrir ventanas.
 /// </summary>
 public static class Launcher
 {
     public const string ConsoleFlag = "--launch-console";
+    public const string StartServerFlag = "--start-server";
 
     private static readonly string[] InternalFlags =
     {
-        ConsoleFlag, "--elevated", "--no-elevate", "--service"
+        ConsoleFlag, StartServerFlag, "--elevated", "--no-elevate", "--service"
     };
 
     public static bool HasConsoleFlag(string[] args)
         => args.Any(a => string.Equals(a, ConsoleFlag, StringComparison.OrdinalIgnoreCase));
+
+    public static bool HasStartServerFlag(string[] args)
+        => args.Any(a => string.Equals(a, StartServerFlag, StringComparison.OrdinalIgnoreCase));
 
     public static bool IsInternalFlag(string arg)
         => InternalFlags.Any(flag => string.Equals(arg, flag, StringComparison.OrdinalIgnoreCase));
@@ -41,6 +46,19 @@ public static class Launcher
 
         OpenConsole();
         return true;
+    }
+
+    /// <summary>
+    /// Inicia el servidor en segundo plano si aún no está activo y espera a que
+    /// responda, sin abrir la consola. Lo usa el instalador para la casilla
+    /// «Iniciar el servidor ahora» y para no duplicar la instancia si ya corre.
+    /// </summary>
+    public static void RunStartServer(string[] args, int port)
+    {
+        if (IsServerRunning(port)) return;
+
+        StartServer(RemoveFlag(args, StartServerFlag));
+        WaitForServer(port, TimeSpan.FromSeconds(20));
     }
 
     public static bool IsServerRunning(int port)
@@ -116,6 +134,7 @@ public static class Launcher
         foreach (var arg in args)
         {
             if (string.Equals(arg, ConsoleFlag, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(arg, StartServerFlag, StringComparison.OrdinalIgnoreCase)) continue;
             start.ArgumentList.Add(arg);
         }
 

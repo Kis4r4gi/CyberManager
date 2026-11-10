@@ -5,6 +5,9 @@ namespace CyberManager.Shared;
 /// <summary>Versión de compilación que comparten el servidor, la consola y el cliente.</summary>
 public static class AppInfo
 {
+    /// <summary>Página de versiones publicadas del proyecto en GitHub.</summary>
+    public const string ReleasesUrl = "https://github.com/Kis4r4gi/CyberManager/releases";
+
     public static string Version { get; } = Resolve();
 
     private static string Resolve()

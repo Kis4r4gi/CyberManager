@@ -141,7 +141,6 @@ public sealed class DashboardView : UserControl, IRefreshable
             _autoRefresh.Start();
             SyncToolbar();
             await RefreshAsync();
-            _ = CheckForUpdatesAsync();
         };
         Unloaded += (_, _) =>
         {
@@ -809,28 +808,7 @@ public sealed class DashboardView : UserControl, IRefreshable
         await HandleActionAsync(dialog.Action, station);
     }
 
-    /// <summary>Consulta si hay actualizaciones disponibles.</summary>
-    private async Task CheckForUpdatesAsync()
-    {
-        try
-        {
-            var update = await App.Api.LatestUpdateAsync(refresh: false);
-            if (update is null) return;
-
-            // Solo mostramos información en el modo administrador, no al cajero
-            if (App.Session.Role == UserRole.Cashier) return;
-
-            // Registramos el aviso en la bitácora interna; el banner principal
-            // está en MainWindow y se actualiza por ahí.
-            Ui.Info($"{L.T("Hay una versión nueva disponible:")} {update.LatestVersion} " +
-                $"(actual: {update.CurrentVersion})", "Actualización");
-        }
-        catch
-        {
-            // Errores silenciosos: no afectar la UI si no se puede consultar GitHub.
-        }
-    }
-
+    /// <summary>Ejecuta la acción elegida en el diálogo de la estación.</summary>
     private async Task HandleActionAsync(string action, StationSummaryDto station)
     {
         var owner = Window.GetWindow(this);

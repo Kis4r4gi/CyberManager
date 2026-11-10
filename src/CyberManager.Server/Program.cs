@@ -26,6 +26,16 @@ if (Launcher.HasConsoleFlag(args))
     return;
 }
 
+// Inicio silencioso solicitado por el instalador: deja el servidor activo sin
+// abrir la consola ni duplicar la instancia si ya está respondiendo.
+if (Launcher.HasStartServerFlag(args))
+{
+    Launcher.RunStartServer(
+        Launcher.RemoveFlag(elevationArgs, Launcher.StartServerFlag),
+        Elevation.ResolvePort(elevationArgs));
+    return;
+}
+
 if (Elevation.TryElevate(elevationArgs, Elevation.ResolvePort(elevationArgs)))
     return;
 
