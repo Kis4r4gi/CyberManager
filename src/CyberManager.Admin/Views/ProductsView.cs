@@ -25,6 +25,7 @@ public sealed class ProductsView : UserControl, IRefreshable
     {
         _productsGrid = Kit.Table(
             Kit.Col("Código", nameof(ProductRow.Sku), 110),
+            Kit.Col("Icono", nameof(ProductRow.Icon), 60),
             Kit.Col("Producto", nameof(ProductRow.Name)),
             Kit.Col("Categoría", nameof(ProductRow.Category), 140),
             Kit.Col("Precio USD", nameof(ProductRow.Price), 100, "{0:N2}"),
@@ -128,7 +129,8 @@ public sealed class ProductsView : UserControl, IRefreshable
         var actions = Kit.HStack(8,
             Kit.Button("Nuevo producto", "PrimaryButton", NewProduct),
             Kit.Button("Editar", "GhostButton", EditProduct),
-            Kit.Button("Activar / desactivar", "GhostButton", ToggleProduct));
+            Kit.Button("Activar / desactivar", "GhostButton", ToggleProduct),
+            Kit.Button("Eliminar", "DangerButton", DeleteProduct));
 
         return ListTab("Los precios se capturan con IVA incluido; el sistema desglosa el impuesto al facturar.",
             actions, _productsGrid);
@@ -195,10 +197,31 @@ public sealed class ProductsView : UserControl, IRefreshable
         {
             var request = new SaveProductRequest(product.Sku, product.Name, product.CategoryId,
                 product.Price, product.Cost, product.Stock, product.MinStock, product.Unit,
-                product.IsService, product.TaxRate, !product.Active);
+                product.IsService, product.TaxRate, !product.Active, product.Icon);
             await App.Api.SaveProductAsync(product.Id, request);
             await RefreshAsync();
         }, "No se pudo actualizar el producto");
+    }
+
+    private void DeleteProduct()
+    {
+        if (_productsGrid.SelectedItem is not ProductRow row)
+        {
+            Ui.Info("Seleccione un producto de la lista.", "Productos");
+            return;
+        }
+
+        if (!Ui.Confirm(
+                $"¿Eliminar {row.Name} del catálogo? Dejará de aparecer en la caja y en la pantalla del cliente. " +
+                "Las ventas anteriores conservan su historial.",
+                "Eliminar producto"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteProductAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo eliminar el producto");
     }
 
     // ================= Categorías =================
@@ -206,7 +229,8 @@ public sealed class ProductsView : UserControl, IRefreshable
     {
         var actions = Kit.HStack(8,
             Kit.Button("Nueva categoría", "PrimaryButton", NewCategory),
-            Kit.Button("Editar", "GhostButton", EditCategory));
+            Kit.Button("Editar", "GhostButton", EditCategory),
+            Kit.Button("Eliminar", "DangerButton", DeleteCategory));
 
         return ListTab("Agrupe productos para encontrarlos más rápido en la caja y en la pantalla del cliente.",
             actions, _categoriesGrid);
@@ -237,12 +261,34 @@ public sealed class ProductsView : UserControl, IRefreshable
         }, "No se pudo guardar la categoría");
     }
 
+    private void DeleteCategory()
+    {
+        if (_categoriesGrid.SelectedItem is not CategoryRow row)
+        {
+            Ui.Info("Seleccione una categoría de la lista.", "Categorías");
+            return;
+        }
+
+        if (!Ui.Confirm(
+                $"¿Eliminar la categoría {row.Name}? Los productos asignados se conservarán, " +
+                "pero la categoría dejará de ofrecerse en el catálogo.",
+                "Eliminar categoría"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteCategoryAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo eliminar la categoría");
+    }
+
     // ================= Tarifas =================
     private Grid BuildRateTab()
     {
         var actions = Kit.HStack(8,
             Kit.Button("Nueva tarifa", "PrimaryButton", NewRate),
-            Kit.Button("Editar", "GhostButton", EditRate));
+            Kit.Button("Editar", "GhostButton", EditRate),
+            Kit.Button("Eliminar", "DangerButton", DeleteRate));
 
         return ListTab("La tarifa se aplica por minuto; el mínimo y el bloque definen cómo se redondea el cobro.",
             actions, _ratesGrid);
@@ -273,12 +319,32 @@ public sealed class ProductsView : UserControl, IRefreshable
         }, "No se pudo guardar la tarifa");
     }
 
+    private void DeleteRate()
+    {
+        if (_ratesGrid.SelectedItem is not RateRow row)
+        {
+            Ui.Info("Seleccione una tarifa de la lista.", "Tarifas");
+            return;
+        }
+
+        if (!Ui.Confirm($"¿Eliminar la tarifa {row.Name}? Dejará de estar disponible para nuevas sesiones.",
+                "Eliminar tarifa"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteRateAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo eliminar la tarifa");
+    }
+
     // ================= Paquetes =================
     private Grid BuildPackageTab()
     {
         var actions = Kit.HStack(8,
             Kit.Button("Nuevo paquete", "PrimaryButton", NewPackage),
-            Kit.Button("Editar", "GhostButton", EditPackage));
+            Kit.Button("Editar", "GhostButton", EditPackage),
+            Kit.Button("Eliminar", "DangerButton", DeletePackage));
 
         return ListTab("Paquetes prepagados con minutos de bono, por ejemplo 60 + 15 minutos.",
             actions, _packagesGrid);
@@ -309,12 +375,32 @@ public sealed class ProductsView : UserControl, IRefreshable
         }, "No se pudo guardar el paquete");
     }
 
+    private void DeletePackage()
+    {
+        if (_packagesGrid.SelectedItem is not PackageRow row)
+        {
+            Ui.Info("Seleccione un paquete de la lista.", "Paquetes");
+            return;
+        }
+
+        if (!Ui.Confirm($"¿Eliminar el paquete {row.Name}? Dejará de ofrecerse en la caja.",
+                "Eliminar paquete"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeletePackageAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo eliminar el paquete");
+    }
+
     // ================= Zonas =================
     private Grid BuildZoneTab()
     {
         var actions = Kit.HStack(8,
             Kit.Button("Nueva zona", "PrimaryButton", NewZone),
-            Kit.Button("Editar", "GhostButton", EditZone));
+            Kit.Button("Editar", "GhostButton", EditZone),
+            Kit.Button("Eliminar", "DangerButton", DeleteZone));
 
         return ListTab("Las zonas agrupan equipos (VIP, estándar, consolas) y pueden tener tarifas distintas.",
             actions, _zonesGrid);
@@ -344,6 +430,25 @@ public sealed class ProductsView : UserControl, IRefreshable
             await RefreshAsync();
         }, "No se pudo guardar la zona");
     }
+
+    private void DeleteZone()
+    {
+        if (_zonesGrid.SelectedItem is not ZoneRow row)
+        {
+            Ui.Info("Seleccione una zona de la lista.", "Zonas");
+            return;
+        }
+
+        if (!Ui.Confirm($"¿Eliminar la zona {row.Name}? No debe tener equipos asignados.",
+                "Eliminar zona"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteZoneAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo eliminar la zona");
+    }
 }
 
 // ================= Filas =================
@@ -354,6 +459,7 @@ public sealed class ProductRow
         Source = product;
         Sku = product.Sku;
         Name = product.Name;
+        Icon = string.IsNullOrWhiteSpace(product.Icon) ? "—" : product.Icon!;
         Category = product.CategoryName ?? "General";
         Stock = product.IsService ? "Servicio" : $"{product.Stock:N0} {product.Unit}";
         MinStock = product.IsService ? "—" : product.MinStock.ToString("N0");
@@ -367,6 +473,7 @@ public sealed class ProductRow
     public ProductDto Source { get; }
     public string Sku { get; }
     public string Name { get; }
+    public string Icon { get; }
     public string Category { get; }
     public decimal Price { get; }
     public decimal Cost { get; }
@@ -458,6 +565,7 @@ public sealed class ProductDialog : FormDialog
 {
     private readonly TextBox _sku;
     private readonly TextBox _name;
+    private readonly ComboBox _icon;
     private readonly ComboBox _category;
     private readonly TextBox _price;
     private readonly TextBox _cost;
@@ -476,6 +584,19 @@ public sealed class ProductDialog : FormDialog
     {
         _sku = Add(new TextBox { Text = product?.Sku ?? string.Empty }, "Código / SKU");
         _name = Add(new TextBox { Text = product?.Name ?? string.Empty }, "Nombre del producto");
+
+        var iconOptions = new List<string>
+        {
+            string.Empty, "🎮", "🖥️", "🎧", "⌨️", "🖱️", "🕹️", "🎫",
+            "🍿", "🥤", "🍕", "☕", "🍫", "🧃", "🎯", "📶", "⭐"
+        };
+        _icon = Add(new ComboBox
+        {
+            ItemsSource = iconOptions,
+            IsEditable = true,
+            FontSize = 14,
+            Text = product?.Icon ?? string.Empty
+        }, "Icono (emoji o texto corto, opcional)");
 
         var categoryOptions = new List<Option<int?>> { new(null, "Sin categoría") };
         categoryOptions.AddRange(categories.Where(c => c.Active).OrderBy(c => c.Name)
@@ -518,7 +639,8 @@ public sealed class ProductDialog : FormDialog
 
         Result = new SaveProductRequest(sku, _name.Text.Trim(), categoryId, price, cost, stock, minStock,
             string.IsNullOrWhiteSpace(_unit.Text) ? "und" : _unit.Text.Trim(),
-            _service.IsChecked == true, tax, _active.IsChecked == true);
+            _service.IsChecked == true, tax, _active.IsChecked == true,
+            string.IsNullOrWhiteSpace(_icon.Text) ? null : _icon.Text.Trim());
 
         base.OnAccept();
     }

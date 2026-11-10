@@ -76,8 +76,16 @@
                                             </Grid.RowDefinitions>
 
                                             <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                           TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" />
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Icon}" FontSize="18"
+                                                               Margin="0,0,6,0" VerticalAlignment="Top" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"
+                                                               TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" />
+                                                </Grid>
                                                 <TextBlock Text="{Binding Category}" Style="{StaticResource Muted}"
                                                            Margin="0,3,0,0" />
                                             </StackPanel>

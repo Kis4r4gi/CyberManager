@@ -201,6 +201,7 @@ public sealed class OrderProduct
     }
 
     public string Name => Product.Name;
+    public string Icon => Product.Icon ?? string.Empty;
     public string Category => Product.CategoryName ?? "General";
     public string PriceUsd => $"$ {Product.Price:N2}";
     public string PriceBs => $"Bs {Product.Price * Rate:N2}";

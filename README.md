@@ -127,7 +127,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   **Pago Móvil**, saldo del cliente, mixto y pendiente (cargado a la sesión).
 - Descuentos, devoluciones y gastos de caja.
 - **Tickets de 80 mm** para ventas y **cierre diario configurable** (ticket 80 mm, A4 o Carta),
-  con impresión automática opcional, copias y selección de impresora.
+  con impresión automática opcional, copias y **dos impresoras configurables**: una para los
+  tickets de venta y otra para cierres, reportes y documentos de trabajo.
 - **Lector de códigos de barras** tipo teclado: al escanear un SKU y pulsar Enter, el producto se
   agrega al POS si coincide exactamente.
 - **Cierre de ventas detallado**: el cierre diario, el ticket y el correo incluyen **todos los
@@ -137,7 +138,10 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 
 **Inventario y compras**
 
-- Productos por categoría, con SKU, costo, precio, stock y stock mínimo.
+- Productos por categoría, con SKU, costo, precio, stock, stock mínimo e **icono** (emoji o texto
+  corto) visible en la caja y en la pantalla del cliente.
+- **Eliminación desde el catálogo** de productos, categorías, tarifas, paquetes de tiempo y zonas;
+  las ventas y movimientos históricos se conservan.
 - Servicios sin control de stock (impresión, escaneo, fotocopias).
 - Compras a proveedores que actualizan stock y costo.
 - **Saldos y abonos a proveedores**: compras menos pagos, con abonos en efectivo, tarjeta o
@@ -156,8 +160,13 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Envío del cierre diario por correo**: opción configurable que envía el resumen del día y un
   CSV adjunto a uno o varios destinatarios al abrir el cierre, con reenvío manual y correo de
   prueba desde *Configuración → Reportes por correo*.
-- Usuarios con roles: administrador, cajero y técnico.
-- Configuración del negocio, IVA, IGTF, avisos, ticket, impresora y datos de instalación.
+- Usuarios con roles: administrador, cajero y técnico, con **eliminación permanente** de cuentas
+  (bloqueada para el propio usuario, el último administrador activo y usuarios con cajas abiertas).
+- **Interfaz de cajero simplificada**: oculta y bloquea catálogo, inventario, compras, equipos,
+  fondos, promos, reportes, configuración y bitácora; solo quedan tablero, caja/POS, clientes y
+  reservas.
+- Configuración del negocio, IVA, IGTF, avisos, ticket, **impresora de tickets e impresora de
+  trabajo** y datos de instalación.
   Los cambios quedan como borrador y se guardan solo al pulsar **Aplicar y guardar**.
 - **Apariencia personalizable**: seis temas predefinidos, doce colores, tamaño de iconos y texto
   de navegación, y tamaño de los cuadros de artículos y de terminales (80 a 160 %), guardados por
@@ -556,7 +565,11 @@ En *Configuración → Ticket y scanner* puede definir:
 
 - **Datos del negocio** que aparecen en el encabezado: nombre, RIF, dirección, teléfono,
   encabezado adicional y pie del ticket.
-- **Impresora**: nombre exacto de la cola de impresión de Windows (vacío = preguntar cada vez).
+- **Impresora de tickets**: nombre exacto de la cola de impresión de Windows para los tickets de
+  venta (vacío = preguntar cada vez). El desplegable muestra las impresoras instaladas y permite
+  escribir un nombre manualmente.
+- **Impresora de trabajo**: se usa para cierres, reportes y documentos. Si queda vacía, se usa la
+  impresora de tickets.
 - **Copias**: de 1 a 5.
 - **Impresión automática**: imprime el ticket al registrar una venta.
 - **Agregar al POS al escanear**: interpreta el lector como teclado.
@@ -574,8 +587,9 @@ ticket de 80 mm para impresoras térmicas, **A4** o **Carta** para hojas normale
 3. Si el código no existe, use el buscador para agregarlo manualmente.
 
 La impresión automática solo se ejecuta si **Impresión automática** está activa y hay una
-**impresora** configurada. El botón **Imprimir ticket** de cada venta abre el diálogo de
-impresión si no hay impresora guardada.
+**impresora de tickets** configurada. El botón **Imprimir ticket** de cada venta abre el diálogo de
+impresión si no hay impresora guardada. En el mensaje de la venta, **Aceptar** cierra el resumen y
+**Imprimir y aceptar** imprime el ticket y cierra en un solo paso.
 
 ---
 
@@ -668,7 +682,7 @@ alrededor de la ventana, de modo que los límites de paneles y tarjetas se disti
 La consola usa la **barra de título nativa de Windows**, de modo que los botones **Minimizar**,
 **Maximizar/Restaurar** y **Cerrar** son los del sistema y siempre están visibles; en Windows 10/11
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
-instalada (por ejemplo, `CyberManager · Administración · v1.0.8`). La ventana se encuadra
+instalada (por ejemplo, `CyberManager · Administración · v1.0.9`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
 reajusta al cambiar de monitor o de escala (DPI).
 
@@ -726,7 +740,9 @@ necesario cerrar la caja ni detener el servidor.
 2. Anote el **ID del equipo** y el **token**. Puede copiar el token al portapapeles.
 3. En el PC de la estación, abra `CyberManager.Client.exe`. Si no está configurado, aparece la
    ventana de configuración. Indique:
-   - **URL del servidor**: `http://192.168.1.10:5080` (IP LAN del servidor).
+   - **URL del servidor**: `http://192.168.1.10:5080` (IP LAN del servidor) o pulse
+     **Buscar en la red** para localizarlo automáticamente con `/api/health`. Si escribe solo la
+     IP o el nombre del equipo, el sistema agrega el puerto `5080`.
    - **ID del equipo**: el número anotado.
    - **Token**: el token del equipo.
    - **Idioma de la estación**: español o inglés.
@@ -1130,8 +1146,9 @@ Identificadores clave: `/api/health`, `/api/auth/login`, `/api/dashboard`, `/api
 `/api/station/promo-videos/{id}/file` (descarga con token de equipo),
 `/api/webfilter` (CRUD de NetFiltroWeb, solo rol `Admin`), `/api/webfilter/restore`,
 `/api/station/webfilter` (lista activa con token de equipo), `/api/station/state` (estado y barra
-flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`) y
-`/api/stations/{id}/config`.
+flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
+`/api/stations/{id}/config` (devuelve la IP LAN real del servidor) y
+`DELETE /api/users/{id}/permanent` (eliminación definitiva de una cuenta, solo rol `Admin`).
 
 ---
 

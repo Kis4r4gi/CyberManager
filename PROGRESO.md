@@ -626,6 +626,56 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8> el `2026-11-09T22:33:29Z`;
   el recordatorio de 2 horas quedará para `2026-11-10T00:33:29Z`.
 
+### Impresoras, interfaz de cajero, iconos y conexión por IP (1.0.9, 2026-11-10)
+
+- **Impresora de tickets e impresora de trabajo**: nueva clave `WorkPrinterName` y campo
+  `TicketSettings.WorkPrinterName`. `PrintSale` usa `PrinterName`; `PrintClosing` usa
+  `WorkPrinterName` y cae a `PrinterName` si está vacía. Ambas se imprimen directamente en la cola
+  configurada y solo abren el diálogo de Windows si no hay impresora guardada. En
+  *Configuración → Ticket y operación* hay dos desplegables editables con las impresoras instaladas
+  (`TicketPrinter.InstalledPrinters()`), y también se puede escribir un nombre manualmente.
+- **Interfaz de cajero sin funciones administrativas**: `MainWindow.ApplyRoleVisibility` oculta y
+  `Navigate` bloquea catálogo, inventario, compras, equipos, fondos, promos, reportes y
+  configuración; también oculta la bitácora, su separador y las etiquetas de catálogo/sistema.
+  El botón **Configuración** del tablero y el aviso de actualizaciones quedan ocultos, y
+  `StationActionsDialog` recibe `systemActions: false` para no ofrecer control remoto, energía ni
+  mantenimiento al cajero.
+- **Iconos de producto**: nueva columna `Product.Icon` (emoji o texto corto) con migración en
+  `DbSeeder.EnsureCompatibilityAsync`, expuesta en `ProductDto` y `SaveProductRequest`. El editor
+  de productos incluye un desplegable editable con iconos sugeridos; el icono se muestra en las
+  tarjetas del POS y en la pantalla de pedidos del cliente.
+- **Eliminación de catálogo**: botones **Eliminar** para productos, categorías, tarifas, paquetes
+  de tiempo y zonas. Se reutilizan los `DELETE` existentes con desactivación lógica, de modo que
+  las ventas y movimientos históricos se conservan.
+- **Eliminación permanente de cajeros**: `DELETE /api/users/{id}/permanent` borra la cuenta y
+  limpia referencias opcionales en sesiones, cajas, ventas, compras, movimientos, clientes y
+  auditoría. Bloquea la autoeliminación, el último administrador activo y los usuarios con cajas
+  abiertas. En *Configuración → Usuarios* hay un botón **Eliminar** con confirmación.
+- **Aceptar después de imprimir**: `SaleReceiptDialog` usa **Aceptar** como botón principal y
+  agrega **Imprimir y aceptar**; **Imprimir ticket** sigue disponible sin cerrar el resumen.
+- **Conexión por IP al primer uso**: `GET /api/stations/{id}/config` devuelve el host y puerto
+  reales de la petición; si la consola entra por loopback, usa la IPv4 de la interfaz con puerta de
+  enlace (evita adaptadores virtuales de Hyper-V/WSL). `ApiClient.Normalize` agrega `:5080` cuando
+  se escribe solo la IP o el nombre del equipo (sin puerto y con `http`). `SetupWindow` incorpora
+  **Buscar en la red**, que consulta `/api/health` en localhost y en las subredes locales.
+- **Pruebas**:
+  - `dotnet build CyberManager.sln`: **0 errores y 0 advertencias**.
+  - Servidor temporal en el puerto 5099: `/api/stations/1/config` devolvió
+    `http://192.168.1.7:5099` tanto al entrar por `127.0.0.1` como por la IP LAN; `/api/health`
+    respondió `{"status":"ok"}`.
+  - Catálogo: se crearon y eliminaron una categoría, tarifa, paquete, zona y producto; el producto
+    quedó inactivo tras el borrado lógico. El icono `🎮` se guardó y recuperó con los códigos
+    UTF-16 `55356,57262`.
+  - Usuarios: se creó un cajero y se eliminó con `DELETE /api/users/{id}/permanent`; la lista
+    confirmó que ya no existe. La autoeliminación del administrador respondió **400**.
+  - `ApiClient.Normalize`: `192.168.1.7` → `http://192.168.1.7:5080/`, `192.168.1.7:5099` se
+    conserva, `https://servidor` no recibe el puerto 5080 y una URL vacía usa
+    `http://127.0.0.1:5080/`.
+- **Pendiente de verificación real**: impresión física en dos colas distintas, instalación con UAC,
+  firewall, eliminación de usuarios con historial de cajas y descubrimiento de servidor en una red
+  con varias subredes.
+- **Instaladores**: pendiente de empaquetar y publicar.
+
 ---
 
 ## Rutas y comandos clave

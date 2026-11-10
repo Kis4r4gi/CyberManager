@@ -115,6 +115,48 @@ public static class AuthEndpoints
             return Results.NoContent();
         });
 
+        // Eliminación permanente: conserva las ventas y movimientos, pero borra la cuenta.
+        g.MapDelete("/{id:int}/permanent", async (int id, ClaimsPrincipal principal, AppDbContext db) =>
+        {
+            if (id == principal.UserId()) throw new AppException("No puede eliminar su propio usuario.");
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id) ?? throw AppException.NotFound("Usuario");
+
+            if (user.Role == UserRole.Admin &&
+                await db.Users.CountAsync(u => u.Active && u.Role == UserRole.Admin) <= 1)
+                throw new AppException("No se puede eliminar el último administrador activo.");
+
+            if (await db.CashSessions.AnyAsync(c => c.OpenedByUserId == id && c.IsOpen))
+                throw new AppException("El usuario tiene una caja abierta. Ciérrela antes de eliminar la cuenta.");
+
+            // Las referencias opcionales se limpian para no dejar identificadores huérfanos.
+            await db.Sessions.Where(s => s.OpenedByUserId == id || s.ClosedByUserId == id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.OpenedByUserId, (int?)null)
+                    .SetProperty(x => x.ClosedByUserId, (int?)null));
+            await db.CashSessions.Where(c => c.ClosedByUserId == id)
+                .ExecuteUpdateAsync(c => c.SetProperty(x => x.ClosedByUserId, (int?)null));
+            await db.CashMovements.Where(m => m.UserId == id)
+                .ExecuteUpdateAsync(m => m.SetProperty(x => x.UserId, (int?)null));
+            await db.Sales.Where(s => s.UserId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, (int?)null));
+            await db.StockMovements.Where(m => m.UserId == id)
+                .ExecuteUpdateAsync(m => m.SetProperty(x => x.UserId, (int?)null));
+            await db.Purchases.Where(p => p.UserId == id)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.UserId, (int?)null));
+            await db.CustomerTransactions.Where(t => t.UserId == id)
+                .ExecuteUpdateAsync(t => t.SetProperty(x => x.UserId, (int?)null));
+            await db.SupplierPayments.Where(p => p.UserId == id)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.UserId, (int?)null));
+            await db.AuditLogs.Where(a => a.UserId == id)
+                .ExecuteUpdateAsync(a => a.SetProperty(x => x.UserId, (int?)null));
+            await db.ExchangeRates.Where(r => r.CreatedByUserId == id)
+                .ExecuteUpdateAsync(r => r.SetProperty(x => x.CreatedByUserId, (int?)null));
+
+            db.Users.Remove(user);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
         return app;
     }
 }

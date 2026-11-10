@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Claims;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
@@ -99,7 +102,7 @@ public static class StationEndpoints
             return Results.Ok(new { stationId = st.Id, token = st.DeviceToken });
         }).RequireAuthorization("Admin");
 
-        g.MapGet("/{id:int}/config", async (int id, AppDbContext db) =>
+        g.MapGet("/{id:int}/config", async (int id, HttpRequest request, AppDbContext db) =>
         {
             var st = await db.Stations.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id)
                      ?? throw AppException.NotFound("Equipo");
@@ -108,7 +111,7 @@ public static class StationEndpoints
                 stationId = st.Id,
                 name = st.Name,
                 token = st.DeviceToken,
-                serverUrl = "http://localhost:5080"
+                serverUrl = ServerUrlFor(request)
             });
         }).RequireAuthorization("Admin");
 
@@ -188,5 +191,61 @@ public static class StationEndpoints
             .RequireAuthorization();
 
         return app;
+    }
+
+    /// <summary>
+    /// Construye la URL que debe configurar el equipo cliente. Si la consola se conecta
+    /// desde el mismo servidor (loopback), se devuelve la IPv4 de la red local.
+    /// </summary>
+    private static string ServerUrlFor(HttpRequest request)
+    {
+        var port = request.Host.Port ?? 5080;
+        var host = request.Host.Host;
+
+        if (string.IsNullOrWhiteSpace(host) || IsLoopback(host))
+            host = LocalIPv4() ?? "127.0.0.1";
+
+        return $"{request.Scheme}://{host}:{port}";
+    }
+
+    private static bool IsLoopback(string host)
+        => host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+           || (IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address));
+
+    private static string? LocalIPv4()
+    {
+        try
+        {
+            var candidates = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == OperationalStatus.Up
+                            && n.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                            && n.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+                .Select(n =>
+                {
+                    var properties = n.GetIPProperties();
+                    return new
+                    {
+                        Addresses = properties.UnicastAddresses
+                            .Select(a => a.Address)
+                            .Where(a => a.AddressFamily == AddressFamily.InterNetwork
+                                        && !IPAddress.IsLoopback(a)
+                                        && !a.ToString().StartsWith("169.254.", StringComparison.Ordinal))
+                            .ToList(),
+                        HasGateway = properties.GatewayAddresses
+                            .Any(g => g.Address is not null && !g.Address.Equals(IPAddress.Any))
+                    };
+                })
+                .Where(c => c.Addresses.Count > 0)
+                .ToList();
+
+            // Se prefiere la interfaz con puerta de enlace (red real) frente a
+            // adaptadores virtuales de Hyper-V, WSL o VPN sin salida.
+            var preferred = candidates.FirstOrDefault(c => c.HasGateway) ?? candidates.FirstOrDefault();
+            return preferred?.Addresses.FirstOrDefault()?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

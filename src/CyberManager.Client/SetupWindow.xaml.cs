@@ -1,3 +1,7 @@
+using System.Net;
+using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -112,6 +116,106 @@ public partial class SetupWindow : Window
 
         DialogResult = true;
         Close();
+    }
+
+    /// <summary>Busca el servidor en la red local usando /api/health (sin autenticación).</summary>
+    private async void Discover_Click(object sender, RoutedEventArgs e)
+    {
+        DiscoverButton.IsEnabled = false;
+        ShowStatus(L.T("Buscando el servidor en la red local..."), isError: false);
+
+        try
+        {
+            var found = await DiscoverServerAsync();
+            if (found is null)
+            {
+                ShowStatus(L.IsEnglish
+                    ? "No server was found. Check that the server is running and the firewall allows port 5080."
+                    : "No se encontró el servidor. Verifique que esté encendido y que el firewall permita el puerto 5080.",
+                    isError: true);
+                return;
+            }
+
+            ServerUrlBox.Text = found;
+            ShowStatus(L.IsEnglish
+                ? $"Server found at {found}. Press «Test connection» to confirm."
+                : $"Servidor encontrado en {found}. Pulse «Probar conexión» para confirmar.",
+                isError: false);
+        }
+        finally
+        {
+            DiscoverButton.IsEnabled = true;
+        }
+    }
+
+    private static async Task<string?> DiscoverServerAsync()
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromMilliseconds(900) };
+
+        async Task<bool> ProbeAsync(string url)
+        {
+            try
+            {
+                using var response = await http.GetAsync($"{url}/api/health");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        if (await ProbeAsync("http://127.0.0.1:5080"))
+            return "http://127.0.0.1:5080";
+
+        var candidates = new List<string>();
+        foreach (var address in LocalIPv4Addresses())
+        {
+            var parts = address.GetAddressBytes();
+            for (var host = 1; host <= 254; host++)
+            {
+                if (host == parts[3]) continue;
+                candidates.Add($"http://{parts[0]}.{parts[1]}.{parts[2]}.{host}:5080");
+            }
+        }
+
+        using var gate = new SemaphoreSlim(48);
+        var probes = candidates.Select(async url =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                return await ProbeAsync(url) ? url : null;
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(probes);
+        return results.FirstOrDefault(result => result is not null);
+    }
+
+    private static IEnumerable<IPAddress> LocalIPv4Addresses()
+    {
+        try
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == OperationalStatus.Up
+                            && n.NetworkInterfaceType != NetworkInterfaceType.Loopback
+                            && n.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                .Select(a => a.Address)
+                .Where(a => a.AddressFamily == AddressFamily.InterNetwork
+                            && !IPAddress.IsLoopback(a))
+                .Distinct()
+                .ToList();
+        }
+        catch
+        {
+            return Array.Empty<IPAddress>();
+        }
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)

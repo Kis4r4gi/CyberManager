@@ -388,7 +388,12 @@ public sealed class PosView : UserControl, IRefreshable
         var scale = AppearanceService.Current.ProductCardScale / 100.0;
 
         var content = new StackPanel();
-        content.Children.Add(new TextBlock
+
+        var head = new Grid();
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var name = new TextBlock
         {
             Text = product.Name,
             FontSize = 13 * scale,
@@ -396,7 +401,30 @@ public sealed class PosView : UserControl, IRefreshable
             TextWrapping = TextWrapping.Wrap,
             MaxHeight = 38 * scale,
             TextTrimming = TextTrimming.CharacterEllipsis
-        });
+        };
+
+        if (!string.IsNullOrWhiteSpace(product.Icon))
+        {
+            head.Children.Add(new Border
+            {
+                Width = Math.Round(30 * scale),
+                Height = Math.Round(30 * scale),
+                CornerRadius = new CornerRadius(8 * scale),
+                Background = Kit.Brush("SurfaceBrush"),
+                Margin = new Thickness(0, 0, 8 * scale, 0),
+                Child = new TextBlock
+                {
+                    Text = product.Icon,
+                    FontSize = Math.Round(17 * scale),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            });
+            Grid.SetColumn(name, 1);
+        }
+
+        head.Children.Add(name);
+        content.Children.Add(head);
         content.Children.Add(new TextBlock
         {
             Text = product.CategoryName ?? "General",
@@ -745,7 +773,7 @@ public sealed class SaleReceiptDialog : FormDialog
     public SaleReceiptDialog(SaleDto sale, TicketSettings? ticketSettings = null)
         : base($"Venta {sale.Number}", $"{Labels.InvoiceName(sale.InvoiceType)} · {Labels.PaymentName(sale.Method)}")
     {
-        AcceptButton.Content = "Cerrar";
+        AcceptButton.Content = "Aceptar";
         HideCancel();
 
         AddRow("Fecha", sale.CreatedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"));
@@ -773,26 +801,39 @@ public sealed class SaleReceiptDialog : FormDialog
         if (sale.Change > 0)
             AddRow("Cambio", sale.PaidCurrency == Currency.Usd ? $"$ {sale.Change:N2}" : $"Bs {sale.Change:N2}");
 
-        var print = Kit.Button("Imprimir ticket", "BlueButton", () =>
+        bool TryPrint()
         {
             try
             {
                 var settings = ticketSettings ?? TicketSettings.From(new Dictionary<string, string>());
-                if (!TicketPrinter.PrintSale(sale, settings))
-                    Ui.Info("No se seleccionó una impresora.", "Impresión cancelada");
+                if (TicketPrinter.PrintSale(sale, settings))
+                    return true;
+
+                Ui.Info("No se seleccionó una impresora.", "Impresión cancelada");
             }
             catch (Exception ex)
             {
                 Ui.Error(ex.Message, "No se pudo imprimir el ticket");
             }
+
+            return false;
+        }
+
+        var print = Kit.Button("Imprimir ticket", "BlueButton", () => TryPrint());
+        var printAndAccept = Kit.Button("Imprimir y aceptar", "PrimaryButton", () =>
+        {
+            if (TryPrint()) DialogResult = true;
         });
-        print.HorizontalAlignment = HorizontalAlignment.Left;
-        print.Margin = new Thickness(0, 12, 0, 0);
-        Body.Children.Add(print);
+
+        var printActions = Kit.HStack(8, print, printAndAccept);
+        printActions.HorizontalAlignment = HorizontalAlignment.Left;
+        printActions.Margin = new Thickness(0, 12, 0, 0);
+        Body.Children.Add(printActions);
 
         AddNote(sale.Status == SaleStatus.Cancelled
             ? "Esta venta está anulada."
-            : "Venta registrada en la caja del turno.", "SuccessBrush");
+            : "Venta registrada en la caja del turno. Use «Aceptar» para cerrar el mensaje.",
+            "SuccessBrush");
     }
 }
 

@@ -478,7 +478,8 @@ public sealed class SettingsView : UserControl, IRefreshable
         var actions = Kit.HStack(8,
             Kit.Button("Nuevo usuario", "PrimaryButton", NewUser),
             Kit.Button("Editar", "GhostButton", EditUser),
-            Kit.Button("Desactivar", "DangerButton", DeactivateUser));
+            Kit.Button("Desactivar", "GhostButton", DeactivateUser),
+            Kit.Button("Eliminar", "DangerButton", DeleteUserPermanently));
         actions.Margin = new Thickness(0, 0, 0, 12);
         Grid.SetRow(actions, 1);
         root.Children.Add(actions);
@@ -536,6 +537,33 @@ public sealed class SettingsView : UserControl, IRefreshable
             await App.Api.DeactivateUserAsync(row.Source.Id);
             await LoadUsersAsync();
         }, "No se pudo desactivar el usuario");
+    }
+
+    private void DeleteUserPermanently()
+    {
+        if (_usersGrid.SelectedItem is not UserRow row)
+        {
+            Ui.Info("Seleccione un usuario de la lista.", "Usuarios");
+            return;
+        }
+
+        if (row.Source.Id == App.Session.UserId)
+        {
+            Ui.Info("No puede eliminar su propio usuario.", "Eliminar usuario");
+            return;
+        }
+
+        if (!Ui.Confirm(
+                $"¿Eliminar permanentemente al usuario {row.Username}? La cuenta se borrará y no podrá " +
+                "iniciar sesión de nuevo. Las ventas, cajas y movimientos anteriores conservan su historial.",
+                "Eliminar usuario"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteUserPermanentlyAsync(row.Source.Id);
+            await LoadUsersAsync();
+        }, "No se pudo eliminar el usuario");
     }
 
     private async Task LoadUsersAsync()

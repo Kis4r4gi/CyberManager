@@ -37,6 +37,16 @@ public class ApiClient
         url = (url ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(url)) url = "http://127.0.0.1:5080";
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) url = "http://" + url;
+
+        // En la red local el servidor usa el puerto 5080. Si el usuario solo escribe
+        // la IP o el nombre del equipo, se agrega el puerto automáticamente.
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var isHttps = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            if (!isHttps && uri.IsDefaultPort)
+                url = new UriBuilder(uri) { Port = 5080 }.Uri.ToString();
+        }
+
         return url.TrimEnd('/') + "/";
     }
 

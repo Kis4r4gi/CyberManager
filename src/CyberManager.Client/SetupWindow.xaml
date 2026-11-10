@@ -19,7 +19,16 @@
             </StackPanel>
 
             <TextBlock Text="Dirección del servidor" Style="{StaticResource Label}" Margin="0,20,0,4" />
-            <TextBox x:Name="ServerUrlBox" ToolTip="Ejemplo: http://192.168.1.10:5080" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="ServerUrlBox" ToolTip="Ejemplo: http://192.168.1.10:5080" />
+                <Button x:Name="DiscoverButton" Grid.Column="1" Content="Buscar en la red"
+                        Style="{StaticResource GhostButton}" Margin="8,0,0,0" Click="Discover_Click"
+                        ToolTip="Busca el servidor CyberManager en la red local y completa la dirección." />
+            </Grid>
 
             <TextBlock Text="Número de equipo (StationId)" Style="{StaticResource Label}" Margin="0,14,0,4" />
             <TextBox x:Name="StationIdBox" ToolTip="Número que aparece en Administración › Equipos" />

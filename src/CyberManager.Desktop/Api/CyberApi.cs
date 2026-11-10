@@ -65,17 +65,25 @@ public class CyberApi : ApiClient
     public Task<CategoryDto> SaveCategoryAsync(int? id, SaveCategoryRequest req)
         => id is int cid ? PutAsync<CategoryDto>($"/api/categories/{cid}", req) : PostAsync<CategoryDto>("/api/categories", req);
 
+    public Task DeleteCategoryAsync(int id) => DeleteAsync($"/api/categories/{id}");
+
     public Task<List<RateDto>> RatesAsync() => GetAsync<List<RateDto>>("/api/rates");
     public Task<RateDto> SaveRateAsync(int? id, SaveRateRequest req)
         => id is int rid ? PutAsync<RateDto>($"/api/rates/{rid}", req) : PostAsync<RateDto>("/api/rates", req);
+
+    public Task DeleteRateAsync(int id) => DeleteAsync($"/api/rates/{id}");
 
     public Task<List<ZoneDto>> ZonesAsync() => GetAsync<List<ZoneDto>>("/api/zones");
     public Task<ZoneDto> SaveZoneAsync(int? id, SaveZoneRequest req)
         => id is int zid ? PutAsync<ZoneDto>($"/api/zones/{zid}", req) : PostAsync<ZoneDto>("/api/zones", req);
 
+    public Task DeleteZoneAsync(int id) => DeleteAsync($"/api/zones/{id}");
+
     public Task<List<TimePackageDto>> PackagesAsync() => GetAsync<List<TimePackageDto>>("/api/time-packages");
     public Task<TimePackageDto> SavePackageAsync(int? id, SaveTimePackageRequest req)
         => id is int pid ? PutAsync<TimePackageDto>($"/api/time-packages/{pid}", req) : PostAsync<TimePackageDto>("/api/time-packages", req);
+
+    public Task DeletePackageAsync(int id) => DeleteAsync($"/api/time-packages/{id}");
 
     // ---- ventas ----
     public Task<SaleDto> CreateSaleAsync(CreateSaleRequest req) => PostAsync<SaleDto>("/api/sales", req);
@@ -257,6 +265,7 @@ public class CyberApi : ApiClient
     public Task<UserDto> CreateUserAsync(CreateUserRequest req) => PostAsync<UserDto>("/api/users", req);
     public Task<UserDto> UpdateUserAsync(int id, UpdateUserRequest req) => PutAsync<UserDto>($"/api/users/{id}", req);
     public Task DeactivateUserAsync(int id) => DeleteAsync($"/api/users/{id}");
+    public Task DeleteUserPermanentlyAsync(int id) => DeleteAsync($"/api/users/{id}/permanent");
 
     // ---- actualizaciones publicadas en GitHub ----
     public Task<UpdateInfoDto> LatestUpdateAsync(bool refresh = false, bool cached = false)
