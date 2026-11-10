@@ -765,7 +765,22 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente de verificación real**: instalar TightVNC en una estación x64 y x86, comprobar el
   servicio y la contraseña, abrir VNC desde la consola, cambiar el puerto y verificar la regla de
   Firewall, y desinstalar estación/servidor en distinto orden para validar el marcador compartido.
-  También queda pendiente regenerar los instaladores 1.0.12 y publicar la release.
+
+### Release v1.0.12 (2026-11-10)
+
+- **Instaladores generados** con `scripts\build-installer.ps1 -IncludeVncSource`:
+  - `artifacts\CyberManager-Servidor-1.0.12.exe` — 268.636.762 bytes (256,2 MB),
+    SHA-256 `E84E7ADAD13D0BD21BC25698C230CF7D1B2F4A8D3079CB135C8FE15023C379A9`.
+  - `artifacts\CyberManager-Estacion-1.0.12.exe` — 150.697.169 bytes (143,7 MB),
+    SHA-256 `81D665D55F47DB43F0D50DF477C0533C3B510EE89C6668F61299C783C1141F2C`.
+- **Assets de la release**: ambos instaladores y `tightvnc-2.8.90-src-gpl.zip`
+  (3.018.194 bytes, SHA-256 `F3F76393A5865E1F1919C78C3EB43B9C937CF738927C2BFC920ECBD3913B061C`)
+  para cumplir con la distribución del código fuente GPLv2.
+- **Publicación**: release `v1.0.12` en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.12>. La consola la detecta al
+  abrir y ofrece el aviso **Sí/No** para abrir la página de versiones.
+- **Commits**: `bd16a24` (actualizaciones al abrir e inicio silencioso del servidor) y `0a1ef68`
+  (integración TightVNC). `version.props` quedó en **1.0.12**.
 
 ---
 
