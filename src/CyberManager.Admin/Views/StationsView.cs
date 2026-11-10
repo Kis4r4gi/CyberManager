@@ -78,6 +78,7 @@ public sealed class StationsView : UserControl, IRefreshable
             Kit.Button("Subir", "GhostButton", () => MoveStation(-1)),
             Kit.Button("Bajar", "GhostButton", () => MoveStation(1)),
             Kit.Button("Editar", "GhostButton", EditStation),
+            Kit.Button("Eliminar", "DangerButton", DeleteStation),
             Kit.Button("Configuración / token", "BlueButton", ShowConfig),
             Kit.Button("Ver pantalla", "BlueButton", ShowScreen),
             Kit.Button("Mantenimiento", "WarningButton", ToggleMaintenance),
@@ -356,6 +357,33 @@ public sealed class StationsView : UserControl, IRefreshable
             await App.Api.SaveStationAsync(station.Id, request);
             await RefreshAsync();
         }, "No se pudo actualizar el equipo");
+    }
+
+    private async void DeleteStation()
+    {
+        if (Selected is not { } station)
+        {
+            Ui.Info("Seleccione un equipo de la lista.", "Equipos");
+            return;
+        }
+
+        if (await App.Api.StationHasActiveSessionsAsync(station.Id))
+        {
+            Ui.Info("No se puede eliminar el equipo mientras tiene sesiones activas.", "Equipo");
+            return;
+        }
+
+        if (!Ui.Confirm(
+                $"¿Eliminar permanentemente el equipo {station.Name}? " +
+                "Esto desactivará el equipo y limpiará sus referencias.",
+                "Eliminar equipo"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeactivateStationAsync(station.Id);
+            await RefreshAsync();
+        }, "No se pudo desactivar el equipo");
     }
 }
 

@@ -19,7 +19,14 @@ public class CyberApi : ApiClient
         return result;
     }
 
-    public Task<UserDto> MeAsync() => GetAsync<UserDto>("/api/auth/me");
+    public Task LogoutAsync()
+    {
+        Token = null;
+        return Task.CompletedTask;
+    }
+
+    public Task<string> GetCurrentUsernameAsync()
+        => GetAsync<string>("/api/auth/me");
 
     // ---- tablero / equipos ----
     public Task<DashboardDto> DashboardAsync() => GetAsync<DashboardDto>("/api/dashboard");
@@ -47,10 +54,18 @@ public class CyberApi : ApiClient
         => id is int sid ? PutAsync<StationDto>($"/api/stations/{sid}", req) : PostAsync<StationDto>("/api/stations", req);
 
     public Task DeleteStationAsync(int id) => DeleteAsync($"/api/stations/{id}");
+
+    public Task<bool> StationHasActiveSessionsAsync(int id)
+        => GetAsync<bool>($"/api/stations/{id}/has-active-sessions");
+
+    public Task<StationDto> DeactivateStationAsync(int id)
+        => PutAsync<StationDto>($"/api/stations/{id}/deactivate", new { Active = false });
+
+    public Task<StationConfigDto> StationConfigAsync(int id) => GetAsync<StationConfigDto>($"/api/stations/{id}/config");
+
+    public Task<object> RegenerateTokenAsync(int id) => PostAsync<object>($"/api/stations/{id}/token", new { });
     public Task ReorderStationsAsync(List<int> stationIds)
         => PostAsync("/api/stations/reorder", new ReorderStationsRequest(stationIds));
-    public Task<object> RegenerateTokenAsync(int id) => PostAsync<object>($"/api/stations/{id}/token", new { });
-    public Task<StationConfigDto> StationConfigAsync(int id) => GetAsync<StationConfigDto>($"/api/stations/{id}/config");
 
     // ---- catálogo ----
     public Task<List<ProductDto>> ProductsAsync(bool includeInactive = false)
@@ -112,12 +127,9 @@ public class CyberApi : ApiClient
     public Task CreatePurchaseAsync(CreatePurchaseRequest req) => PostAsync("/api/purchases", req);
 
     // ---- pagos a proveedores ----
-    public Task<List<SupplierBalanceDto>> SupplierBalancesAsync()
-        => GetAsync<List<SupplierBalanceDto>>("/api/suppliers/balances");
-    public Task<List<SupplierPaymentDto>> SupplierPaymentsAsync(int supplierId)
-        => GetAsync<List<SupplierPaymentDto>>($"/api/suppliers/{supplierId}/payments");
-    public Task<SupplierPaymentDto> CreateSupplierPaymentAsync(int supplierId, CreateSupplierPaymentRequest req)
-        => PostAsync<SupplierPaymentDto>($"/api/suppliers/{supplierId}/payments", req);
+    public Task<List<SupplierBalanceDto>> SupplierBalancesAsync() => GetAsync<List<SupplierBalanceDto>>("/api/suppliers/balances");
+    public Task<List<SupplierPaymentDto>> SupplierPaymentsAsync(int supplierId) => GetAsync<List<SupplierPaymentDto>>($"/api/suppliers/{supplierId}/payments");
+    public Task<SupplierPaymentDto> CreateSupplierPaymentAsync(int supplierId, CreateSupplierPaymentRequest req) => PostAsync<SupplierPaymentDto>($"/api/suppliers/{supplierId}/payments", req);
 
     public Task<List<SupplierPaymentDto>> AllSupplierPaymentsAsync(DateTime? from = null, DateTime? to = null)
     {
@@ -192,16 +204,13 @@ public class CyberApi : ApiClient
         return PostFileAsync<WallpaperDto>("/api/wallpapers", "file", fileName, contentType, data, fields);
     }
 
-    public Task<WallpaperDto> UpdateWallpaperAsync(int id, SaveWallpaperRequest req)
-        => PutAsync<WallpaperDto>($"/api/wallpapers/{id}", req);
+    public Task<WallpaperDto> UpdateWallpaperAsync(int id, SaveWallpaperRequest req) => PutAsync<WallpaperDto>($"/api/wallpapers/{id}", req);
 
     public Task DeleteWallpaperAsync(int id) => DeleteAsync($"/api/wallpapers/{id}");
 
-    public Task<WallpaperPlaylistDto> ApplyWallpaperAsync(ApplyWallpaperSettingsRequest req)
-        => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/apply", req);
+    public Task<WallpaperPlaylistDto> ApplyWallpaperAsync(ApplyWallpaperSettingsRequest req) => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/apply", req);
 
-    public Task<WallpaperPlaylistDto> RefreshWallpapersAsync()
-        => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/refresh", new { });
+    public Task<WallpaperPlaylistDto> RefreshWallpapersAsync() => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/refresh", new { });
 
     // ---- videos promocionales ----
     public Task<List<PromoVideoDto>> PromoVideosAsync() => GetAsync<List<PromoVideoDto>>("/api/promo-videos");
@@ -219,17 +228,14 @@ public class CyberApi : ApiClient
         return PostFileAsync<PromoVideoDto>("/api/promo-videos", "file", fileName, contentType, data, fields);
     }
 
-    public Task<PromoVideoDto> UpdatePromoVideoAsync(int id, SavePromoVideoRequest req)
-        => PutAsync<PromoVideoDto>($"/api/promo-videos/{id}", req);
+    public Task<PromoVideoDto> UpdatePromoVideoAsync(int id, SavePromoVideoRequest req) => PutAsync<PromoVideoDto>($"/api/promo-videos/{id}", req);
 
     public Task DeletePromoVideoAsync(int id) => DeleteAsync($"/api/promo-videos/{id}");
 
-    public Task<PromoVideoPlaylistDto> RefreshPromoVideosAsync()
-        => PostAsync<PromoVideoPlaylistDto>("/api/promo-videos/refresh", new { });
+    public Task<PromoVideoPlaylistDto> RefreshPromoVideosAsync() => PostAsync<PromoVideoPlaylistDto>("/api/promo-videos/refresh", new { });
 
     // ---- NetFiltroWeb ----
-    public Task<List<WebFilterRuleDto>> WebFilterRulesAsync()
-        => GetAsync<List<WebFilterRuleDto>>("/api/webfilter");
+    public Task<List<WebFilterRuleDto>> WebFilterRulesAsync() => GetAsync<List<WebFilterRuleDto>>("/api/webfilter");
 
     public Task<WebFilterRuleDto> SaveWebFilterRuleAsync(int? id, SaveWebFilterRuleRequest req)
         => id is int rid
@@ -238,25 +244,20 @@ public class CyberApi : ApiClient
 
     public Task DeleteWebFilterRuleAsync(int id) => DeleteAsync($"/api/webfilter/{id}");
 
-    public Task<object> RestoreWebFilterDefaultsAsync()
-        => PostAsync<object>("/api/webfilter/restore", new { });
+    public Task<object> RestoreWebFilterDefaultsAsync() => PostAsync<object>("/api/webfilter/restore", new { });
 
     // ---- respaldos de la base de datos ----
     public Task<BackupListDto> BackupsAsync() => GetAsync<BackupListDto>("/api/backups");
 
-    public Task<BackupFileDto> CreateBackupAsync()
-        => PostAsync<BackupFileDto>("/api/backups", new { });
+    public Task<BackupFileDto> CreateBackupAsync() => PostAsync<BackupFileDto>("/api/backups", new { });
 
-    public Task<byte[]> DownloadBackupAsync(string fileName)
-        => GetBytesAsync($"/api/backups/{Uri.EscapeDataString(fileName)}/download");
+    public Task<byte[]> DownloadBackupAsync(string fileName) => GetBytesAsync($"/api/backups/{Uri.EscapeDataString(fileName)}/download");
 
-    public Task<RestoreBackupResultDto> RestoreStoredBackupAsync(string fileName)
-        => PostAsync<RestoreBackupResultDto>(
-            $"/api/backups/{Uri.EscapeDataString(fileName)}/restore", new { });
+    public Task<RestoreBackupResultDto> RestoreStoredBackupAsync(string fileName) => PostAsync<RestoreBackupResultDto>(
+        $"/api/backups/{Uri.EscapeDataString(fileName)}/restore", new { });
 
-    public Task<RestoreBackupResultDto> RestoreBackupUploadAsync(string fileName, byte[] data)
-        => PostFileAsync<RestoreBackupResultDto>("/api/backups/restore-upload", "file",
-            fileName, "application/octet-stream", data);
+    public Task<RestoreBackupResultDto> RestoreBackupUploadAsync(string fileName, byte[] data) => PostFileAsync<RestoreBackupResultDto>("/api/backups/restore-upload", "file",
+        fileName, "application/octet-stream", data);
 
     // ---- configuración / usuarios ----
     public Task<Dictionary<string, string>> SettingsAsync() => GetAsync<Dictionary<string, string>>("/api/settings");
@@ -272,8 +273,7 @@ public class CyberApi : ApiClient
         => GetAsync<UpdateInfoDto>(
             $"/api/updates/latest?refresh={(refresh ? "true" : "false")}&cached={(cached ? "true" : "false")}");
 
-    public Task<UpdateInfoDto> DismissUpdateAsync(string version)
-        => PostAsync<UpdateInfoDto>("/api/updates/dismiss", new DismissUpdateRequest(version));
+    public Task<UpdateInfoDto> DismissUpdateAsync(string version) => PostAsync<UpdateInfoDto>("/api/updates/dismiss", new DismissUpdateRequest(version));
 }
 
 public static class AppPaths
@@ -312,6 +312,5 @@ public class AppConfig
         }
     }
 
-    public void Save(string app)
-        => File.WriteAllText(AppPaths.ConfigFile(app), JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+    public void Save(string app) => File.WriteAllText(AppPaths.ConfigFile(app), JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
 }

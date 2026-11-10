@@ -94,6 +94,20 @@ public static class StationEndpoints
             return Results.NoContent();
         }).RequireAuthorization("Admin");
 
+        g.MapGet("/{id:int}/has-active-sessions", async (int id, AppDbContext db) =>
+        {
+            return Results.Ok(await db.Sessions.AnyAsync(s => s.StationId == id
+                        && s.Status != SessionStatus.Closed && s.Status != SessionStatus.Cancelled));
+        }).RequireAuthorization("Admin");
+
+        g.MapPost("/{id:int}/deactivate", async (int id, AppDbContext db) =>
+        {
+            var st = await db.Stations.FirstOrDefaultAsync(s => s.Id == id) ?? throw AppException.NotFound("Equipo");
+            st.Active = false;
+            await db.SaveChangesAsync();
+            return Results.Ok(Mappers.ToDto(st));
+        }).RequireAuthorization("Admin");
+
         g.MapPost("/{id:int}/token", async (int id, AppDbContext db) =>
         {
             var st = await db.Stations.FirstOrDefaultAsync(s => s.Id == id) ?? throw AppException.NotFound("Equipo");
