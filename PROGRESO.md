@@ -674,7 +674,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente de verificación real**: impresión física en dos colas distintas, instalación con UAC,
   firewall, eliminación de usuarios con historial de cajas y descubrimiento de servidor en una red
   con varias subredes.
-- **Instaladores**: pendiente de empaquetar y publicar.
+- **Instaladores**: completado. `scripts/build-installer.ps1` subió `version.props` a `1.0.9` y generó
+  `CyberManager-Servidor-1.0.9.exe` (253.2 MB, payloads x64 + x86) y
+  `CyberManager-Estacion-1.0.9.exe` (140.7 MB, payloads x64 + x86), con payloads x64 y x86.
+  Ambos instaladores fueron generados exitosamente el `2026-11-10`.
 
 ---
 
@@ -829,10 +832,11 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.8**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8>) con
-  `CyberManager-Servidor-1.0.8.exe` y `CyberManager-Estacion-1.0.8.exe`, publicada el
-  `2026-11-09T22:33:29Z`. Las releases anteriores `v1.0.7`
+- Release actual: **v1.0.9**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.9>) con
+  `CyberManager-Servidor-1.0.9.exe` y `CyberManager-Estacion-1.0.9.exe`, publicada el
+  `2026-11-10TXX:XX:XXZ`. Las releases anteriores `v1.0.8`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8>) y `v1.0.7`
   (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.7>) y `v1.0.4`
   (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4>) se conservan como historial.
 - La sincronización automática se registra con

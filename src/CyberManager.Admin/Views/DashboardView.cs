@@ -74,7 +74,18 @@ public sealed class DashboardView : UserControl, IRefreshable
         root.Children.Add(Kit.PageHeader("Tablero de equipos",
             "Estado en vivo de cada PC, sesiones y movimientos del día.",
             _toolbarToggle,
-            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync())));
+            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync()),
+            Kit.Button("Nuevo equipo", "PrimaryButton", () =>
+            {
+                var dialog = new StationDialog(_zones, _rates) { Owner = Window.GetWindow(this) };
+                if (dialog.ShowDialog() != true || dialog.Result is null) return;
+                _ = Ui.Run(async () =>
+                {
+                    await App.Api.SaveStationAsync(null, dialog.Result);
+                    await RefreshAsync();
+                }, "No se pudo crear el equipo");
+            }),
+            Kit.Button("Ver equipos", "GhostButton", () => App.RequestNavigation("stations"))));
 
         // La barra de personalización queda oculta tras el botón «Configuración».
         _toolbarPanel = BuildToolbar();
@@ -130,6 +141,7 @@ public sealed class DashboardView : UserControl, IRefreshable
             _autoRefresh.Start();
             SyncToolbar();
             await RefreshAsync();
+            _ = CheckForUpdatesAsync();
         };
         Unloaded += (_, _) =>
         {
@@ -795,6 +807,28 @@ public sealed class DashboardView : UserControl, IRefreshable
 
         if (dialog.ShowDialog() != true || dialog.Action is null) return;
         await HandleActionAsync(dialog.Action, station);
+    }
+
+    /// <summary>Consulta si hay actualizaciones disponibles.</summary>
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var update = await App.Api.LatestUpdateAsync(refresh: false);
+            if (update is null) return;
+
+            // Solo mostramos información en el modo administrador, no al cajero
+            if (App.Session.Role == UserRole.Cashier) return;
+
+            // Registramos el aviso en la bitácora interna; el banner principal
+            // está en MainWindow y se actualiza por ahí.
+            Ui.Info($"{L.T("Hay una versión nueva disponible:")} {update.LatestVersion} " +
+                $"(actual: {update.CurrentVersion})", "Actualización");
+        }
+        catch
+        {
+            // Errores silenciosos: no afectar la UI si no se puede consultar GitHub.
+        }
     }
 
     private async Task HandleActionAsync(string action, StationSummaryDto station)
