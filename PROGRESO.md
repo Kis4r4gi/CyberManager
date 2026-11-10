@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-09
+> Última actualización: 2026-11-10
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -13,7 +13,8 @@ estación), unificados por arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
-La solución compila con **0 errores y 0 advertencias**. Se generan **dos instaladores unificados**
+La solución compila con **0 errores** (quedan 8 advertencias de nulabilidad en el cliente, no
+bloqueantes). Se generan **dos instaladores unificados**
 (Servidor y Estación), cada uno con los payloads de x64 y x86 y selección automática de la
 arquitectura al instalar. El **servidor está instalado y corriendo** como tarea programada en este
 equipo (`C:\CyberManager\Servidor`, puerto 5080).
@@ -678,6 +679,29 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `CyberManager-Servidor-1.0.9.exe` (253.2 MB, payloads x64 + x86) y
   `CyberManager-Estacion-1.0.9.exe` (140.7 MB, payloads x64 + x86), con payloads x64 y x86.
   Ambos instaladores fueron generados exitosamente el `2026-11-10`.
+
+### Verificación integral y apertura del cliente al finalizar (1.0.11, 2026-11-10)
+
+- **Proyecto real verificado**: se restauró el repositorio público `Kis4r4gi/CyberManager`
+  (rama `main`) en `C:\Users\Justo Lopez\Documents\CyberManager`. Contiene los 7 proyectos, los
+  scripts de empaquetado y las funciones de 1.0.9: impresoras separadas de tickets y de trabajo,
+  interfaz de cajero sin opciones administrativas, iconos de producto, borrado permanente de
+  usuarios, conexión por IP/MAC, control remoto/VNC, IGTF, RIF, tooltips a 2 s y videos
+  promocionales.
+- **Compilación**: `dotnet build CyberManager.sln -c Release` → **0 errores**. Quedan 8
+  advertencias de nulabilidad en `CyberManager.Client` (`App.xaml.cs` y `SetupWindow.xaml.cs`)
+  que no bloquean la compilación ni el empaquetado.
+- **Instalador de estación**: la página final ahora ofrece **Abrir CyberManager Cliente** además de
+  **Configurar el agente de esta estación**. `ShouldOpenClient` evita abrir una segunda instancia
+  cuando el cliente ya estaba en ejecución (en ese caso se reinicia en `ssDone`). El instalador de
+  servidor ya ofrecía **Abrir la consola de administración**.
+- **Instaladores unificados regenerados** con Inno Setup 6.7.4 (x64 + x86):
+  - `artifacts\CyberManager-Servidor-1.0.11.exe` — 265.509.659 bytes (~253,2 MB),
+    SHA-256 `504550C679AF3589847E4BFF88644D128D9ED716DC2784478252D3BB09EDD1B0`.
+  - `artifacts\CyberManager-Estacion-1.0.11.exe` — 147.584.297 bytes (~140,7 MB),
+    SHA-256 `E03D4ED0D1CB681688F14002020EAE5E5DD4A5184F2923B507765E9222BB2377`.
+- **Pendiente de verificación real**: instalación con UAC, firewall, servicio del agente,
+  desinstalación y control remoto contra una estación física.
 
 ---
 

@@ -48,6 +48,8 @@ spanish.StartupGroup=Inicio automático:
 english.StartupGroup=Automatic startup:
 spanish.StartupClient=Iniciar el cliente con Windows
 english.StartupClient=Start the client with Windows
+spanish.OpenClient=Abrir CyberManager Cliente
+english.OpenClient=Open CyberManager Client
 spanish.ConfigureAgent=Configurar el agente de esta estación (ID y token)
 english.ConfigureAgent=Configure this station's agent (ID and token)
 spanish.OpeningAgent=Abriendo configuración del agente...
@@ -106,6 +108,7 @@ Name: "{commonstartup}\CyberManager Cliente"; Filename: "{app}\Client\CyberManag
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-agente.ps1"""; Description: "{cm:ConfigureAgent}"; StatusMsg: "{cm:OpeningAgent}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Client\CyberManager.Client.exe"; Description: "{cm:OpenClient}"; WorkingDir: "{app}\Client"; Flags: nowait postinstall skipifsilent; Check: ShouldOpenClient
 
 [UninstallRun]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\desinstalar-servicios.ps1"" -Agente"; Flags: runhidden waituntilterminated; RunOnceId: "DetenerAgenteCyberManager"
@@ -185,6 +188,13 @@ begin
   StopAgentService;
   StopProcess('CyberManager.Agent.exe');
   StopProcess('CyberManager.Client.exe');
+end;
+
+// No se abre el cliente si ya estaba en ejecución: se reinicia en ssDone para
+// no dejar dos instancias abiertas.
+function ShouldOpenClient(): Boolean;
+begin
+  Result := not (ClientWasRunning or AgentWasRunning);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

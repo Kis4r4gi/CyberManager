@@ -449,6 +449,8 @@ Después de instalar:
 3. Al terminar, el instalador abre la configuración del agente. Indique el **ID**, el **token** y
    la **URL LAN del servidor**, y siga las instrucciones para registrar el servicio
    `CyberManagerAgent`.
+4. En la página final también puede marcar **Abrir CyberManager Cliente** para iniciar el cliente
+   de inmediato, sin esperar al siguiente inicio de sesión.
 
 ### Desinstalación
 
