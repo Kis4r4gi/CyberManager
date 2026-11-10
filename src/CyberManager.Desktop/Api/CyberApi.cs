@@ -295,6 +295,8 @@ public class AppConfig
     public string? LastUsername { get; set; }
     public int StationId { get; set; }
     public string StationToken { get; set; } = string.Empty;
+    public string? StationIpAddress { get; set; }
+    public string? StationMacAddress { get; set; }
     /// <summary>Idioma de la estación: "es" o "en".</summary>
     public string Language { get; set; } = "es";
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -25,7 +26,7 @@ public partial class SetupWindow : Window
 
         ServerUrlBox.Text = config.ServerUrl;
         StationIdBox.Text = config.StationId > 0 ? config.StationId.ToString() : string.Empty;
-        TokenBox.Text = config.StationToken;
+        // Token field removed: using IP/MAC based connection
 
         foreach (ComboBoxItem item in LanguageBox.Items)
         {
@@ -50,9 +51,11 @@ public partial class SetupWindow : Window
         Loc.Apply(this);
     }
 
-    private bool TryRead(out int stationId)
+    private bool TryRead(out int stationId, out string? stationIpAddress, out string? stationMacAddress)
     {
         stationId = 0;
+        stationIpAddress = null;
+        stationMacAddress = null;
 
         if (!int.TryParse(StationIdBox.Text.Trim(), out stationId) || stationId <= 0)
         {
@@ -60,25 +63,41 @@ public partial class SetupWindow : Window
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(TokenBox.Text))
+        // Parse IP address if provided
+        if (!string.IsNullOrWhiteSpace(IpAddressBox.Text) && !IPAddress.TryParse(IpAddressBox.Text, out var ip))
         {
-            ShowStatus(L.T("Debe indicar el token del equipo."), isError: true);
+            ShowStatus(L.T("La dirección IP no tiene un formato válido."), isError: true);
             return false;
         }
+        stationIpAddress = IpAddressBox.Text;
+
+        // Parse MAC address if provided
+        if (!string.IsNullOrWhiteSpace(MacAddressBox.Text))
+        {
+            // Validate MAC address format (XX:XX:XX:XX:XX:XX or XXXX.XXXX.XXXX or X X X X X X)
+            var macText = MacAddressBox.Text.Trim();
+            if (!Regex.IsMatch(macText, @"^([0-9A-Fa-f]{2}[:]){5}[0-9A-Fa-f]{2}$|^([0-9A-Fa-f]{4}[\.]){2}[0-9A-Fa-f]{4}$|^([0-9A-Fa-f]{2}[ ]{5}[0-9A-Fa-f]{2})$"))
+            {
+                ShowStatus(L.T("La dirección MAC no tiene un formato válido."), isError: true);
+                return false;
+            }
+        }
+        stationMacAddress = MacAddressBox.Text;
 
         return true;
     }
 
     private async void Test_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryRead(out var stationId)) return;
+        if (!TryRead(out var stationId, out var stationIpAddress, out var stationMacAddress)) return;
 
         TestButton.IsEnabled = false;
         ShowStatus(L.T("Conectando con el servidor..."), isError: false);
 
         try
         {
-            var api = new StationApi(ServerUrlBox.Text, stationId, TokenBox.Text.Trim());
+            // Usar IP y/or MAC para la conexión en lugar de token
+            var api = new StationApi(ServerUrlBox.Text, stationId, stationIpAddress, stationMacAddress);
             var state = await api.StateAsync();
 
             var session = state.Session is null
@@ -103,13 +122,14 @@ public partial class SetupWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryRead(out var stationId)) return;
+        if (!TryRead(out var stationId, out var stationIpAddress, out var stationMacAddress)) return;
 
         var config = new AppConfig
         {
             ServerUrl = ApiClient.Normalize(ServerUrlBox.Text),
             StationId = stationId,
-            StationToken = TokenBox.Text.Trim(),
+            StationIpAddress = stationIpAddress,
+            StationMacAddress = stationMacAddress,
             Language = (LanguageBox.SelectedItem as ComboBoxItem)?.Tag as string ?? L.Code
         };
         config.Save("Client");

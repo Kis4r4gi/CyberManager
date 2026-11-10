@@ -33,8 +33,11 @@
             <TextBlock Text="Número de equipo (StationId)" Style="{StaticResource Label}" Margin="0,14,0,4" />
             <TextBox x:Name="StationIdBox" ToolTip="Número que aparece en Administración › Equipos" />
 
-            <TextBlock Text="Token del equipo" Style="{StaticResource Label}" Margin="0,14,0,4" />
-            <TextBox x:Name="TokenBox" FontFamily="Consolas" />
+            <TextBlock Text="Dirección IP" Style="{StaticResource Label}" Margin="0,14,0,4" />
+            <TextBox x:Name="IpAddressBox" ToolTip="Dirección IP del equipo (ej. 192.168.1.50)" />
+
+            <TextBlock Text="Dirección MAC" Style="{StaticResource Label}" Margin="0,14,0,4" />
+            <TextBox x:Name="MacAddressBox" ToolTip="Dirección MAC del equipo (ej. AA:BB:CC:DD:EE:FF)" FontFamily="Consolas" />
 
             <TextBlock Text="Idioma de la estación" Style="{StaticResource Label}" Margin="0,14,0,4" />
             <ComboBox x:Name="LanguageBox" SelectionChanged="Language_Changed">

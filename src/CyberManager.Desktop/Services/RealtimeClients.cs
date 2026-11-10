@@ -115,6 +115,36 @@ public sealed class StationRealtime : IAsyncDisposable
         ConnectionChanged?.Invoke(true);
     }
 
+    /// <summary>Conecta usando dirección IP y MAC en lugar de token.</summary>
+    public async Task ConnectAsync(string baseUrl, int stationId, string ipAddress, string macAddress)
+    {
+        await DisposeAsync();
+
+        var url = $"{baseUrl.TrimEnd('/')}/hubs/station" +
+                  $"?stationId={stationId}&ipAddress={Uri.EscapeDataString(ipAddress)}&macAddress={Uri.EscapeDataString(macAddress)}";
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl(url)
+            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+            .Build();
+
+        _hub.On<AgentCommand>("Command", c => CommandReceived?.Invoke(c));
+        _hub.On<StationStateEvent>("StationState", e => StationStateChanged?.Invoke(e));
+        _hub.On<SessionWarningEvent>("SessionWarning", e => SessionWarning?.Invoke(e));
+        _hub.On<WallpaperPlaylistDto>("WallpaperChanged", p => WallpaperChanged?.Invoke(p));
+        _hub.On<PromoVideoPlaylistDto>("PromoVideosChanged", p => PromoVideosChanged?.Invoke(p));
+        _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
+        _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));
+        _hub.On<WebFilterPlaylistDto>("WebFilterChanged", p => WebFilterChanged?.Invoke(p));
+
+        _hub.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
+        _hub.Reconnected += _ => { ConnectionChanged?.Invoke(true); return Task.CompletedTask; };
+        _hub.Closed += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
+
+        await _hub.StartAsync();
+        ConnectionChanged?.Invoke(true);
+    }
+
     public Task HeartbeatAsync(AgentHeartbeat heartbeat)
         => _hub is { State: HubConnectionState.Connected }
             ? _hub.InvokeAsync("Heartbeat", heartbeat)

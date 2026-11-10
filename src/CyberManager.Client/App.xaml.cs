@@ -31,7 +31,8 @@ public partial class App : Application
     private DateTime _lastConnectAttempt = DateTime.MinValue;
 
     private static bool Configured =>
-        Config.StationId > 0 && !string.IsNullOrWhiteSpace(Config.StationToken);
+        Config.StationId > 0 && (!string.IsNullOrWhiteSpace(Config.StationToken) ||
+            (!string.IsNullOrWhiteSpace(Config.StationIpAddress) && !string.IsNullOrWhiteSpace(Config.StationMacAddress)));
 
     public App()
     {
@@ -79,7 +80,16 @@ public partial class App : Application
     {
         await StopAsync();
 
-        Api = new StationApi(Config.ServerUrl, Config.StationId, Config.StationToken);
+        // Usar IP y MAC para la conexión si están configurados, sino usar token legado
+        if (!string.IsNullOrWhiteSpace(Config.StationIpAddress) && !string.IsNullOrWhiteSpace(Config.StationMacAddress))
+        {
+            Api = new StationApi(Config.ServerUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
+        }
+        else
+        {
+            Api = new StationApi(Config.ServerUrl, Config.StationId, Config.StationToken);
+        }
+
         Realtime = new StationRealtime();
         Realtime.CommandReceived += OnCommandReceived;
         Realtime.StationStateChanged += OnStationStateChanged;
@@ -91,7 +101,15 @@ public partial class App : Application
 
         try
         {
-            await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+            // Conectar usando el método apropiado según la configuración
+            if (Api is not null && Api.StationIpAddress is not null && Api.StationMacAddress is not null)
+            {
+                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
+            }
+            else
+            {
+                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+            }
             _lastConnectAttempt = DateTime.UtcNow;
         }
         catch
@@ -178,7 +196,15 @@ public partial class App : Application
             _lastConnectAttempt = DateTime.UtcNow;
             try
             {
-                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+                // Reintentar conexión usando el método apropiado
+                if (Api is not null && Api.StationIpAddress is not null && Api.StationMacAddress is not null)
+                {
+                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
+                }
+                else
+                {
+                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+                }
             }
             catch { /* se reintenta luego */ }
         }
