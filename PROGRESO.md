@@ -622,6 +622,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Instaladores**: `scripts/build-installer.ps1` subió `version.props` a `1.0.8` y generó
   `CyberManager-Servidor-1.0.8.exe` (265.493.981 bytes, ~253,2 MB) y
   `CyberManager-Estacion-1.0.8.exe` (147.580.604 bytes, ~140,7 MB).
+- Release `v1.0.8` publicada con ambos instaladores en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8> el `2026-11-09T22:33:29Z`;
+  el recordatorio de 2 horas quedará para `2026-11-10T00:33:29Z`.
 
 ---
 
@@ -776,12 +779,12 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.4**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4>) con
-  `CyberManager-Servidor-1.0.4.exe` y `CyberManager-Estacion-1.0.4.exe`, publicada el
-  `2026-11-08T23:46:40Z`. Las releases anteriores `v1.0.3`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.3>) y `v1.0.2`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.2>) se conservan como historial.
+- Release actual: **v1.0.8**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8>) con
+  `CyberManager-Servidor-1.0.8.exe` y `CyberManager-Estacion-1.0.8.exe`, publicada el
+  `2026-11-09T22:33:29Z`. Las releases anteriores `v1.0.7`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.7>) y `v1.0.4`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.4>) se conservan como historial.
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
