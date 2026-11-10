@@ -32,11 +32,11 @@ public record SaveCategoryRequest(string Name, string Color, int SortOrder, bool
 public record ProductDto(
     int Id, string Sku, string Name, int? CategoryId, string? CategoryName, string? CategoryColor,
     decimal Price, decimal Cost, decimal Stock, decimal MinStock, string Unit, bool IsService,
-    decimal TaxRate, bool Active, bool LowStock);
+    decimal TaxRate, bool Active, bool LowStock, string? Icon = null);
 
 public record SaveProductRequest(
     string Sku, string Name, int? CategoryId, decimal Price, decimal Cost, decimal Stock,
-    decimal MinStock, string Unit, bool IsService, decimal TaxRate, bool Active);
+    decimal MinStock, string Unit, bool IsService, decimal TaxRate, bool Active, string? Icon = null);
 
 public record SupplierDto(int Id, string Name, string? Phone, string? Email, string? Address, string? Notes, bool Active);
 public record SaveSupplierRequest(string Name, string? Phone, string? Email, string? Address, string? Notes, bool Active);

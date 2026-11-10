@@ -12,7 +12,7 @@ namespace CyberManager.Admin.Services;
 /// <summary>Datos de encabezado y configuración de impresión de tickets.</summary>
 public sealed record TicketSettings(
     string BusinessName, string? TaxId, string? Address, string? Phone,
-    string? Header, string? Footer, string? PrinterName, int Copies, bool AutoPrint,
+    string? Header, string? Footer, string? PrinterName, string? WorkPrinterName, int Copies, bool AutoPrint,
     string ClosingFormat)
 {
     public static TicketSettings From(IReadOnlyDictionary<string, string> settings)
@@ -31,6 +31,7 @@ public sealed record TicketSettings(
             Get("TicketHeader"),
             Get("TicketFooter", "¡Gracias por su visita!"),
             Get("PrinterName"),
+            Get("WorkPrinterName"),
             copies,
             autoPrint,
             TicketPrinter.NormalizeClosingFormat(Get("DailyClosingFormat", "ticket80")));
@@ -56,12 +57,18 @@ public static class TicketPrinter
     };
 
     public static bool PrintSale(SaleDto sale, TicketSettings settings, bool silent = false)
-        => Print(BuildSale(sale, settings), silent ? settings.PrinterName : null, settings.Copies,
+        => Print(BuildSale(sale, settings), settings.PrinterName, settings.Copies,
             $"Ticket {sale.Number}", silent);
 
     public static bool PrintClosing(DailyClosingDto closing, TicketSettings settings, bool silent = false)
-        => Print(BuildClosing(closing, settings), silent ? settings.PrinterName : null,
+    {
+        var printer = string.IsNullOrWhiteSpace(settings.WorkPrinterName)
+            ? settings.PrinterName
+            : settings.WorkPrinterName;
+
+        return Print(BuildClosing(closing, settings), printer,
             settings.Copies, $"Cierre {closing.Date:yyyyMMdd}", silent);
+    }
 
     public static FlowDocument BuildSale(SaleDto sale, TicketSettings settings)
     {
@@ -204,6 +211,28 @@ public static class TicketPrinter
             dialog.PrintDocument(paginator, $"{jobName} ({i + 1}/{copies})");
 
         return true;
+    }
+
+    /// <summary>Lista las impresoras instaladas y las colas de red conectadas.</summary>
+    public static IReadOnlyList<string> InstalledPrinters()
+    {
+        try
+        {
+            using var server = new LocalPrintServer();
+            return server.GetPrintQueues(new[]
+                {
+                    EnumeratedPrintQueueTypes.Local, EnumeratedPrintQueueTypes.Connections
+                })
+                .Select(q => q.FullName)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
     }
 
     private static PrintQueue? FindQueue(string name)

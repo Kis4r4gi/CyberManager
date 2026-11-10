@@ -208,7 +208,7 @@ public static class CatalogEndpoints
             {
                 Sku = req.Sku, Name = req.Name, CategoryId = req.CategoryId, Price = req.Price,
                 Cost = req.Cost, Stock = req.Stock, MinStock = req.MinStock, Unit = req.Unit,
-                IsService = req.IsService, TaxRate = req.TaxRate, Active = req.Active
+                IsService = req.IsService, TaxRate = req.TaxRate, Active = req.Active, Icon = req.Icon
             };
             db.Products.Add(p);
             await db.SaveChangesAsync();
@@ -230,7 +230,7 @@ public static class CatalogEndpoints
                     ?? throw AppException.NotFound("Producto");
             p.Sku = req.Sku; p.Name = req.Name; p.CategoryId = req.CategoryId; p.Price = req.Price;
             p.Cost = req.Cost; p.MinStock = req.MinStock; p.Unit = req.Unit;
-            p.IsService = req.IsService; p.TaxRate = req.TaxRate; p.Active = req.Active;
+            p.IsService = req.IsService; p.TaxRate = req.TaxRate; p.Active = req.Active; p.Icon = req.Icon;
             await db.SaveChangesAsync();
             return Results.Ok(Mappers.ToDto(p));
         }).RequireAuthorization("Admin");

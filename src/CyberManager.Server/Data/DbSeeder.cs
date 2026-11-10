@@ -81,6 +81,9 @@ public static class DbSeeder
         await AddColumnIfMissingAsync(db, "Stations", "Kind", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfMissingAsync(db, "Stations", "Platform", "TEXT NULL");
         await AddColumnIfMissingAsync(db, "Stations", "Controllers", "INTEGER NULL");
+
+        // Icono corto de los productos (emoji o texto).
+        await AddColumnIfMissingAsync(db, "Products", "Icon", "TEXT NULL");
     }
 
     private static async Task AddColumnIfMissingAsync(AppDbContext db, string table, string column, string definition)
@@ -363,6 +366,7 @@ public static class DbSeeder
             [SettingsKeys.AutoLockOvertime] = "true",
             [SettingsKeys.AllowPostpaid] = "true",
             [SettingsKeys.PrinterName] = "",
+            [SettingsKeys.WorkPrinterName] = "",
             [SettingsKeys.KioskMode] = "false",
             [SettingsKeys.InvoicePrefix] = "00",
             [SettingsKeys.BackupAutoEnabled] = "true",

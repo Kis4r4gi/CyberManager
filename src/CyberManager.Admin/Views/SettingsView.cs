@@ -18,7 +18,9 @@ public sealed class SettingsView : UserControl, IRefreshable
 {
     private readonly Dictionary<string, TextBox> _texts = new();
     private readonly Dictionary<string, CheckBox> _checks = new();
+    private readonly Dictionary<string, ComboBox> _printers = new();
     private readonly Dictionary<string, string> _textDefaults = new();
+    private readonly Dictionary<string, string> _printerDefaults = new();
     private readonly Dictionary<string, bool> _checkDefaults = new();
 
     private readonly TextBlock _businessStatus = Kit.Muted("Cargue la configuración para comenzar.");
@@ -181,7 +183,8 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         panel.Children.Add(Kit.Section("Ticket y operación"));
         var operation = new UniformGrid { Columns = 2 };
-        AddText(operation, "PrinterName", "Impresora de tickets (opcional)", "");
+        AddPrinter(operation, "PrinterName", "Impresora de tickets (vacío = predeterminada)", "");
+        AddPrinter(operation, "WorkPrinterName", "Impresora de trabajo (cierres y reportes)", "");
         AddText(operation, "TicketCopies", "Copias por ticket (1 a 5)", "1");
         panel.Children.Add(operation);
 
@@ -290,6 +293,9 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         foreach (var (key, box) in _texts)
             values[key] = Normalize(box.Text);
+
+        foreach (var (key, box) in _printers)
+            values[key] = box.Text.Trim();
 
         foreach (var (key, check) in _checks)
             values[key] = (check.IsChecked == true).ToString().ToLowerInvariant();
@@ -1645,6 +1651,11 @@ public sealed class SettingsView : UserControl, IRefreshable
                 ? value
                 : _textDefaults.GetValueOrDefault(key, string.Empty);
 
+        foreach (var (key, box) in _printers)
+            box.Text = settings.TryGetValue(key, out var printer)
+                ? printer
+                : _printerDefaults.GetValueOrDefault(key, string.Empty);
+
         foreach (var (key, check) in _checks)
             check.IsChecked = settings.TryGetValue(key, out var raw) && bool.TryParse(raw, out var parsed)
                 ? parsed
@@ -1692,6 +1703,25 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         var field = Kit.Field(label, box);
         field.Margin = new Thickness(0, 0, fullWidth ? 0 : 16, 10);
+        parent.Children.Add(field);
+    }
+
+    private void AddPrinter(Panel parent, string key, string label, string fallback)
+    {
+        var box = new ComboBox
+        {
+            IsEditable = true,
+            IsTextSearchEnabled = true,
+            ItemsSource = TicketPrinter.InstalledPrinters().ToList(),
+            Text = fallback,
+            ToolTip = "Elija una impresora instalada o escriba su nombre. " +
+                      "Si se deja vacío, se usará la impresora predeterminada de Windows."
+        };
+        _printers[key] = box;
+        _printerDefaults[key] = fallback;
+
+        var field = Kit.Field(label, box);
+        field.Margin = new Thickness(0, 0, 16, 10);
         parent.Children.Add(field);
     }
 

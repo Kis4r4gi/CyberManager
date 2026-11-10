@@ -15,7 +15,7 @@ public static class Mappers
     public static ProductDto ToDto(Product p) => new(
         p.Id, p.Sku, p.Name, p.CategoryId, p.Category?.Name, p.Category?.Color,
         p.Price, p.Cost, p.Stock, p.MinStock, p.Unit, p.IsService, p.TaxRate,
-        p.Active, p.Stock <= p.MinStock);
+        p.Active, p.Stock <= p.MinStock, p.Icon);
 
     public static CustomerDto ToDto(Customer c) => new(
         c.Id, c.Name, c.Phone, c.Email, c.DocumentId, c.Address, c.FiscalData,

@@ -63,7 +63,7 @@
                 <ColumnDefinition Width="4" />
                 <ColumnDefinition Width="*" MinWidth="420" />
                 <ColumnDefinition Width="4" />
-                <ColumnDefinition Width="322" MinWidth="220" MaxWidth="520" />
+                <ColumnDefinition Width="322" MinWidth="220" MaxWidth="520" x:Name="LogColumn" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
@@ -75,7 +75,7 @@
 
                     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Margin="10,14,10,0">
                         <StackPanel x:Name="NavPanel">
-                            <TextBlock Text="OPERACIÓN" Style="{StaticResource Label}" Margin="12,4,0,6" />
+                            <TextBlock x:Name="OperationLabel" Text="OPERACIÓN" Style="{StaticResource Label}" Margin="12,4,0,6" />
                             <Button Style="{StaticResource NavButton}" CommandParameter="dashboard" Click="Nav_Click"
                                     ToolTip="Abre el tablero de equipos.">
                                 <StackPanel Orientation="Horizontal">
@@ -98,7 +98,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <TextBlock Text="CATÁLOGO" Style="{StaticResource Label}" Margin="12,16,0,6" />
+                            <TextBlock x:Name="CatalogLabel" Text="CATÁLOGO" Style="{StaticResource Label}" Margin="12,16,0,6" />
                             <Button Style="{StaticResource NavButton}" CommandParameter="products" Click="Nav_Click"
                                     ToolTip="Gestiona productos y tarifas.">
                                 <StackPanel Orientation="Horizontal">
@@ -128,7 +128,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <TextBlock Text="PERSONAS" Style="{StaticResource Label}" Margin="12,16,0,6" />
+                            <TextBlock x:Name="PeopleLabel" Text="PERSONAS" Style="{StaticResource Label}" Margin="12,16,0,6" />
                             <Button Style="{StaticResource NavButton}" CommandParameter="customers" Click="Nav_Click"
                                     ToolTip="Gestiona clientes y saldos.">
                                 <StackPanel Orientation="Horizontal">
@@ -144,7 +144,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <TextBlock Text="SISTEMA" Style="{StaticResource Label}" Margin="12,16,0,6" />
+                            <TextBlock x:Name="SystemLabel" Text="SISTEMA" Style="{StaticResource Label}" Margin="12,16,0,6" />
                             <Button Style="{StaticResource NavButton}" CommandParameter="wallpapers" Click="Nav_Click"
                                     ToolTip="Gestiona los fondos de pantalla.">
                                 <StackPanel Orientation="Horizontal">
@@ -230,7 +230,7 @@
             </Grid>
 
             <!-- ================= Bitácora de terminales ================= -->
-            <Border Grid.Column="4" Background="{StaticResource SidebarBrush}"
+            <Border x:Name="LogHost" Grid.Column="4" Background="{StaticResource SidebarBrush}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -269,7 +269,7 @@
                           ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
                           ShowsPreview="False" Cursor="SizeWE"
                           ToolTip="Arrastre para ajustar el ancho del menú lateral" />
-            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch"
+            <GridSplitter x:Name="LogSplitter" Grid.Column="3" Width="4" HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}"
                           ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
                           ShowsPreview="False" Cursor="SizeWE"

@@ -69,6 +69,8 @@ public sealed class DashboardView : UserControl, IRefreshable
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         _toolbarToggle = Kit.Button("Configuración", "GhostButton", ToggleToolbar);
+        if (App.Session.Role == UserRole.Cashier)
+            _toolbarToggle.Visibility = Visibility.Collapsed;
         root.Children.Add(Kit.PageHeader("Tablero de equipos",
             "Estado en vivo de cada PC, sesiones y movimientos del día.",
             _toolbarToggle,
@@ -785,7 +787,8 @@ public sealed class DashboardView : UserControl, IRefreshable
     {
         if (sender is not FrameworkElement { DataContext: StationSummaryDto station }) return;
 
-        var dialog = new StationActionsDialog(station, _dashboard?.ExchangeRate ?? 0)
+        var dialog = new StationActionsDialog(station, _dashboard?.ExchangeRate ?? 0,
+            systemActions: App.Session.Role != UserRole.Cashier)
         {
             Owner = Window.GetWindow(this)
         };

@@ -11,7 +11,8 @@ public sealed class StationActionsDialog : FormDialog
 {
     public string? Action { get; private set; }
 
-    public StationActionsDialog(StationSummaryDto station, decimal exchangeRate)
+    public StationActionsDialog(StationSummaryDto station, decimal exchangeRate,
+        bool systemActions = true)
         : base(station.Name, $"Zona: {station.ZoneName ?? "sin zona"}")
     {
         AcceptButton.Content = "Cerrar";
@@ -78,27 +79,30 @@ public sealed class StationActionsDialog : FormDialog
             Add("Transferir a otro PC", "GhostButton", "transfer");
         }
 
-        Add("Ver pantalla remota", "BlueButton", "screen");
-        if (station.Status == StationStatus.Offline)
-            Add("Encender equipo (WoL)", "SuccessButton", "wake");
-        Add(station.Status == StationStatus.Maintenance ? "Quitar mantenimiento" : "Poner en mantenimiento",
-            "GhostButton", "maintenance");
-        Add("Bloquear equipo", "GhostButton", "lock");
-        Add("Enviar mensaje", "GhostButton", "message");
+        if (systemActions)
+        {
+            Add("Ver pantalla remota", "BlueButton", "screen");
+            if (station.Status == StationStatus.Offline)
+                Add("Encender equipo (WoL)", "SuccessButton", "wake");
+            Add(station.Status == StationStatus.Maintenance ? "Quitar mantenimiento" : "Poner en mantenimiento",
+                "GhostButton", "maintenance");
+            Add("Bloquear equipo", "GhostButton", "lock");
+            Add("Enviar mensaje", "GhostButton", "message");
 
-        // ---------- Control remoto del equipo ----------
-        Add("Control de volumen", "GhostButton", "volume");
-        Add("Silenciar", "GhostButton", "mute");
-        Add("Activar sonido", "GhostButton", "unmute");
-        Add("Apagar monitor", "GhostButton", "monitoroff");
-        Add("Encender monitor", "GhostButton", "monitoron");
-        Add("Bloquear teclado y mouse", "WarningButton", "lockinput");
-        Add("Desbloquear entrada", "GhostButton", "unlockinput");
-        Add("Cerrar programa", "WarningButton", "killprocess");
+            // ---------- Control remoto del equipo ----------
+            Add("Control de volumen", "GhostButton", "volume");
+            Add("Silenciar", "GhostButton", "mute");
+            Add("Activar sonido", "GhostButton", "unmute");
+            Add("Apagar monitor", "GhostButton", "monitoroff");
+            Add("Encender monitor", "GhostButton", "monitoron");
+            Add("Bloquear teclado y mouse", "WarningButton", "lockinput");
+            Add("Desbloquear entrada", "GhostButton", "unlockinput");
+            Add("Cerrar programa", "WarningButton", "killprocess");
 
-        Add("Apagar equipo", "DangerButton", "shutdown");
-        Add("Reiniciar equipo", "DangerButton", "restart");
-        Add("Cerrar sesión Windows", "DangerButton", "logoff");
+            Add("Apagar equipo", "DangerButton", "shutdown");
+            Add("Reiniciar equipo", "DangerButton", "restart");
+            Add("Cerrar sesión Windows", "DangerButton", "logoff");
+        }
 
         Body.Children.Add(actions);
     }

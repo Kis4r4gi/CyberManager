@@ -27,6 +27,8 @@ public static class SettingsKeys
     public const string AutoLockOvertime = "AutoLockOvertime";
     public const string AllowPostpaid = "AllowPostpaid";
     public const string PrinterName = "PrinterName";
+    /// <summary>Impresora para cierres, reportes y documentos de trabajo.</summary>
+    public const string WorkPrinterName = "WorkPrinterName";
     public const string KioskMode = "KioskMode";
     public const string InvoicePrefix = "InvoicePrefix";
     public const string ControlNumberStart = "ControlNumberStart";

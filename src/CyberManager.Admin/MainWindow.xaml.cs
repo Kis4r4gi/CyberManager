@@ -16,6 +16,12 @@ public partial class MainWindow : Window
 {
     private const int MaxLogEntries = 250;
 
+    /// <summary>Vistas reservadas a administradores y técnicos.</summary>
+    private static readonly HashSet<string> AdministrativeViews = new(StringComparer.Ordinal)
+    {
+        "products", "inventory", "purchases", "stations", "wallpapers", "promos", "reports", "settings"
+    };
+
     private readonly Dictionary<string, UserControl> _views = new();
     private readonly DispatcherTimer _headerTimer = new() { Interval = TimeSpan.FromSeconds(20) };
     private readonly Dictionary<int, string> _stationNames = new();
@@ -34,6 +40,7 @@ public partial class MainWindow : Window
         VersionText.Text = $"CyberManager {AppInfo.Version}";
         UpdateWindowTitle();
         UpdateRoleText();
+        ApplyRoleVisibility();
 
         App.NavigationRequested += OnNavigationRequested;
         AppearanceService.Changed += ApplyAppearance;
@@ -46,6 +53,36 @@ public partial class MainWindow : Window
 
     private void UpdateRoleText()
         => RoleText.Text = Labels.RoleName(App.Session.Role);
+
+    private static bool IsCashier => App.Session.Role == UserRole.Cashier;
+
+    /// <summary>
+    /// El cajero solo ve las funciones de operación: tablero, punto de venta, caja,
+    /// clientes y reservas. Las vistas administrativas se ocultan y se bloquean.
+    /// </summary>
+    private void ApplyRoleVisibility()
+    {
+        if (!IsCashier) return;
+
+        foreach (var button in NavPanel.Children.OfType<Button>())
+        {
+            if (button.CommandParameter is string key && AdministrativeViews.Contains(key))
+                button.Visibility = Visibility.Collapsed;
+        }
+
+        CatalogLabel.Visibility = Visibility.Collapsed;
+        SystemLabel.Visibility = Visibility.Collapsed;
+
+        // La bitácora de terminales es información administrativa.
+        LogHost.Visibility = Visibility.Collapsed;
+        LogSplitter.Visibility = Visibility.Collapsed;
+        LogColumn.Width = new GridLength(0);
+        LogColumn.MinWidth = 0;
+        LogColumn.MaxWidth = 0;
+
+        // El aviso de actualizaciones solo interesa al administrador.
+        UpdateBanner.Visibility = Visibility.Collapsed;
+    }
 
     /// <summary>Muestra el nombre y la versión del software en la barra de título de Windows.</summary>
     private void UpdateWindowTitle()
@@ -187,6 +224,9 @@ public partial class MainWindow : Window
 
     private void Navigate(string key)
     {
+        if (IsCashier && AdministrativeViews.Contains(key))
+            key = "dashboard";
+
         if (!_views.TryGetValue(key, out var view))
         {
             view = key switch
@@ -273,6 +313,12 @@ public partial class MainWindow : Window
     private void ApplyUpdate(UpdateInfoDto info)
     {
         _update = info;
+
+        if (IsCashier)
+        {
+            UpdateBanner.Visibility = Visibility.Collapsed;
+            return;
+        }
 
         if (!info.IsReminderDue || string.IsNullOrWhiteSpace(info.LatestVersion))
         {

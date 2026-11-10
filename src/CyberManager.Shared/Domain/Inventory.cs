@@ -28,6 +28,8 @@ public class Product
     public decimal TaxRate { get; set; }
     public bool Active { get; set; } = true;
     public string? ImagePath { get; set; }
+    /// <summary>Icono corto (emoji o texto) que se muestra en la caja y la pantalla del cliente.</summary>
+    public string? Icon { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
 
