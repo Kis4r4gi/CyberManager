@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-10
+> Última actualización: 2026-11-14
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -781,6 +781,22 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   abrir y ofrece el aviso **Sí/No** para abrir la página de versiones.
 - **Commits**: `bd16a24` (actualizaciones al abrir e inicio silencioso del servidor) y `0a1ef68`
   (integración TightVNC). `version.props` quedó en **1.0.12**.
+
+### Importación del stock real (2026-11-14)
+
+- Se agregó `scripts/import-stock.ps1`, que importa listas CSV o HTML del sistema anterior usando
+  el código como SKU: crea los productos nuevos y actualiza los existentes sin duplicar.
+- La base instalada en `C:\CyberManager\Servidor\Server\cybermanager.db` quedó con **424 productos**
+  importados de `resources\stock.csv`: 424 activos, IVA 16 %, 98 marcados como servicio (sin stock
+  ni mínimo), 180 movimientos de stock inicial y 0 SKUs duplicados.
+- Se eliminaron los 16 productos de ejemplo (`BEB-001`…`SRV-004`); no tenían ventas, compras ni
+  movimientos asociados. Antes de escribir se creó el respaldo
+  `respaldos\cybermanager_20261114_121852_pre-importacion.db`.
+- Las tres filas con descripción que contenía comas (`mod2`, `port14`, `port15`) se reconstruyeron
+  correctamente: `mod 2, opsu`, `portamina fosca plastico 0,5` y `portamina foska metal 0,7`.
+- El importador aplica 16 % de IVA por defecto (`-TaxRate`), marca servicios según `-ServiceMode`
+  (`Auto`, `None`, `All`) y permite `-DryRun`, `-Database`, `-ServerDir`, `-SkipBackup` y
+  `-DeleteDemoProducts`. Documentado en README → *Importar productos desde una lista de stock*.
 
 ---
 

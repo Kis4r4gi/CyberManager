@@ -740,6 +740,29 @@ necesario cerrar la caja ni detener el servidor.
 
 ---
 
+## Importar productos desde una lista de stock
+
+`scripts/import-stock.ps1` carga la lista exportada por el sistema anterior (CSV o tabla HTML con
+las columnas Código, Descripción, Precio, %IVA, Stock y Mínimo). Usa el código como SKU: crea los
+productos que no existen y actualiza nombre, precio, stock, mínimo, IVA y tipo de los que ya
+existen, sin duplicar códigos. Las descripciones que contienen comas se reconstruyen
+automáticamente.
+
+```powershell
+# Ver qué haría, sin escribir nada
+.\scripts\import-stock.ps1 -File .\resources\stock.csv -DryRun
+
+# Importar y eliminar los 16 productos de ejemplo del sembrado inicial
+.\scripts\import-stock.ps1 -File .\resources\stock.csv -DeleteDemoProducts
+```
+
+Por defecto aplica **16 % de IVA** a todos los productos (el %IVA del archivo se ignora), crea un
+respaldo en `respaldos` antes de escribir y marca como servicio los productos sin stock, sin
+mínimo y con precio mayor que cero, para que sigan siendo vendibles. Opciones útiles:
+`-TaxRate`, `-ServiceMode Auto|None|All`, `-Database`, `-ServerDir` y `-SkipBackup`.
+
+---
+
 ## Configurar un equipo (PC)
 
 1. En la consola vaya a **Equipos**, seleccione el PC y pulse **Configuración / token**.
@@ -1067,6 +1090,7 @@ guarda una copia local del estado:
 | `scripts/generate-icon.ps1`     | Genera el icono compartido `assets/CyberManager.ico`.               |
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
+| `scripts/import-stock.ps1`      | Importa o actualiza productos desde un CSV/HTML de stock.           |
 | `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con
