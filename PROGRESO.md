@@ -1145,12 +1145,12 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.18**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.18>) con
-  `CyberManager-Servidor-1.0.18.exe` (269.029.427 bytes) y
-  `CyberManager-Estacion-1.0.18.exe` (150.704.974 bytes), publicada el
-  `2026-11-14T23:01:50Z`. La release anterior publicada es `v1.0.12`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.12>).
+- Release actual: **v1.0.19**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.19>) con
+  `CyberManager-Servidor-1.0.19.exe` (269.043.642 bytes) y
+  `CyberManager-Estacion-1.0.19.exe` (150.711.457 bytes), publicada el
+  `2026-11-14T23:43:46Z`. La release anterior publicada es `v1.0.18`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.18>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
