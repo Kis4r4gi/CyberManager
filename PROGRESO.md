@@ -971,6 +971,17 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
     cajero, las vistas administrativas quedaron en `Collapsed` y `App.IsShuttingDown` siguió en
     `false`.
 - **Compilación**: `dotnet build CyberManager.sln -c Release` con **0 errores**.
+- **Instaladores 1.0.19**: `CyberManager-Servidor-1.0.19.exe` (269.043.642 bytes) y
+  `CyberManager-Estacion-1.0.19.exe` (150.711.457 bytes). Instalación silenciosa del servidor con
+  las tareas `desktopicon,serverstartup,firewall`: `/api/health` responde `ok`, el servidor y la
+  consola quedaron en **1.0.19**, la tarea `CyberManagerServer` está **Running** y la base conserva
+  **424 productos**, **40 imágenes** y **8 respaldos**. El proceso de instalación se esperó desde
+  PowerShell hasta el tiempo límite porque el servidor iniciado por la tarea es un proceso hijo;
+  la instalación y el arranque terminaron correctamente.
+- **Prueba de extremo a extremo del fondo**: se subió al servidor real un PNG de 64 × 48 con fondo
+  blanco y un cuadro rojo (producto 268, sin imagen). La API devolvió `image/png` de 318 bytes, la
+  esquina quedó con **alfa 0** y el centro con **alfa 255**. Después se eliminó la imagen de prueba:
+  el producto volvió a `hasIcon = false` y la base quedó de nuevo en **424 productos y 40 imágenes**.
 
 ---
 
