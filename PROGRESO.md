@@ -922,6 +922,14 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `"ProductDisplay":"icon"` y un JSON antiguo asume `"image"`.
 - **Compilación**: `dotnet build CyberManager.sln -c Release` con **0 errores** (8 avisos nullable
   preexistentes en el cliente).
+- **Instaladores 1.0.18**: `CyberManager-Servidor-1.0.18.exe` (256,6 MB) y
+  `CyberManager-Estacion-1.0.18.exe` (143,7 MB). Instalación silenciosa del servidor con las tareas
+  `desktopicon,serverstartup,firewall` (código de salida **0**): `/api/health` responde `ok`, el
+  servidor y la consola quedaron en **1.0.18**, la tarea `CyberManagerServer` está **Running** y la
+  base conserva **424 productos**, **40 imágenes** `image/png` (AGUA 330: 11.353 bytes) y
+  **8 respaldos** en la carpeta predeterminada. El `appearance.json` real del equipo no tiene la
+  clave nueva, así que la consola instalada arranca en modo **Imagen PNG** y la guardará al aplicar
+  Apariencia.
 
 ---
 
