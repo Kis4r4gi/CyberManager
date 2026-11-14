@@ -132,11 +132,19 @@ public sealed class ProductsView : UserControl, IRefreshable
     // ================= Productos =================
     private Grid BuildProductTab()
     {
-        var actions = Kit.HStack(8,
+        var buttons = new List<FrameworkElement>
+        {
             Kit.Button("Nuevo producto", "PrimaryButton", NewProduct),
             Kit.Button("Editar", "GhostButton", EditProduct),
             Kit.Button("Activar / desactivar", "GhostButton", ToggleProduct),
-            Kit.Button("Eliminar", "DangerButton", DeleteProduct));
+            Kit.Button("Eliminar", "DangerButton", DeleteProduct)
+        };
+
+        // Buscar imágenes en internet es una acción exclusiva del administrador.
+        if (App.Session.Role == UserRole.Admin)
+            buttons.Add(Kit.Button("Buscar imagen…", "GhostButton", SearchProductIcon));
+
+        var actions = Kit.HStack(8, buttons.ToArray());
 
         return ListTab("Los precios se capturan con IVA incluido; el sistema desglosa el impuesto al facturar.",
             actions, _productsGrid);
@@ -225,6 +233,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         };
         menu.Items.Add(ProductMenuItem("Editar producto…", EditProduct));
         menu.Items.Add(ProductMenuItem("Cambiar imagen…", ChangeProductIcon));
+        menu.Items.Add(ProductMenuItem("Buscar imagen en internet…", SearchProductIcon));
         menu.Items.Add(removeIcon);
         menu.Items.Add(resizeIcon);
         menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
@@ -308,6 +317,30 @@ public sealed class ProductsView : UserControl, IRefreshable
             await App.Api.UploadProductIconAsync(row.Source.Id, image.FileName, image.Data);
             await RefreshAsync();
         }, "No se pudo cambiar la imagen del producto");
+    }
+
+    /// <summary>
+    /// Busca una imagen en internet para el producto seleccionado y la guarda como PNG.
+    /// Solo está disponible para el administrador.
+    /// </summary>
+    private void SearchProductIcon()
+    {
+        if (App.Session.Role != UserRole.Admin) return;
+
+        if (_productsGrid.SelectedItem is not ProductRow row)
+        {
+            Ui.Info("Seleccione un producto de la lista.", "Buscar imagen");
+            return;
+        }
+
+        var dialog = new IconSearchDialog(row.Name, row.Name) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true || dialog.Result is not byte[] data) return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.UploadProductIconAsync(row.Source.Id, "icono_web.png", data);
+            await RefreshAsync();
+        }, "No se pudo guardar la imagen del producto");
     }
 
     private void RemoveProductIcon()
@@ -833,10 +866,13 @@ public sealed class ProductDialog : FormDialog
         };
 
         var chooseButton = Kit.Button("Elegir imagen…", "GhostButton", ChooseIcon);
+        var searchButton = Kit.Button("Buscar en internet…", "GhostButton", SearchWebIcon);
+        searchButton.Margin = new Thickness(0, 6, 0, 0);
         var clearButton = Kit.Button("Quitar", "GhostButton", ClearIcon);
         clearButton.Margin = new Thickness(0, 6, 0, 0);
         var iconButtons = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10, 0, 0, 0) };
         iconButtons.Children.Add(chooseButton);
+        iconButtons.Children.Add(searchButton);
         iconButtons.Children.Add(clearButton);
 
         var iconRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -909,6 +945,20 @@ public sealed class ProductDialog : FormDialog
         _iconData = null;
         _iconChanged = true;
         SetPreview(null);
+    }
+
+    /// <summary>Abre la búsqueda de imágenes en internet y usa la elegida como PNG.</summary>
+    private void SearchWebIcon()
+    {
+        var name = string.IsNullOrWhiteSpace(_name.Text) ? "el producto" : _name.Text.Trim();
+        var query = string.IsNullOrWhiteSpace(_name.Text) ? null : _name.Text.Trim();
+        var dialog = new IconSearchDialog(name, query) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Result is not byte[] data) return;
+
+        _iconData = data;
+        _iconFileName = "icono_web.png";
+        _iconChanged = true;
+        ShowPreview(data);
     }
 
     private async Task LoadCurrentIconAsync(ProductDto product)

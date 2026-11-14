@@ -5,6 +5,7 @@ using CyberManager.Shared;
 using CyberManager.Shared.Domain;
 using CyberManager.Shared.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CyberManager.Server.Data;
 
@@ -14,7 +15,7 @@ public static class DbSeeder
     /// <c>EnsureCreated</c> no agrega tablas ni columnas a una base ya existente. Este script
     /// mantiene compatibles las instalaciones creadas antes de las funciones nuevas.
     /// </summary>
-    public static async Task EnsureCompatibilityAsync(AppDbContext db)
+    public static async Task EnsureCompatibilityAsync(AppDbContext db, ILogger? log = null)
     {
         await db.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS "Wallpapers" (
@@ -99,6 +100,53 @@ public static class DbSeeder
         // Icono corto de los productos (emoji o texto) e imagen asociada.
         await AddColumnIfMissingAsync(db, "Products", "Icon", "TEXT NULL");
         await AddColumnIfMissingAsync(db, "Products", "IconUpdatedUtc", "TEXT NULL");
+
+        // Las imágenes de versiones anteriores (BMP, JPG o GIF) se guardan como PNG.
+        await NormalizeProductIconsAsync(db, log);
+    }
+
+    /// <summary>
+    /// Convierte a PNG las imágenes de producto guardadas antes de esta versión. Es
+    /// idempotente: en los arranques siguientes no encuentra filas que cambiar.
+    /// </summary>
+    private static async Task NormalizeProductIconsAsync(AppDbContext db, ILogger? log)
+    {
+        var legacy = await db.ProductIcons
+            .Where(i => i.ContentType != "image/png" || i.Extension != ".png")
+            .ToListAsync();
+        if (legacy.Count == 0) return;
+
+        var converted = 0;
+        foreach (var icon in legacy)
+        {
+            try
+            {
+                var (data, probe) = ProductIconImage.ToPng(icon.Data);
+                icon.Data = data;
+                icon.ContentType = probe.ContentType;
+                icon.Extension = probe.Extension;
+                icon.Width = probe.Width;
+                icon.Height = probe.Height;
+                icon.SizeBytes = data.LongLength;
+                icon.Sha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+                icon.UpdatedUtc = DateTime.UtcNow;
+
+                var product = await db.Products.FirstOrDefaultAsync(p => p.Id == icon.ProductId);
+                if (product is not null) product.IconUpdatedUtc = icon.UpdatedUtc;
+                converted++;
+            }
+            catch (Exception ex)
+            {
+                log?.LogWarning(ex, "No se pudo convertir a PNG la imagen del producto {ProductId}",
+                    icon.ProductId);
+            }
+        }
+
+        if (converted > 0)
+        {
+            await db.SaveChangesAsync();
+            log?.LogInformation("Imágenes de producto convertidas a PNG: {Count}", converted);
+        }
     }
 
     private static async Task AddColumnIfMissingAsync(AppDbContext db, string table, string column, string definition)

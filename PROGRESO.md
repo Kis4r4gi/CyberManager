@@ -829,6 +829,34 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   en la base (`ContentType = image/png`, `Extension = .png`) y conserva el BMP si la conversión no
   está disponible.
 
+### Búsqueda de iconos en internet y PNG universal (2026-11-14)
+
+- **Regla PNG universal**: toda imagen de producto se guarda y se sirve como PNG. El servidor
+  agregó `System.Drawing.Common` 8.0.11 y `ProductIconImage.ToPng`; el POST de icono convierte la
+  imagen recibida a PNG antes de guardarla y `DbSeeder.NormalizeProductIconsAsync` migra las filas
+  antiguas al arrancar. La consola usa `ProductImage.Normalize` y `ProductImage.ToPng(data, maxSize)`
+  para la conversión local antes de subir.
+- **Migración verificada**: sobre una copia de la base instalada el arranque del servidor convirtió
+  **39 imágenes**; las **40** con imagen respondieron `image/png`. Una subida BMP de prueba pasó de
+  39.654 a **10.530 bytes** PNG (`89 50 4E 47`). Respaldo usado:
+  `respaldos\cybermanager_20261114_142800_manual.db`.
+- **Búsqueda en internet**: `Services/WebImageSearch.cs` consulta Openverse
+  (`https://api.openverse.org/v1/images/`) con `license=cc0,pdm`, filtro de URLs raster (excluye SVG
+  y TIFF), descarga con límites (16 MB original, 4 MB miniatura), miniaturas y conversión final a
+  PNG de 512 px. Reintenta ante 401/403/429/5xx y conexiones fallidas, y explica el error en
+  español. `page_size` se limita a **20** porque Openverse rechaza valores mayores en peticiones
+  anónimas (`401 {"detail":"page_size may not exceed 20 for anonymous requests"}`).
+- **Diálogo**: `IconSearchDialog` muestra 20 mosaicos en 4 columnas, carga las miniaturas con un
+  límite de 4 descargas simultáneas, permite seleccionar con resaltado, informa la licencia
+  (CC0/dominio público) y lanza la búsqueda automáticamente con el nombre del producto. Se abre
+  desde el formulario del producto (**Buscar en internet…**), desde la barra de **Productos**
+  (**Buscar imagen…**) y desde el menú contextual (**Buscar imagen en internet…**). Todas las
+  entradas están restringidas al rol `Admin`.
+- **Prueba real del diálogo**: búsqueda `hamburger` → **20 resultados**, **18 miniaturas** cargadas
+  (2 sin vista previa), selección de la primera y PNG final de **289.830 bytes, 512×384,
+  `image/png`**. La prueba se ejecutó en STA con el tema oscuro cargado y una captura del diálogo
+  para revisar el diseño.
+
 ### Carpeta de respaldos, menú de producto y punto de venta (2026-11-14)
 
 - **Carpeta de respaldos configurable**: nueva clave `SettingsKeys.BackupFolder`. Vacía significa

@@ -156,7 +156,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
-    await DbSeeder.EnsureCompatibilityAsync(db);
+    await DbSeeder.EnsureCompatibilityAsync(db,
+        scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbSeeder"));
     await DbSeeder.SeedAsync(db);
 }
 

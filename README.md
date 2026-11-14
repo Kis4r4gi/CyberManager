@@ -777,8 +777,11 @@ mínimo y con precio mayor que cero, para que sigan siendo vendibles. Opciones �
 Cada producto puede tener una imagen (`.bmp`, `.png`, `.jpg` o `.gif`, hasta 20 MB). La imagen se
 guarda **dentro de la base de datos**, así que viaja con los respaldos y no se pierde al reinstalar.
 La consola y las estaciones guardan una copia en disco y en memoria para mostrarla al instante.
-Los archivos **`.bmp` se convierten automáticamente a `.png`** al agregarlos, tanto desde la consola
-como con el importador en bloque, para que ocupen menos espacio sin perder calidad.
+
+**Todas las imágenes se guardan y se muestran en PNG.** Al agregar un `.bmp`, `.jpg` o `.gif`, el
+sistema lo convierte automáticamente a `.png` antes de escribirlo en la base, tanto desde la consola
+como con el importador en bloque. El servidor también convierte cualquier imagen antigua que no sea
+PNG al arrancar, de modo que la API siempre responde `image/png`.
 
 **Desde la consola:** en **Productos**, pulse **Nuevo** o **Editar**, use **Elegir imagen…** y
 guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** indica si el producto
@@ -786,11 +789,29 @@ tiene una. El emoji o texto del campo **Icono** se conserva como respaldo cuando
 tiene imagen.
 
 También puede hacer **clic derecho sobre cualquier producto** para abrir su menú desplegable:
-**Editar producto…**, **Cambiar imagen…**, **Quitar imagen**, **Redimensionar imagen…**, **Activar /
-desactivar** y **Eliminar producto**. **Redimensionar imagen…** reduce la imagen guardada a 64, 96,
-128, 160, 256 o 512 píxeles como lado máximo, mantiene la proporción y la guarda en PNG para que
-ocupe menos. Estas acciones del menú están disponibles **solo para el administrador**; la API
-también exige el rol `Admin` para modificar imágenes.
+**Editar producto…**, **Cambiar imagen…**, **Buscar imagen en internet…**, **Quitar imagen**,
+**Redimensionar imagen…**, **Activar / desactivar** y **Eliminar producto**. **Redimensionar
+imagen…** reduce la imagen guardada a 64, 96, 128, 160, 256 o 512 píxeles como lado máximo, mantiene
+la proporción y la guarda en PNG para que ocupe menos. Estas acciones del menú están disponibles
+**solo para el administrador**; la API también exige el rol `Admin` para modificar imágenes.
+
+### Buscar imágenes en internet
+
+El botón **Buscar imagen…** (barra de **Productos**) y la opción **Buscar imagen en internet…** del
+menú contextual abren un buscador que consulta [Openverse](https://openverse.org) y muestra una
+cuadrícula con las coincidencias. También está disponible dentro del diálogo del producto con
+**Buscar en internet…**.
+
+- Solo se listan imágenes con licencia **CC0** o de **dominio público**, que se pueden usar sin
+  atribución obligatoria. La licencia se muestra en cada miniatura y en la nota del diálogo.
+- Las miniaturas se cargan en paralelo (4 a la vez) y la búsqueda se lanza automáticamente con el
+  nombre del producto; puede cambiarlo y pulsar **Buscar** o **Enter**.
+- Al pulsar **Usar imagen** se descarga la imagen original (o la miniatura si la original falla),
+  se convierte a **PNG** y se limita a **512 px** de lado máximo antes de guardarla en el producto.
+- La búsqueda requiere conexión a internet y no usa claves de API. Openverse puede responder con
+  lentitud o limitar las peticiones anónimas; el sistema reintenta y muestra un mensaje claro si el
+  servicio no está disponible.
+- Solo el administrador puede buscar y asignar imágenes; el cajero no ve estas opciones.
 
 La imagen se muestra en el punto de venta (**Punto de venta** → tarjetas de producto) y en la
 pantalla del cliente (**Pedir productos**). En el punto de venta la tarjeta con imagen le da el

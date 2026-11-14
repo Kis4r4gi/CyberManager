@@ -273,6 +273,12 @@ public static class CatalogEndpoints
             if (!probe.Valid)
                 throw new AppException("Formato no válido. Use BMP, PNG, JPG o GIF.");
 
+            // Todas las imágenes de producto se guardan en PNG.
+            (data, probe) = ProductIconImage.ToPng(data);
+            if (data.LongLength > ImageInspector.MaxBytes)
+                throw new AppException(
+                    $"La imagen convertida a PNG supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB. Use una imagen más pequeña.");
+
             var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id)
                           ?? throw AppException.NotFound("Producto");
 
