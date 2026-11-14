@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Media;
 using CyberManager.Desktop.Api;
@@ -32,6 +33,15 @@ public sealed class AppearanceSettings
     public double StationCardScale { get; set; } = 100;
     /// <summary>Idioma de la consola: "es" o "en".</summary>
     public string Language { get; set; } = "es";
+    /// <summary>
+    /// Qué se muestra para cada producto en el catálogo y el punto de venta:
+    /// <c>image</c> (PNG si existe) o <c>icon</c> (emoji o texto).
+    /// </summary>
+    public string ProductDisplay { get; set; } = "image";
+
+    /// <summary>True cuando se debe mostrar la imagen PNG del producto.</summary>
+    [JsonIgnore]
+    public bool ShowProductImages => ProductDisplay != "icon";
 
     // ---------------- Personalización del tablero de equipos ----------------
     /// <summary>Orden del tablero: manual, name, status, zone, kind, time o amount.</summary>
@@ -94,6 +104,10 @@ public sealed class AppearanceSettings
     };
 
     public static IReadOnlyList<string> Presets { get; } = new[] { "Cyber", "Neón", "Esmeralda", "Ámbar", "Océano", "Grafito" };
+
+    /// <summary>Normaliza el modo de visualización de productos: "image" o "icon".</summary>
+    public static string NormalizeProductDisplay(string? value)
+        => string.Equals(value, "icon", StringComparison.OrdinalIgnoreCase) ? "icon" : "image";
 }
 
 public static class AppearanceService
@@ -141,6 +155,7 @@ public static class AppearanceService
         Current.NavFontSize = Math.Clamp(settings.NavFontSize, 11, 17);
         Current.ProductCardScale = Math.Clamp(settings.ProductCardScale, 80, 160);
         Current.StationCardScale = Math.Clamp(settings.StationCardScale, 80, 160);
+        Current.ProductDisplay = AppearanceSettings.NormalizeProductDisplay(settings.ProductDisplay);
         Current.Language = L.Parse(settings.Language) == AppLanguage.English ? "en" : "es";
         Current.DashboardSort = NormalizeDashboardSort(settings.DashboardSort);
         Current.DashboardZoneId = settings.DashboardZoneId is > 0 ? settings.DashboardZoneId : null;

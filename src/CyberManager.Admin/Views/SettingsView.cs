@@ -56,6 +56,7 @@ public sealed class SettingsView : UserControl, IRefreshable
     private Slider _navFontSlider = null!;
     private Slider _productCardSlider = null!;
     private Slider _stationCardSlider = null!;
+    private ComboBox _productDisplayBox = null!;
     private bool _appearanceLoading;
     private bool _businessLoaded;
     private bool _businessSaving;
@@ -621,6 +622,8 @@ public sealed class SettingsView : UserControl, IRefreshable
             preset.NavFontSize = _navFontSlider.Value;
             preset.ProductCardScale = _productCardSlider.Value;
             preset.StationCardScale = _stationCardSlider.Value;
+            preset.ProductDisplay = (_productDisplayBox.SelectedItem as Option<string>)?.Value
+                                    ?? AppearanceService.Current.ProductDisplay;
             preset.Language = (_languageBox.SelectedItem as Option<string>)?.Value
                               ?? AppearanceService.Current.Language;
             CopyDashboardPreferences(AppearanceService.Current, preset);
@@ -689,6 +692,27 @@ public sealed class SettingsView : UserControl, IRefreshable
         };
         cards.Children.Add(Kit.Field("Cuadros de terminales (80 a 160 %)", _stationCardSlider));
         panel.Children.Add(cards);
+
+        panel.Children.Add(Kit.Section("Productos y punto de venta"));
+        panel.Children.Add(Description(
+            "Elija si las listas y las tarjetas del punto de venta muestran la imagen PNG del " +
+            "producto o su icono (emoji o texto). Si un producto no tiene imagen, se usa el icono."));
+        _productDisplayBox = new ComboBox
+        {
+            ItemsSource = new List<Option<string>>
+            {
+                new("image", "Imagen PNG (si existe)"),
+                new("icon", "Icono (emoji o texto)")
+            },
+            DisplayMemberPath = nameof(Option<object>.DisplayText)
+        };
+        _productDisplayBox.SelectionChanged += (_, _) =>
+        {
+            if (_appearanceLoading) return;
+            MarkAppearanceDirty();
+            ApplyAppearance(previewOnly: true);
+        };
+        panel.Children.Add(Kit.Field("Mostrar en productos y punto de venta", _productDisplayBox));
 
         var actions = Kit.HStack(8,
             Kit.Button("Aplicar y guardar", "SuccessButton", () => _ = SaveAllAsync()),
@@ -780,6 +804,9 @@ public sealed class SettingsView : UserControl, IRefreshable
             _navFontSlider.Value = Math.Clamp(settings.NavFontSize, 11, 17);
             _productCardSlider.Value = Math.Clamp(settings.ProductCardScale, 80, 160);
             _stationCardSlider.Value = Math.Clamp(settings.StationCardScale, 80, 160);
+            var display = AppearanceSettings.NormalizeProductDisplay(settings.ProductDisplay);
+            _productDisplayBox.SelectedItem = _productDisplayBox.Items.Cast<Option<string>>()
+                .FirstOrDefault(o => o.Value == display);
             var languageCode = L.Parse(settings.Language) == AppLanguage.English ? "en" : "es";
             _languageBox.SelectedItem = _languageBox.Items.Cast<Option<string>>()
                 .FirstOrDefault(o => o.Value == languageCode);
@@ -821,6 +848,7 @@ public sealed class SettingsView : UserControl, IRefreshable
             NavFontSize = _navFontSlider.Value,
             ProductCardScale = _productCardSlider.Value,
             StationCardScale = _stationCardSlider.Value,
+            ProductDisplay = (_productDisplayBox.SelectedItem as Option<string>)?.Value ?? "image",
             Language = (_languageBox.SelectedItem as Option<string>)?.Value ?? "es",
 
             // La personalización del tablero se administra desde el propio tablero:

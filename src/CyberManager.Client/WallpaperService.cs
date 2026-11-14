@@ -209,7 +209,7 @@ public sealed class WallpaperService : IDisposable
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
-        image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        // IgnoreImageCache + StreamSource lanza ArgumentNullException en WPF .NET 8.
         image.StreamSource = stream;
         image.EndInit();
         image.Freeze();

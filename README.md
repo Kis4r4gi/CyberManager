@@ -819,6 +819,24 @@ espacio libre a la fotografía y la ajusta automáticamente con proporción unif
 ni deformarla; el tamaño de la tarjeta sigue la escala configurada en **Apariencia**. Si un equipo
 no puede descargarla, se muestra el emoji de respaldo.
 
+### Elegir entre imagen o icono
+
+El catálogo y el punto de venta pueden mostrar la **imagen PNG** o el **icono** (emoji o texto) de
+cada producto. El ajuste está en dos lugares y comparte el mismo valor:
+
+- En **Productos**, el selector **Mostrar:** de la barra superior (**Imagen PNG** o **Icono**).
+- En **Configuración → Apariencia → Productos y punto de venta**, la lista **Mostrar en productos y
+  punto de venta**.
+
+Con **Imagen PNG** (opción predeterminada) se muestra la fotografía del producto cuando existe; en
+el punto de venta se usa la tarjeta grande que ajusta la imagen al espacio disponible. Con **Icono**
+se muestra siempre el emoji o texto del producto, aunque tenga imagen, y el punto de venta usa la
+tarjeta compacta. Si un producto no tiene imagen, en ambos modos se muestra su icono.
+
+La preferencia se guarda por equipo en `%LOCALAPPDATA%\CyberManager\Admin\appearance.json`, se
+aplica al instante en las vistas abiertas (incluido el punto de venta) y los archivos de
+configuración antiguos, sin esta clave, asumen el modo **Imagen PNG**.
+
 ### Importar imágenes en bloque
 
 `scripts/import-product-icons.ps1` empareja por nombre los archivos `.bmp` de una carpeta con los

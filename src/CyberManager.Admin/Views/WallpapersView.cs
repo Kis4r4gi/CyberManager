@@ -288,7 +288,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            // IgnoreImageCache + StreamSource lanza ArgumentNullException en WPF .NET 8.
             image.DecodePixelWidth = 520;
             image.StreamSource = new MemoryStream(data);
             image.EndInit();
@@ -384,7 +384,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            // IgnoreImageCache + StreamSource lanza ArgumentNullException en WPF .NET 8.
             image.DecodePixelWidth = 760;
             image.StreamSource = new MemoryStream(data);
             image.EndInit();

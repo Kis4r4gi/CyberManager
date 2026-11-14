@@ -141,7 +141,9 @@ public sealed class ProductIconCache
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
-        image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        // No se usa BitmapCreateOptions.IgnoreImageCache: en WPF (.NET 8) provoca
+        // ArgumentNullException al decodificar desde un StreamSource. La caché ya
+        // usa nombres por versión, así que no hace falta invalidar la global.
         image.StreamSource = stream;
         image.EndInit();
         image.Freeze();

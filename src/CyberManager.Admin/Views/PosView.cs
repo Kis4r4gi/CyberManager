@@ -267,8 +267,18 @@ public sealed class PosView : UserControl, IRefreshable
 
         Content = root;
 
-        Loaded += (_, _) => _searchBox.Focus();
+        Loaded += (_, _) =>
+        {
+            _searchBox.Focus();
+            AppearanceService.Changed -= OnAppearanceChanged;
+            AppearanceService.Changed += OnAppearanceChanged;
+        };
+        Unloaded += (_, _) => AppearanceService.Changed -= OnAppearanceChanged;
     }
+
+    /// <summary>Repinta el catálogo cuando cambia el modo de imagen o la escala de las tarjetas.</summary>
+    private void OnAppearanceChanged(AppearanceSettings settings)
+        => Dispatcher.Invoke(RenderProducts);
 
     /// <summary>El lector de código de barras escribe el código y envía Enter.</summary>
     private void OnSearchKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -386,7 +396,7 @@ public sealed class PosView : UserControl, IRefreshable
     {
         var available = product.IsService || product.Stock > 0;
         var scale = AppearanceService.Current.ProductCardScale / 100.0;
-        var hasImage = product.HasIcon;
+        var hasImage = AppearanceService.Current.ShowProductImages && product.HasIcon;
         var stockText = product.IsService ? "Servicio" : product.Stock <= 0 ? "Agotado" : $"{product.Stock:N0} disp.";
 
         var layout = new Grid();

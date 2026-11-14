@@ -893,6 +893,36 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   servidor sobre `C:\CyberManager\Servidor`; `/api/health` responde `ok`, la versión instalada es
   **1.0.15** y la base conserva **424 productos** con **40 imágenes** y **7 respaldos**.
 
+### Elegir imagen PNG o icono en productos y punto de venta (2026-11-14)
+
+- **Preferencia**: nueva clave `AppearanceSettings.ProductDisplay` (`"image"` predeterminado,
+  `"icon"`), con `ShowProductImages` calculado y `NormalizeProductDisplay`. `AppearanceService.Apply`
+  la normaliza y los `appearance.json` antiguos, sin la clave, asumen el modo imagen.
+- **Configuración**: en *Apariencia → Productos y punto de venta* hay una lista **Mostrar en
+  productos y punto de venta** con **Imagen PNG (si existe)** e **Icono (emoji o texto)**; se
+  conserva al cambiar de tema predefinido y al restablecer la apariencia.
+- **Productos**: la columna **Icono** pasó a una plantilla que muestra la miniatura PNG de 32×32 o el
+  emoji/texto. La barra superior agrega el selector rápido **Mostrar:** con la misma preferencia.
+  `RenderProductsAsync` carga hasta 4 miniaturas a la vez mediante `App.Icons.GetAsync` y
+  `LoadProductImagesAsync`; si la descarga falla, se mantiene el icono.
+- **Punto de venta**: `hasImage = AppearanceService.Current.ShowProductImages && product.HasIcon`.
+  Con imagen usa la tarjeta de 196 × 198 px; con icono, la compacta de 184 × 108 px (ambas escaladas
+  por `ProductCardScale`). La vista se suscribe a `AppearanceService.Changed` al cargarse y se
+  desuscribe al descargarse, así que el cambio se repinta al instante.
+- **Fallo corregido al decodificar imágenes**: `ProductIconCache` usaba
+  `BitmapCreateOptions.IgnoreImageCache` junto con `StreamSource`, lo que lanza
+  `ArgumentNullException: Value cannot be null (Parameter 'key')` en WPF sobre .NET 8 y hacía que
+  las 40 imágenes nunca se mostraran (catálogo, punto de venta y cliente). Se quitó esa opción en
+  `ProductIconCache` y en las cargas de fondos (`WallpapersView` y `WallpaperService`).
+- **Prueba** (`ProductDisplayTest`, STA, .NET 8, servidor 1.0.17 en el puerto 5080): 424 productos y
+  40 con PNG. Modo imagen: **40 miniaturas** y 384 iconos visibles; modo icono: **0 miniaturas** y
+  424 iconos. Punto de venta: **198 px** con imagen y **108 px** con icono, la imagen queda visible
+  tras la carga asíncrona y el repintado por `AppearanceService.Changed` cambia la tarjeta a
+  108/198 px. Los selectores de Productos y Apariencia existen y se sincronizan; el JSON guarda
+  `"ProductDisplay":"icon"` y un JSON antiguo asume `"image"`.
+- **Compilación**: `dotnet build CyberManager.sln -c Release` con **0 errores** (8 avisos nullable
+  preexistentes en el cliente).
+
 ---
 
 ## Rutas y comandos clave

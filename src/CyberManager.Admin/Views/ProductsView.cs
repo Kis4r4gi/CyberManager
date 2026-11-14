@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CyberManager.Admin.Services;
@@ -24,12 +25,14 @@ public sealed class ProductsView : UserControl, IRefreshable
     private List<RateDto> _rates = new();
     private List<TimePackageDto> _packages = new();
     private List<ZoneDto> _zones = new();
+    private ComboBox _productDisplayBox = null!;
+    private bool _productDisplayLoading;
 
     public ProductsView()
     {
         _productsGrid = Kit.Table(
             Kit.Col("Código", nameof(ProductRow.Sku), 110),
-            Kit.Col("Icono", nameof(ProductRow.Icon), 60),
+            ProductIconColumn(),
             Kit.Col("Imagen", nameof(ProductRow.HasImage), 70),
             Kit.Col("Producto", nameof(ProductRow.Name)),
             Kit.Col("Categoría", nameof(ProductRow.Category), 140),
@@ -103,10 +106,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         _packages = await App.Api.PackagesAsync();
         _zones = await App.Api.ZonesAsync();
 
-        _productsGrid.ItemsSource = _products
-            .OrderBy(p => p.Name)
-            .Select(p => new ProductRow(p))
-            .ToList();
+        await RenderProductsAsync();
 
         _categoriesGrid.ItemsSource = _categories
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
@@ -144,10 +144,146 @@ public sealed class ProductsView : UserControl, IRefreshable
         if (App.Session.Role == UserRole.Admin)
             buttons.Add(Kit.Button("Buscar imagen…", "GhostButton", SearchProductIcon));
 
+        // Selector rápido: usa la misma preferencia que se guarda en Apariencia.
+        _productDisplayBox = new ComboBox
+        {
+            ItemsSource = ProductDisplayOptions(),
+            DisplayMemberPath = nameof(Option<object>.DisplayText),
+            Width = 150,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _productDisplayBox.SelectionChanged += (_, _) =>
+        {
+            if (_productDisplayLoading) return;
+            if (_productDisplayBox.SelectedItem is not Option<string> option) return;
+            ApplyProductDisplay(option.Value);
+        };
+
+        var displayRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var displayLabel = Kit.Label("Mostrar:");
+        displayLabel.VerticalAlignment = VerticalAlignment.Center;
+        displayLabel.Margin = new Thickness(12, 0, 6, 0);
+        displayRow.Children.Add(displayLabel);
+        displayRow.Children.Add(_productDisplayBox);
+        buttons.Add(displayRow);
+
         var actions = Kit.HStack(8, buttons.ToArray());
+        SyncProductDisplayBox();
 
         return ListTab("Los precios se capturan con IVA incluido; el sistema desglosa el impuesto al facturar.",
             actions, _productsGrid);
+    }
+
+    private static List<Option<string>> ProductDisplayOptions() => new()
+    {
+        new("image", "Imagen PNG"),
+        new("icon", "Icono")
+    };
+
+    /// <summary>Columna que muestra la imagen PNG o el icono de texto según la preferencia.</summary>
+    private static DataGridTemplateColumn ProductIconColumn()
+    {
+        var image = new FrameworkElementFactory(typeof(Image));
+        image.SetValue(Image.StretchProperty, Stretch.Uniform);
+        image.SetValue(FrameworkElement.WidthProperty, 32.0);
+        image.SetValue(FrameworkElement.HeightProperty, 32.0);
+        image.SetValue(FrameworkElement.MarginProperty, new Thickness(2));
+        image.SetBinding(Image.SourceProperty, new Binding(nameof(ProductRow.IconImage)));
+        image.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(ProductRow.ImageVisibility)));
+
+        var text = new FrameworkElementFactory(typeof(TextBlock));
+        text.SetValue(TextBlock.FontSizeProperty, 18.0);
+        text.SetValue(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        text.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+        text.SetBinding(TextBlock.TextProperty, new Binding(nameof(ProductRow.Icon)));
+        text.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(ProductRow.IconVisibility)));
+
+        var panel = new FrameworkElementFactory(typeof(Grid));
+        panel.AppendChild(image);
+        panel.AppendChild(text);
+        return Kit.TemplateCol("Icono", panel, 70);
+    }
+
+    /// <summary>Vuelve a construir las filas con la imagen o el icono que corresponda.</summary>
+    private async Task RenderProductsAsync()
+    {
+        var ordered = _products.OrderBy(p => p.Name).ToList();
+        var images = AppearanceService.Current.ShowProductImages
+            ? await LoadProductImagesAsync(ordered)
+            : new Dictionary<int, ImageSource>();
+
+        _productsGrid.ItemsSource = ordered
+            .Select(p => new ProductRow(p, images.GetValueOrDefault(p.Id)))
+            .ToList();
+
+        SyncProductDisplayBox();
+    }
+
+    /// <summary>Carga las miniaturas visibles en el catálogo con un límite de 4 a la vez.</summary>
+    private static async Task<Dictionary<int, ImageSource>> LoadProductImagesAsync(
+        IReadOnlyList<ProductDto> products)
+    {
+        var result = new Dictionary<int, ImageSource>();
+        var targets = products.Where(p => p.HasIcon).ToList();
+        if (targets.Count == 0) return result;
+
+        using var gate = new SemaphoreSlim(4);
+        var tasks = targets.Select(async product =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                var source = await App.Icons.GetAsync(product.Id, product.IconUpdatedUtc,
+                    App.Api.ProductIconAsync);
+                if (source is null) return;
+                lock (result) result[product.Id] = source;
+            }
+            catch
+            {
+                // Sin conexión o imagen no disponible: se conserva el icono de texto.
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
+        return result;
+    }
+
+    /// <summary>Sincroniza el selector rápido con la preferencia guardada.</summary>
+    private void SyncProductDisplayBox()
+    {
+        _productDisplayLoading = true;
+        try
+        {
+            var current = AppearanceSettings.NormalizeProductDisplay(
+                AppearanceService.Current.ProductDisplay);
+            _productDisplayBox.SelectedItem = _productDisplayBox.Items
+                .Cast<Option<string>>()
+                .FirstOrDefault(o => o.Value == current);
+        }
+        finally
+        {
+            _productDisplayLoading = false;
+        }
+    }
+
+    /// <summary>Guarda la preferencia y repinta el catálogo con el modo elegido.</summary>
+    private void ApplyProductDisplay(string value)
+    {
+        var normalized = AppearanceSettings.NormalizeProductDisplay(value);
+        if (AppearanceService.Current.ProductDisplay == normalized) return;
+
+        var settings = AppearanceService.Current.Clone();
+        settings.ProductDisplay = normalized;
+        AppearanceService.Apply(settings, save: true);
+        _ = Ui.Run(RenderProductsAsync, "No se pudo actualizar la vista de productos");
     }
 
     private static Grid ListTab(string description, FrameworkElement actions, DataGrid grid)
@@ -684,13 +820,16 @@ public sealed class ProductsView : UserControl, IRefreshable
 // ================= Filas =================
 public sealed class ProductRow
 {
-    public ProductRow(ProductDto product)
+    public ProductRow(ProductDto product, ImageSource? iconImage = null)
     {
         Source = product;
         Sku = product.Sku;
         Name = product.Name;
         Icon = string.IsNullOrWhiteSpace(product.Icon) ? "—" : product.Icon!;
         HasImage = product.HasIcon ? "Sí" : "—";
+        IconImage = iconImage;
+        ImageVisibility = iconImage is null ? Visibility.Collapsed : Visibility.Visible;
+        IconVisibility = iconImage is null ? Visibility.Visible : Visibility.Collapsed;
         Category = product.CategoryName ?? "General";
         Stock = product.IsService ? "Servicio" : $"{product.Stock:N0} {product.Unit}";
         MinStock = product.IsService ? "—" : product.MinStock.ToString("N0");
@@ -706,6 +845,10 @@ public sealed class ProductRow
     public string Name { get; }
     public string Icon { get; }
     public string HasImage { get; }
+    /// <summary>Miniatura cargada cuando el catálogo muestra imágenes PNG.</summary>
+    public ImageSource? IconImage { get; }
+    public Visibility ImageVisibility { get; }
+    public Visibility IconVisibility { get; }
     public string Category { get; }
     public decimal Price { get; }
     public decimal Cost { get; }
