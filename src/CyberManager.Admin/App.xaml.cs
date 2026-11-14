@@ -10,6 +10,8 @@ public partial class App : Application
 {
     public static CyberApi Api { get; private set; } = null!;
     public static AdminRealtime Realtime { get; private set; } = null!;
+    /// <summary>Caché de las imágenes de producto (memoria y disco).</summary>
+    public static ProductIconCache Icons { get; } = ProductIconCache.Create("Admin");
     public static LoginResponse Session { get; private set; } = null!;
     public static string ServerUrl { get; private set; } = "http://127.0.0.1:5080";
 

@@ -403,8 +403,27 @@ public sealed class PosView : UserControl, IRefreshable
             TextTrimming = TextTrimming.CharacterEllipsis
         };
 
-        if (!string.IsNullOrWhiteSpace(product.Icon))
+        if (product.HasIcon || !string.IsNullOrWhiteSpace(product.Icon))
         {
+            var fallback = new TextBlock
+            {
+                Text = product.Icon ?? string.Empty,
+                FontSize = Math.Round(17 * scale),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var image = new Image
+            {
+                Stretch = Stretch.Uniform,
+                Visibility = Visibility.Collapsed,
+                Margin = new Thickness(2)
+            };
+
+            var iconGrid = new Grid();
+            iconGrid.Children.Add(fallback);
+            iconGrid.Children.Add(image);
+
             head.Children.Add(new Border
             {
                 Width = Math.Round(30 * scale),
@@ -412,15 +431,13 @@ public sealed class PosView : UserControl, IRefreshable
                 CornerRadius = new CornerRadius(8 * scale),
                 Background = Kit.Brush("SurfaceBrush"),
                 Margin = new Thickness(0, 0, 8 * scale, 0),
-                Child = new TextBlock
-                {
-                    Text = product.Icon,
-                    FontSize = Math.Round(17 * scale),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
-                }
+                ClipToBounds = true,
+                Child = iconGrid
             });
             Grid.SetColumn(name, 1);
+
+            if (product.HasIcon)
+                _ = LoadProductIconAsync(product, image, fallback);
         }
 
         head.Children.Add(name);
@@ -487,6 +504,26 @@ public sealed class PosView : UserControl, IRefreshable
             tile.MouseLeftButtonUp += (_, _) => AddToCart(product);
 
         return tile;
+    }
+
+    private async Task LoadProductIconAsync(ProductDto product, Image image, UIElement fallback)
+    {
+        try
+        {
+            var source = await App.Icons.GetAsync(product.Id, product.IconUpdatedUtc, App.Api.ProductIconAsync);
+            if (source is null) return;
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                image.Source = source;
+                image.Visibility = Visibility.Visible;
+                fallback.Visibility = Visibility.Collapsed;
+            });
+        }
+        catch
+        {
+            // Sin conexión: se conserva el emoji de respaldo.
+        }
     }
 
     private void AddToCart(ProductDto product)

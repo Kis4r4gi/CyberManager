@@ -1,9 +1,12 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
+using Microsoft.Win32;
 
 namespace CyberManager.Admin.Views;
 
@@ -26,6 +29,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         _productsGrid = Kit.Table(
             Kit.Col("Código", nameof(ProductRow.Sku), 110),
             Kit.Col("Icono", nameof(ProductRow.Icon), 60),
+            Kit.Col("Imagen", nameof(ProductRow.HasImage), 70),
             Kit.Col("Producto", nameof(ProductRow.Name)),
             Kit.Col("Categoría", nameof(ProductRow.Category), 140),
             Kit.Col("Precio USD", nameof(ProductRow.Price), 100, "{0:N2}"),
@@ -169,7 +173,8 @@ public sealed class ProductsView : UserControl, IRefreshable
 
         _ = Ui.Run(async () =>
         {
-            await App.Api.SaveProductAsync(null, dialog.Result);
+            var saved = await App.Api.SaveProductAsync(null, dialog.Result);
+            await SaveIconAsync(saved.Id, dialog);
             await RefreshAsync();
         }, "No se pudo guardar el producto");
     }
@@ -183,8 +188,18 @@ public sealed class ProductsView : UserControl, IRefreshable
         _ = Ui.Run(async () =>
         {
             await App.Api.SaveProductAsync(row.Source.Id, dialog.Result);
+            await SaveIconAsync(row.Source.Id, dialog);
             await RefreshAsync();
         }, "No se pudo guardar el producto");
+    }
+
+    /// <summary>Sube o quita la imagen del producto después de guardar sus datos.</summary>
+    private static async Task SaveIconAsync(int productId, ProductDialog dialog)
+    {
+        if (dialog.IconData is byte[] data)
+            await App.Api.UploadProductIconAsync(productId, dialog.IconFileName, data);
+        else if (dialog.RemoveIcon)
+            await App.Api.DeleteProductIconAsync(productId);
     }
 
     private void ToggleProduct()
@@ -460,6 +475,7 @@ public sealed class ProductRow
         Sku = product.Sku;
         Name = product.Name;
         Icon = string.IsNullOrWhiteSpace(product.Icon) ? "—" : product.Icon!;
+        HasImage = product.HasIcon ? "Sí" : "—";
         Category = product.CategoryName ?? "General";
         Stock = product.IsService ? "Servicio" : $"{product.Stock:N0} {product.Unit}";
         MinStock = product.IsService ? "—" : product.MinStock.ToString("N0");
@@ -474,6 +490,7 @@ public sealed class ProductRow
     public string Sku { get; }
     public string Name { get; }
     public string Icon { get; }
+    public string HasImage { get; }
     public string Category { get; }
     public decimal Price { get; }
     public decimal Cost { get; }
@@ -575,8 +592,18 @@ public sealed class ProductDialog : FormDialog
     private readonly TextBox _tax;
     private readonly CheckBox _service;
     private readonly CheckBox _active;
+    private readonly Image _iconPreview;
+    private readonly TextBlock _iconPlaceholder;
+    private byte[]? _iconData;
+    private string _iconFileName = "icono.bmp";
+    private bool _iconChanged;
 
     public SaveProductRequest? Result { get; private set; }
+    /// <summary>Imagen nueva seleccionada por el usuario (null si no cambió).</summary>
+    public byte[]? IconData { get; private set; }
+    public string IconFileName { get; private set; } = "icono.bmp";
+    /// <summary>El usuario quitó la imagen que tenía el producto.</summary>
+    public bool RemoveIcon { get; private set; }
 
     public ProductDialog(List<CategoryDto> categories, ProductDto? product = null)
         : base(product is null ? "Nuevo producto" : $"Editar {product.Name}",
@@ -597,6 +624,46 @@ public sealed class ProductDialog : FormDialog
             FontSize = 14,
             Text = product?.Icon ?? string.Empty
         }, "Icono (emoji o texto corto, opcional)");
+
+        var previewGrid = new Grid { Width = 64, Height = 64 };
+        _iconPreview = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(3) };
+        _iconPlaceholder = new TextBlock
+        {
+            Text = "Sin imagen",
+            Style = Kit.Style("Muted"),
+            FontSize = 10,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        previewGrid.Children.Add(_iconPreview);
+        previewGrid.Children.Add(_iconPlaceholder);
+
+        var previewBorder = new Border
+        {
+            Width = 64,
+            Height = 64,
+            CornerRadius = new CornerRadius(8),
+            Background = Kit.Brush("SurfaceBrush"),
+            BorderBrush = Kit.Brush("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            ClipToBounds = true,
+            Child = previewGrid
+        };
+
+        var chooseButton = Kit.Button("Elegir imagen…", "GhostButton", ChooseIcon);
+        var clearButton = Kit.Button("Quitar", "GhostButton", ClearIcon);
+        clearButton.Margin = new Thickness(0, 6, 0, 0);
+        var iconButtons = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10, 0, 0, 0) };
+        iconButtons.Children.Add(chooseButton);
+        iconButtons.Children.Add(clearButton);
+
+        var iconRow = new StackPanel { Orientation = Orientation.Horizontal };
+        iconRow.Children.Add(previewBorder);
+        iconRow.Children.Add(iconButtons);
+        Add(iconRow, "Imagen del producto (.bmp, PNG, JPG o GIF)");
+
+        if (product?.HasIcon == true)
+            _ = LoadCurrentIconAsync(product);
 
         var categoryOptions = new List<Option<int?>> { new(null, "Sin categoría") };
         categoryOptions.AddRange(categories.Where(c => c.Active).OrderBy(c => c.Name)
@@ -621,6 +688,84 @@ public sealed class ProductDialog : FormDialog
 
     private static string Money(decimal? value) => (value ?? 0).ToString("N2", CultureInfo.CurrentCulture);
 
+    private void ChooseIcon()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Seleccione la imagen del producto",
+            Filter = "Imágenes|*.bmp;*.png;*.jpg;*.jpeg;*.gif|Todos los archivos|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            var info = new FileInfo(dialog.FileName);
+            if (info.Length > ImageInspector.MaxBytes)
+                throw new InvalidOperationException(
+                    $"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
+
+            var data = File.ReadAllBytes(dialog.FileName);
+            if (!ImageInspector.Detect(data).Valid)
+                throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
+
+            _iconData = data;
+            _iconFileName = Path.GetFileName(dialog.FileName);
+            _iconChanged = true;
+            ShowPreview(data);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Imagen no válida",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void ClearIcon()
+    {
+        _iconData = null;
+        _iconChanged = true;
+        SetPreview(null);
+    }
+
+    private async Task LoadCurrentIconAsync(ProductDto product)
+    {
+        try
+        {
+            var source = await App.Icons.GetAsync(product.Id, product.IconUpdatedUtc, App.Api.ProductIconAsync);
+            if (source is null) return;
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (!_iconChanged) SetPreview(source);
+            });
+        }
+        catch
+        {
+            // La vista previa es opcional; si falla se muestra "Sin imagen".
+        }
+    }
+
+    private void ShowPreview(byte[] data)
+    {
+        var image = new BitmapImage();
+        using (var stream = new MemoryStream(data))
+        {
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+        }
+        image.Freeze();
+        SetPreview(image);
+    }
+
+    private void SetPreview(ImageSource? source)
+    {
+        _iconPreview.Source = source;
+        _iconPlaceholder.Visibility = source is null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     protected override void OnAccept()
     {
         if (string.IsNullOrWhiteSpace(_name.Text))
@@ -641,6 +786,10 @@ public sealed class ProductDialog : FormDialog
             string.IsNullOrWhiteSpace(_unit.Text) ? "und" : _unit.Text.Trim(),
             _service.IsChecked == true, tax, _active.IsChecked == true,
             string.IsNullOrWhiteSpace(_icon.Text) ? null : _icon.Text.Trim());
+
+        IconData = _iconChanged ? _iconData : null;
+        IconFileName = _iconFileName;
+        RemoveIcon = _iconChanged && _iconData is null;
 
         base.OnAccept();
     }

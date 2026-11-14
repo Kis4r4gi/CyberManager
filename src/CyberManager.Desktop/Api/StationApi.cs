@@ -52,6 +52,7 @@ public class StationApi : ApiClient
     public Task<StationClientStateDto> StateAsync() => GetAsync<StationClientStateDto>("/api/station/state");
     public Task<List<ProductDto>> ProductsAsync() => GetAsync<List<ProductDto>>("/api/station/products");
     public Task<List<CategoryDto>> CategoriesAsync() => GetAsync<List<CategoryDto>>("/api/station/categories");
+    public Task<byte[]> ProductIconAsync(int id) => GetBytesAsync($"/api/station/products/{id}/icon");
     public Task<SaleDto> OrderAsync(StationOrderRequest request) => PostAsync<SaleDto>("/api/station/order", request);
     public Task<byte[]> WallpaperFileAsync(int id) => GetBytesAsync($"/api/station/wallpapers/{id}/file");
     public Task<byte[]> PromoVideoFileAsync(int id) => GetBytesAsync($"/api/station/promo-videos/{id}/file");

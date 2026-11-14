@@ -15,6 +15,8 @@ public partial class App : Application
     public static AppConfig Config { get; private set; } = new();
     public static StationApi? Api { get; private set; }
     public static StationRealtime? Realtime { get; private set; }
+    /// <summary>Caché de las imágenes de producto (memoria y disco).</summary>
+    public static ProductIconCache Icons { get; } = ProductIconCache.Create("Client");
     public static StationClientStateDto? State { get; private set; }
     public static bool IsLocked { get; private set; } = true;
 

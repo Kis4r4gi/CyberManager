@@ -763,6 +763,46 @@ mínimo y con precio mayor que cero, para que sigan siendo vendibles. Opciones �
 
 ---
 
+## Imágenes de los productos
+
+Cada producto puede tener una imagen (`.bmp`, `.png`, `.jpg` o `.gif`, hasta 20 MB). La imagen se
+guarda **dentro de la base de datos**, así que viaja con los respaldos y no se pierde al reinstalar.
+La consola y las estaciones guardan una copia en disco y en memoria para mostrarla al instante.
+
+**Desde la consola:** en **Productos**, pulse **Nuevo** o **Editar**, use **Elegir imagen…** y
+guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** indica si el producto
+tiene una. El emoji o texto del campo **Icono** se conserva como respaldo cuando el producto no
+tiene imagen.
+
+La imagen se muestra en la caja (**Caja** → tarjetas de producto) y en la pantalla del cliente
+(**Pedir productos**). Si un equipo no puede descargarla, se muestra el emoji de respaldo.
+
+### Importar imágenes en bloque
+
+`scripts/import-product-icons.ps1` empareja por nombre los archivos `.bmp` de una carpeta con los
+productos y guarda la imagen en la base. Por defecto **solo genera un informe**
+(`scripts/iconos-emparejamiento.csv`) sin escribir nada:
+
+```powershell
+# Informe de coincidencias (no escribe)
+.\scripts\import-product-icons.ps1
+
+# Aplicar las coincidencias fuertes (crea respaldo antes de escribir)
+.\scripts\import-product-icons.ps1 -Apply
+```
+
+El emparejamiento automático ignora mayúsculas, acentos y signos, y descarta los casos en que dos
+productos empatan (quedan como **Revisar**). Para los nombres que el sistema anterior escribía de
+otra forma existe `scripts/iconos-mapeo.csv` con dos columnas, `Bmp` y `Sku`: cada fila asigna una
+imagen concreta a un código de producto y tiene prioridad sobre el puntaje automático. Edite ese
+archivo y vuelva a ejecutar con `-Apply` para corregir o ampliar las asignaciones.
+
+Opciones útiles: `-Folder`, `-MinScore`, `-ApplyScore`, `-ApplyFuzzy` (aplica también las dudosas),
+`-Mapping`, `-NoMapping`, `-Database`, `-ServerDir`, `-SkipBackup` y `-Report`. Ejecute el script
+con `pwsh` (PowerShell 7), porque usa las DLL de SQLite del servidor.
+
+---
+
 ## Configurar un equipo (PC)
 
 1. En la consola vaya a **Equipos**, seleccione el PC y pulse **Configuración / token**.
@@ -1091,6 +1131,7 @@ guarda una copia local del estado:
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
 | `scripts/import-stock.ps1`      | Importa o actualiza productos desde un CSV/HTML de stock.           |
+| `scripts/import-product-icons.ps1` | Asigna imágenes `.bmp` a los productos por nombre.               |
 | `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con

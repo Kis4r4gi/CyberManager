@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
@@ -239,6 +240,72 @@ public static class CatalogEndpoints
         {
             var p = await db.Products.FirstOrDefaultAsync(x => x.Id == id) ?? throw AppException.NotFound("Producto");
             p.Active = false;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }).RequireAuthorization("Admin");
+
+        // ---------- Imagen del producto ----------
+        // La imagen se guarda en la base de datos; los equipos la descargan y la cachean.
+        g.MapGet("/{id:int}/icon", async (int id, AppDbContext db) =>
+        {
+            var icon = await db.ProductIcons.AsNoTracking().FirstOrDefaultAsync(i => i.ProductId == id)
+                       ?? throw AppException.NotFound("Imagen del producto");
+            return Results.File(icon.Data, icon.ContentType, enableRangeProcessing: true);
+        });
+
+        g.MapPost("/{id:int}/icon", async (int id, HttpRequest request, AppDbContext db) =>
+        {
+            if (!request.HasFormContentType)
+                throw new AppException("Debe enviar la imagen como formulario multipart.");
+
+            var form = await request.ReadFormAsync();
+            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                throw new AppException("Seleccione una imagen para el producto.");
+            if (file.Length > ImageInspector.MaxBytes)
+                throw new AppException($"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
+
+            await using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            var data = stream.ToArray();
+
+            var probe = ImageInspector.Detect(data);
+            if (!probe.Valid)
+                throw new AppException("Formato no válido. Use BMP, PNG, JPG o GIF.");
+
+            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id)
+                          ?? throw AppException.NotFound("Producto");
+
+            var icon = await db.ProductIcons.FirstOrDefaultAsync(i => i.ProductId == id);
+            if (icon is null)
+            {
+                icon = new ProductIcon { ProductId = id };
+                db.ProductIcons.Add(icon);
+            }
+
+            icon.ContentType = probe.ContentType;
+            icon.Extension = probe.Extension;
+            icon.Data = data;
+            icon.Width = probe.Width;
+            icon.Height = probe.Height;
+            icon.SizeBytes = data.LongLength;
+            icon.Sha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+            icon.UpdatedUtc = DateTime.UtcNow;
+            product.IconUpdatedUtc = icon.UpdatedUtc;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(Mappers.ToDto(product));
+        }).RequireAuthorization("Admin").DisableAntiforgery();
+
+        g.MapDelete("/{id:int}/icon", async (int id, AppDbContext db) =>
+        {
+            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id)
+                          ?? throw AppException.NotFound("Producto");
+
+            var icon = await db.ProductIcons.FirstOrDefaultAsync(i => i.ProductId == id);
+            if (icon is not null) db.ProductIcons.Remove(icon);
+            product.IconUpdatedUtc = null;
+
             await db.SaveChangesAsync();
             return Results.NoContent();
         }).RequireAuthorization("Admin");

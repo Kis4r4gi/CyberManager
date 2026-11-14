@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using CyberManager.Desktop.Mvvm;
 using CyberManager.Desktop.Services;
 using CyberManager.Shared;
@@ -73,6 +74,7 @@ public partial class OrderWindow : Window
             CategoryBox.SelectedIndex = 0;
 
             ApplyFilter();
+            _ = LoadIconsAsync();
         }
         catch (Exception ex)
         {
@@ -80,6 +82,34 @@ public partial class OrderWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Error);
             Close();
         }
+    }
+
+    /// <summary>Descarga en segundo plano las imágenes de los productos y las muestra en las tarjetas.</summary>
+    private async Task LoadIconsAsync()
+    {
+        if (App.Api is null) return;
+
+        var targets = _all.Where(p => p.Product.HasIcon).ToList();
+        if (targets.Count == 0) return;
+
+        using var gate = new SemaphoreSlim(4);
+        var tasks = targets.Select(async item =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                var source = await App.Icons.GetAsync(item.Product.Id, item.Product.IconUpdatedUtc,
+                    App.Api.ProductIconAsync);
+                if (source is null) return;
+                await Dispatcher.InvokeAsync(() => item.SetIcon(source));
+            }
+            finally
+            {
+                gate.Release();
+            }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
     private void ApplyFilter()
@@ -189,8 +219,10 @@ public partial class OrderWindow : Window
 
 public sealed record CategoryOption(int? Id, string Name);
 
-public sealed class OrderProduct
+public sealed class OrderProduct : ObservableObject
 {
+    private ImageSource? _iconImage;
+
     public ProductDto Product { get; }
     public decimal Rate { get; }
 
@@ -202,6 +234,9 @@ public sealed class OrderProduct
 
     public string Name => Product.Name;
     public string Icon => Product.Icon ?? string.Empty;
+    public ImageSource? IconImage => _iconImage;
+    public bool HasIconImage => _iconImage is not null;
+    public bool ShowEmoji => _iconImage is null && !string.IsNullOrWhiteSpace(Icon);
     public string Category => Product.CategoryName ?? "General";
     public string PriceUsd => $"$ {Product.Price:N2}";
     public string PriceBs => $"Bs {Product.Price * Rate:N2}";
@@ -209,6 +244,15 @@ public sealed class OrderProduct
     public string StockText => Product.IsService
         ? "Servicio"
         : Product.Stock <= 0 ? "Agotado" : $"{Product.Stock:N0} disp.";
+
+    public void SetIcon(ImageSource image)
+    {
+        if (ReferenceEquals(_iconImage, image)) return;
+        _iconImage = image;
+        OnPropertyChanged(nameof(IconImage));
+        OnPropertyChanged(nameof(HasIconImage));
+        OnPropertyChanged(nameof(ShowEmoji));
+    }
 }
 
 public sealed class CartLine : ObservableObject

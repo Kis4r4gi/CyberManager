@@ -5,6 +5,10 @@
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="{StaticResource BgBrush}" ShowInTaskbar="False">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -81,8 +85,12 @@
                                                         <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Icon}" FontSize="18"
-                                                               Margin="0,0,6,0" VerticalAlignment="Top" />
+                                                    <Grid Width="26" Height="26" Margin="0,0,6,0" VerticalAlignment="Top">
+                                                        <Image Source="{Binding IconImage}" Stretch="Uniform"
+                                                               Visibility="{Binding HasIconImage, Converter={StaticResource BoolToVis}}" />
+                                                        <TextBlock Text="{Binding Icon}" FontSize="18"
+                                                                   Visibility="{Binding ShowEmoji, Converter={StaticResource BoolToVis}}" />
+                                                    </Grid>
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold"
                                                                TextWrapping="Wrap" MaxHeight="38" TextTrimming="CharacterEllipsis" />
                                                 </Grid>

@@ -75,6 +75,20 @@ public static class DbSeeder
             );
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Pattern" ON "WebFilterRules" ("Pattern");
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Kind" ON "WebFilterRules" ("Kind");
+
+            CREATE TABLE IF NOT EXISTS "ProductIcons" (
+                "ProductId" INTEGER NOT NULL CONSTRAINT "PK_ProductIcons" PRIMARY KEY,
+                "ContentType" TEXT NOT NULL,
+                "Extension" TEXT NOT NULL,
+                "Data" BLOB NOT NULL,
+                "Width" INTEGER NOT NULL,
+                "Height" INTEGER NOT NULL,
+                "SizeBytes" INTEGER NOT NULL,
+                "Sha256" TEXT NOT NULL,
+                "UpdatedUtc" TEXT NOT NULL,
+                CONSTRAINT "FK_ProductIcons_Products_ProductId"
+                    FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE
+            );
             """);
 
         // Columnas añadidas para el control de consolas de videojuegos.
@@ -82,8 +96,9 @@ public static class DbSeeder
         await AddColumnIfMissingAsync(db, "Stations", "Platform", "TEXT NULL");
         await AddColumnIfMissingAsync(db, "Stations", "Controllers", "INTEGER NULL");
 
-        // Icono corto de los productos (emoji o texto).
+        // Icono corto de los productos (emoji o texto) e imagen asociada.
         await AddColumnIfMissingAsync(db, "Products", "Icon", "TEXT NULL");
+        await AddColumnIfMissingAsync(db, "Products", "IconUpdatedUtc", "TEXT NULL");
     }
 
     private static async Task AddColumnIfMissingAsync(AppDbContext db, string table, string column, string definition)

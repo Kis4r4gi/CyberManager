@@ -32,7 +32,8 @@ public record SaveCategoryRequest(string Name, string Color, int SortOrder, bool
 public record ProductDto(
     int Id, string Sku, string Name, int? CategoryId, string? CategoryName, string? CategoryColor,
     decimal Price, decimal Cost, decimal Stock, decimal MinStock, string Unit, bool IsService,
-    decimal TaxRate, bool Active, bool LowStock, string? Icon = null);
+    decimal TaxRate, bool Active, bool LowStock, string? Icon = null,
+    bool HasIcon = false, DateTime? IconUpdatedUtc = null);
 
 public record SaveProductRequest(
     string Sku, string Name, int? CategoryId, decimal Price, decimal Cost, decimal Stock,

@@ -30,3 +30,6 @@ desktop.ini
 
 # Registros
 *.log
+
+# Informe generado por scripts\import-product-icons.ps1
+scripts/iconos-emparejamiento.csv

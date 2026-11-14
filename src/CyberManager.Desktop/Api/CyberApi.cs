@@ -76,6 +76,14 @@ public class CyberApi : ApiClient
 
     public Task DeleteProductAsync(int id) => DeleteAsync($"/api/products/{id}");
 
+    // ---- imagen de producto ----
+    public Task<byte[]> ProductIconAsync(int id) => GetBytesAsync($"/api/products/{id}/icon");
+
+    public Task<ProductDto> UploadProductIconAsync(int id, string fileName, byte[] data)
+        => PostFileAsync<ProductDto>($"/api/products/{id}/icon", "file", fileName, "application/octet-stream", data);
+
+    public Task DeleteProductIconAsync(int id) => DeleteAsync($"/api/products/{id}/icon");
+
     public Task<List<CategoryDto>> CategoriesAsync() => GetAsync<List<CategoryDto>>("/api/categories");
     public Task<CategoryDto> SaveCategoryAsync(int? id, SaveCategoryRequest req)
         => id is int cid ? PutAsync<CategoryDto>($"/api/categories/{cid}", req) : PostAsync<CategoryDto>("/api/categories", req);

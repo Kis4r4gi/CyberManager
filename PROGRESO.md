@@ -798,6 +798,32 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (`Auto`, `None`, `All`) y permite `-DryRun`, `-Database`, `-ServerDir`, `-SkipBackup` y
   `-DeleteDemoProducts`. Documentado en README → *Importar productos desde una lista de stock*.
 
+### Imágenes de producto (2026-11-14)
+
+- **Modelo**: `Product.IconUpdatedUtc` funciona como marca de versión y la tabla `ProductIcons`
+  guarda la imagen (`Data` BLOB, `ContentType`, `Extension`, `Width`, `Height`, `SizeBytes`,
+  `Sha256`, `UpdatedUtc`) en relación 1:1 con `Product`, con borrado en cascada. La migración de
+  compatibilidad crea la tabla y la columna al arrancar el servidor.
+- **API**: `GET/POST/DELETE /api/products/{id}/icon` (POST y DELETE solo administradores) y
+  `GET /api/station/products/{id}/icon` para las estaciones. `ProductDto` expone `HasIcon` e
+  `IconUpdatedUtc`.
+- **Caché**: `ProductIconCache` (memoria + disco) usa la clave `productId + IconUpdatedUtc`,
+  deduplica descargas simultáneas y borra las versiones anteriores de cada producto. La consola y
+  el cliente la comparten.
+- **Interfaz**: el diálogo de producto permite **Elegir imagen…**, muestra vista previa y **Quitar**;
+  el listado tiene la columna **Imagen**. La caja muestra la imagen en la tarjeta y, si no hay
+  imagen o falla la descarga, conserva el emoji. La pantalla del cliente la muestra en cada tarjeta
+  con carga paralela limitada a 4 descargas.
+- **Importación**: `scripts/import-product-icons.ps1` empareja los `.bmp` de
+  `resources\BMP SNACKS` por nombre (ignora mayúsculas, acentos y signos), detecta empates y deja
+  informe en `scripts\iconos-emparejamiento.csv`. `scripts\iconos-mapeo.csv` contiene 40
+  asignaciones verificadas imagen → SKU que tienen prioridad sobre el puntaje automático.
+- **Resultado**: se aplicaron **40 imágenes** (120×110 px, 1.586.160 bytes en total) sobre la base
+  instalada; el respaldo previo es
+  `respaldos\cybermanager_20261114_125331_pre-iconos.db`. Las 120 imágenes restantes corresponden a
+  productos que no están en el catálogo o que quedaron como **Revisar** por empate
+  (`SNACHOS`, `raquety`).
+
 ---
 
 ## Rutas y comandos clave
