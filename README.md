@@ -777,6 +777,8 @@ mínimo y con precio mayor que cero, para que sigan siendo vendibles. Opciones �
 Cada producto puede tener una imagen (`.bmp`, `.png`, `.jpg` o `.gif`, hasta 20 MB). La imagen se
 guarda **dentro de la base de datos**, así que viaja con los respaldos y no se pierde al reinstalar.
 La consola y las estaciones guardan una copia en disco y en memoria para mostrarla al instante.
+Los archivos **`.bmp` se convierten automáticamente a `.png`** al agregarlos, tanto desde la consola
+como con el importador en bloque, para que ocupen menos espacio sin perder calidad.
 
 **Desde la consola:** en **Productos**, pulse **Nuevo** o **Editar**, use **Elegir imagen…** y
 guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** indica si el producto
@@ -799,7 +801,7 @@ no puede descargarla, se muestra el emoji de respaldo.
 ### Importar imágenes en bloque
 
 `scripts/import-product-icons.ps1` empareja por nombre los archivos `.bmp` de una carpeta con los
-productos y guarda la imagen en la base. Por defecto **solo genera un informe**
+productos y guarda la imagen en la base, convertida a `.png`. Por defecto **solo genera un informe**
 (`scripts/iconos-emparejamiento.csv`) sin escribir nada:
 
 ```powershell
@@ -1150,7 +1152,7 @@ guarda una copia local del estado:
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
 | `scripts/import-stock.ps1`      | Importa o actualiza productos desde un CSV/HTML de stock.           |
-| `scripts/import-product-icons.ps1` | Asigna imágenes `.bmp` a los productos por nombre.               |
+| `scripts/import-product-icons.ps1` | Asigna imágenes `.bmp` a los productos por nombre y las guarda como PNG. |
 | `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con

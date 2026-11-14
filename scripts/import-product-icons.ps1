@@ -12,6 +12,9 @@
     Las coincidencias dudosas se muestran como "Revisar" y no se aplican, salvo que se
     indique -ApplyFuzzy.
 
+    Los archivos .bmp se guardan convertidos a PNG para que ocupen menos espacio. Si el
+    equipo no puede cargar System.Drawing, se conserva el BMP original.
+
     Antes de escribir se crea un respaldo de la base de datos.
 
 .PARAMETER Folder
@@ -167,6 +170,34 @@ function Get-BmpSize([byte[]]$Data) {
     return @{
         Width  = [BitConverter]::ToInt32($Data, 18)
         Height = [Math]::Abs([BitConverter]::ToInt32($Data, 22))
+    }
+}
+
+<#
+    Recodifica un BMP como PNG con System.Drawing. Devuelve $null si el equipo no
+    puede cargar System.Drawing, en cuyo caso se conserva el BMP original.
+#>
+function ConvertTo-PngBytes([byte[]]$Data) {
+    try {
+        Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+        $input = New-Object System.IO.MemoryStream(, $Data)
+        try {
+            $image = [System.Drawing.Image]::FromStream($input)
+            try {
+                $output = New-Object System.IO.MemoryStream
+                try {
+                    $image.Save($output, [System.Drawing.Imaging.ImageFormat]::Png)
+                    return $output.ToArray()
+                }
+                finally { $output.Dispose() }
+            }
+            finally { $image.Dispose() }
+        }
+        finally { $input.Dispose() }
+    }
+    catch {
+        Write-Warn "No se pudo convertir un BMP a PNG; se guardará el archivo original. $($_.Exception.Message)"
+        return $null
     }
 }
 
@@ -560,6 +591,19 @@ CREATE TABLE IF NOT EXISTS "ProductIcons" (
             $info = $bmpInfo[$match.Bmp]
             $data = [System.IO.File]::ReadAllBytes($info.File.FullName)
             $size = Get-BmpSize $data
+
+            # Se guarda como PNG para que ocupe menos; si no se puede convertir, queda el BMP.
+            $png = ConvertTo-PngBytes $data
+            if ($null -ne $png) {
+                $data = $png
+                $contentType = 'image/png'
+                $extension = '.png'
+            }
+            else {
+                $contentType = 'image/bmp'
+                $extension = '.bmp'
+            }
+
             $updated = [DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fffffff",
                 [System.Globalization.CultureInfo]::InvariantCulture)
 
@@ -571,10 +615,12 @@ CREATE TABLE IF NOT EXISTS "ProductIcons" (
 INSERT OR REPLACE INTO "ProductIcons"
     ("ProductId", "ContentType", "Extension", "Data", "Width", "Height", "SizeBytes", "Sha256", "UpdatedUtc")
 VALUES
-    (@productId, 'image/bmp', '.bmp', @data, @width, @height, @sizeBytes, @sha, @updated);
+    (@productId, @contentType, @extension, @data, @width, @height, @sizeBytes, @sha, @updated);
 "@
             $command.Transaction = $transaction
             [void]$command.Parameters.AddWithValue("@productId", [int]$match.ProductId)
+            [void]$command.Parameters.AddWithValue("@contentType", $contentType)
+            [void]$command.Parameters.AddWithValue("@extension", $extension)
             [void]$command.Parameters.AddWithValue("@data", $data)
             [void]$command.Parameters.AddWithValue("@width", [int]$size.Width)
             [void]$command.Parameters.AddWithValue("@height", [int]$size.Height)

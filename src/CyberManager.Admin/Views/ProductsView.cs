@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using CyberManager.Admin.Services;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
 using Microsoft.Win32;
@@ -302,7 +303,9 @@ public sealed class ProductsView : UserControl, IRefreshable
             if (!ImageInspector.Detect(data).Valid)
                 throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
 
-            await App.Api.UploadProductIconAsync(row.Source.Id, Path.GetFileName(fileName), data);
+            // Los BMP se convierten a PNG antes de subirlos.
+            var image = ProductImage.Normalize(data, fileName);
+            await App.Api.UploadProductIconAsync(row.Source.Id, image.FileName, image.Data);
             await RefreshAsync();
         }, "No se pudo cambiar la imagen del producto");
     }
@@ -774,13 +777,13 @@ public sealed class ProductDialog : FormDialog
     private readonly Image _iconPreview;
     private readonly TextBlock _iconPlaceholder;
     private byte[]? _iconData;
-    private string _iconFileName = "icono.bmp";
+    private string _iconFileName = "icono.png";
     private bool _iconChanged;
 
     public SaveProductRequest? Result { get; private set; }
     /// <summary>Imagen nueva seleccionada por el usuario (null si no cambió).</summary>
     public byte[]? IconData { get; private set; }
-    public string IconFileName { get; private set; } = "icono.bmp";
+    public string IconFileName { get; private set; } = "icono.png";
     /// <summary>El usuario quitó la imagen que tenía el producto.</summary>
     public bool RemoveIcon { get; private set; }
 
@@ -839,7 +842,7 @@ public sealed class ProductDialog : FormDialog
         var iconRow = new StackPanel { Orientation = Orientation.Horizontal };
         iconRow.Children.Add(previewBorder);
         iconRow.Children.Add(iconButtons);
-        Add(iconRow, "Imagen del producto (.bmp, PNG, JPG o GIF)");
+        Add(iconRow, "Imagen del producto (.bmp, PNG, JPG o GIF; los BMP se guardan como PNG)");
 
         if (product?.HasIcon == true)
             _ = LoadCurrentIconAsync(product);
@@ -889,10 +892,10 @@ public sealed class ProductDialog : FormDialog
             if (!ImageInspector.Detect(data).Valid)
                 throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
 
-            _iconData = data;
-            _iconFileName = Path.GetFileName(dialog.FileName);
+            // Los BMP se guardan como PNG para que ocupen menos.
+            (_iconData, _iconFileName) = ProductImage.Normalize(data, dialog.FileName);
             _iconChanged = true;
-            ShowPreview(data);
+            ShowPreview(_iconData);
         }
         catch (Exception ex)
         {

@@ -823,6 +823,11 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `respaldos\cybermanager_20261114_125331_pre-iconos.db`. Las 120 imágenes restantes corresponden a
   productos que no están en el catálogo o que quedaron como **Revisar** por empate
   (`SNACHOS`, `raquety`).
+- **Conversión automática**: al agregar una imagen desde la consola (`ProductImage.Normalize`), un
+  BMP se recodifica como PNG con WPF conservando sus píxeles; por ejemplo, `agua 1lts.bmp` pasó de
+  39.654 a 9.062 bytes. El importador en bloque hace lo mismo con `System.Drawing` antes de escribir
+  en la base (`ContentType = image/png`, `Extension = .png`) y conserva el BMP si la conversión no
+  está disponible.
 
 ### Carpeta de respaldos, menú de producto y punto de venta (2026-11-14)
 
