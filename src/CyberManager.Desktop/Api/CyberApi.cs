@@ -259,6 +259,10 @@ public class CyberApi : ApiClient
 
     public Task<BackupFileDto> CreateBackupAsync() => PostAsync<BackupFileDto>("/api/backups", new { });
 
+    /// <summary>Cambia la carpeta de respaldos del servidor. Null restablece la predeterminada.</summary>
+    public Task<BackupListDto> SetBackupFolderAsync(string? folder)
+        => PutAsync<BackupListDto>("/api/backups/folder", new SetBackupFolderRequest(folder));
+
     public Task<byte[]> DownloadBackupAsync(string fileName) => GetBytesAsync($"/api/backups/{Uri.EscapeDataString(fileName)}/download");
 
     public Task<RestoreBackupResultDto> RestoreStoredBackupAsync(string fileName) => PostAsync<RestoreBackupResultDto>(

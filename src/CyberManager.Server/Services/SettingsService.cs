@@ -35,6 +35,8 @@ public static class SettingsKeys
     public const string BackupAutoEnabled = "BackupAutoEnabled";
     public const string BackupIntervalHours = "BackupIntervalHours";
     public const string BackupRetention = "BackupRetention";
+    /// <summary>Carpeta del servidor donde se guardan los respaldos. Vacío = predeterminada.</summary>
+    public const string BackupFolder = "BackupFolder";
     public const string BcvAutoUpdate = "BcvAutoUpdate";
     public const string UpdateReminderEnabled = "UpdateReminderEnabled";
     public const string UpdateReminderDelayHours = "UpdateReminderDelayHours";

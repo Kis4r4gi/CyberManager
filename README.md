@@ -140,8 +140,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 
 **Inventario y compras**
 
-- Productos por categoría, con SKU, costo, precio, stock, stock mínimo e **icono** (emoji o texto
-  corto) visible en la caja y en la pantalla del cliente.
+- Productos por categoría, con SKU, costo, precio, stock, stock mínimo e **imagen o icono** (emoji o
+  texto corto) visible en el punto de venta y en la pantalla del cliente. El menú de clic derecho
+  permite editar, cambiar, quitar o redimensionar la imagen (solo administrador).
 - **Eliminación desde el catálogo** de productos, categorías, tarifas, paquetes de tiempo y zonas;
   las ventas y movimientos históricos se conservan.
 - Servicios sin control de stock (impresión, escaneo, fotocopias).
@@ -185,7 +186,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   administrador para crear la regla de Firewall del puerto. La tarea programada se ejecuta como
   SYSTEM y no muestra avisos; use `--no-elevate` para iniciar sin UAC en pruebas.
 - **Respaldos integrados**: copia manual o automática de la base SQLite, exportación a un archivo,
-  restauración con respaldo de seguridad previo y retención configurable.
+  restauración con respaldo de seguridad previo, retención configurable y **carpeta de destino
+  elegible** desde un desplegable.
 - **Instaladores de Windows** autocontenidos y unificados: **Servidor** (servidor + consola) y
   **Estación** (cliente + agente). Cada instalador incluye los binarios de **x64 y x86** y elige
   la arquitectura adecuada al instalar. Todos los ejecutables y ambos instaladores comparten el
@@ -722,6 +724,11 @@ detener el servidor:
 - **Respaldo automático**: activado por defecto, con frecuencia configurable (24 horas por defecto)
   y retención de los últimos 30 respaldos automáticos. El servidor revisa cada pocos minutos si
   venció el intervalo y crea la copia en segundo plano.
+- **Carpeta de respaldos**: un desplegable permite elegir la **carpeta del servidor** donde se
+  guardan las copias (por ejemplo otra unidad o un disco externo conectado al servidor). Use
+  **Examinar…** para agregar una ruta y **Aplicar carpeta** para guardarla; **Predeterminada**
+  restablece la carpeta `respaldos` junto a la base. El servidor comprueba que la carpeta exista o
+  se pueda crear y que admita escritura antes de aceptar el cambio.
 - **Crear respaldo ahora**: genera una copia manual en el momento.
 - **Exportar copia**: descarga el respaldo elegido a su equipo para guardarlo en un disco externo
   o en la nube.
@@ -729,9 +736,11 @@ detener el servidor:
 - **Restaurar desde archivo**: carga un `.db` exportado previamente y lo restaura.
 - **Abrir carpeta**: abre en el Explorador la carpeta de respaldos del servidor.
 
-Los archivos se guardan en `respaldos` junto a la base de datos (por ejemplo
+Por omisión los archivos se guardan en `respaldos` junto a la base de datos (por ejemplo
 `C:\CyberManager\Servidor\Server\respaldos`) con nombres
-`cybermanager_AAAAMMDD_HHMMSS_manual.db`, `..._auto.db` o `..._antes_restaurar.db`.
+`cybermanager_AAAAMMDD_HHMMSS_manual.db`, `..._auto.db` o `..._antes_restaurar.db`. Al cambiar la
+carpeta, los respaldos anteriores **permanecen en su ubicación original**; las copias nuevas se
+crean en la carpeta elegida.
 
 Antes de restaurar, el sistema **crea automáticamente un respaldo de seguridad**
 (`antes_restaurar`) y valida que el archivo sea una base SQLite íntegra y corresponda a
@@ -774,8 +783,18 @@ guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** ind
 tiene una. El emoji o texto del campo **Icono** se conserva como respaldo cuando el producto no
 tiene imagen.
 
-La imagen se muestra en la caja (**Caja** → tarjetas de producto) y en la pantalla del cliente
-(**Pedir productos**). Si un equipo no puede descargarla, se muestra el emoji de respaldo.
+También puede hacer **clic derecho sobre cualquier producto** para abrir su menú desplegable:
+**Editar producto…**, **Cambiar imagen…**, **Quitar imagen**, **Redimensionar imagen…**, **Activar /
+desactivar** y **Eliminar producto**. **Redimensionar imagen…** reduce la imagen guardada a 64, 96,
+128, 160, 256 o 512 píxeles como lado máximo, mantiene la proporción y la guarda en PNG para que
+ocupe menos. Estas acciones del menú están disponibles **solo para el administrador**; la API
+también exige el rol `Admin` para modificar imágenes.
+
+La imagen se muestra en el punto de venta (**Punto de venta** → tarjetas de producto) y en la
+pantalla del cliente (**Pedir productos**). En el punto de venta la tarjeta con imagen le da el
+espacio libre a la fotografía y la ajusta automáticamente con proporción uniforme, sin recortarla
+ni deformarla; el tamaño de la tarjeta sigue la escala configurada en **Apariencia**. Si un equipo
+no puede descargarla, se muestra el emoji de respaldo.
 
 ### Importar imágenes en bloque
 

@@ -17,6 +17,10 @@ public static class BackupEndpoints
         g.MapPost("/", async (BackupService backups, CancellationToken ct) =>
             Results.Ok(await backups.CreateAsync(automatic: false, ct)));
 
+        g.MapPut("/folder", async (SetBackupFolderRequest request, BackupService backups,
+            CancellationToken ct) =>
+            Results.Ok(await backups.SetFolderAsync(request.Folder, ct)));
+
         g.MapGet("/{fileName}/download", async (string fileName, BackupService backups,
             CancellationToken ct) =>
         {

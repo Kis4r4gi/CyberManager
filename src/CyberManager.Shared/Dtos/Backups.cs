@@ -14,7 +14,12 @@ public record BackupListDto(
     int IntervalHours,
     int Retention,
     DateTime? LastBackupUtc,
-    List<BackupFileDto> Files);
+    List<BackupFileDto> Files,
+    /// <summary>Carpeta predeterminada junto a la base de datos, para poder volver a ella.</summary>
+    string? DefaultFolder = null);
+
+/// <summary>Cambia la carpeta de respaldos. Null o vacío restablece la predeterminada.</summary>
+public record SetBackupFolderRequest(string? Folder);
 
 /// <summary>Resultado de restaurar una base de datos.</summary>
 public record RestoreBackupResultDto(

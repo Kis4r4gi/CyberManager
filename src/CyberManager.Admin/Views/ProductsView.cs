@@ -84,6 +84,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         Content = root;
 
         _productsGrid.MouseDoubleClick += (_, _) => EditProduct();
+        AttachProductMenu();
         _categoriesGrid.MouseDoubleClick += (_, _) => EditCategory();
         _ratesGrid.MouseDoubleClick += (_, _) => EditRate();
         _packagesGrid.MouseDoubleClick += (_, _) => EditPackage();
@@ -200,6 +201,184 @@ public sealed class ProductsView : UserControl, IRefreshable
             await App.Api.UploadProductIconAsync(productId, dialog.IconFileName, data);
         else if (dialog.RemoveIcon)
             await App.Api.DeleteProductIconAsync(productId);
+    }
+
+    /// <summary>
+    /// Menú desplegable sobre cada producto. Solo se instala para administradores;
+    /// los cajeros no tienen acceso a la vista de productos.
+    /// </summary>
+    private void AttachProductMenu()
+    {
+        if (App.Session.Role != UserRole.Admin) return;
+
+        var removeIcon = ProductMenuItem("Quitar imagen", RemoveProductIcon, danger: true);
+        var resizeIcon = ProductMenuItem("Redimensionar imagen…", ResizeProductIcon);
+
+        var menu = new ContextMenu
+        {
+            Background = Kit.Brush("SurfaceBrush"),
+            Foreground = Kit.Brush("TextBrush"),
+            BorderBrush = Kit.Brush("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4)
+        };
+        menu.Items.Add(ProductMenuItem("Editar producto…", EditProduct));
+        menu.Items.Add(ProductMenuItem("Cambiar imagen…", ChangeProductIcon));
+        menu.Items.Add(removeIcon);
+        menu.Items.Add(resizeIcon);
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+        menu.Items.Add(ProductMenuItem("Activar / desactivar", ToggleProduct));
+        menu.Items.Add(ProductMenuItem("Eliminar producto", DeleteProduct, danger: true));
+
+        menu.Opened += (_, _) =>
+        {
+            var row = _productsGrid.SelectedItem as ProductRow;
+            foreach (var item in menu.Items.OfType<MenuItem>())
+                item.IsEnabled = row is not null;
+
+            var hasIcon = row?.Source.HasIcon == true;
+            removeIcon.IsEnabled = hasIcon;
+            resizeIcon.IsEnabled = hasIcon;
+        };
+
+        _productsGrid.ContextMenu = menu;
+
+        // El clic derecho debe seleccionar la fila antes de abrir el menú.
+        _productsGrid.PreviewMouseRightButtonDown += (_, e) =>
+        {
+            var row = FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject);
+            if (row is null) return;
+            row.IsSelected = true;
+            _productsGrid.SelectedItem = row.Item;
+        };
+    }
+
+    private static MenuItem ProductMenuItem(string header, Action click, bool danger = false)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            Foreground = Kit.Brush(danger ? "DangerBrush" : "TextBrush"),
+            Background = Brushes.Transparent,
+            Padding = new Thickness(12, 7, 12, 7),
+            FontSize = 12.5
+        };
+        item.Click += (_, _) => click();
+        return item;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current is not null)
+        {
+            if (current is T match) return match;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
+    }
+
+    /// <summary>Cambia la imagen sin abrir el formulario completo del producto.</summary>
+    private void ChangeProductIcon()
+    {
+        if (_productsGrid.SelectedItem is not ProductRow row) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = $"Cambiar imagen de {row.Name}",
+            Filter = "Imágenes|*.bmp;*.png;*.jpg;*.jpeg;*.gif|Todos los archivos|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        var fileName = dialog.FileName;
+        _ = Ui.Run(async () =>
+        {
+            var info = new FileInfo(fileName);
+            if (info.Length > ImageInspector.MaxBytes)
+                throw new InvalidOperationException(
+                    $"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
+
+            var data = await File.ReadAllBytesAsync(fileName);
+            if (!ImageInspector.Detect(data).Valid)
+                throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
+
+            await App.Api.UploadProductIconAsync(row.Source.Id, Path.GetFileName(fileName), data);
+            await RefreshAsync();
+        }, "No se pudo cambiar la imagen del producto");
+    }
+
+    private void RemoveProductIcon()
+    {
+        if (_productsGrid.SelectedItem is not ProductRow row || !row.Source.HasIcon) return;
+
+        if (!Ui.Confirm($"¿Quitar la imagen de {row.Name}? El producto conservará su icono de texto.",
+                "Quitar imagen"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteProductIconAsync(row.Source.Id);
+            await RefreshAsync();
+        }, "No se pudo quitar la imagen del producto");
+    }
+
+    /// <summary>
+    /// Reduce la imagen guardada a un tamaño máximo, manteniendo la proporción. Se
+    /// guarda en PNG para que el archivo sea más liviano que el BMP original.
+    /// </summary>
+    private void ResizeProductIcon()
+    {
+        if (_productsGrid.SelectedItem is not ProductRow row || !row.Source.HasIcon) return;
+
+        _ = Ui.Run(async () =>
+        {
+            var data = await App.Api.ProductIconAsync(row.Source.Id);
+            var probe = ImageInspector.Detect(data);
+            if (!probe.Valid)
+                throw new InvalidOperationException("La imagen actual no se pudo leer.");
+
+            var dialog = new IconResizeDialog(row.Name, probe.Width, probe.Height)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var resized = ResizeImage(data, dialog.TargetSize);
+            if (resized is null)
+            {
+                Ui.Info(
+                    $"La imagen ya mide {probe.Width} × {probe.Height} px; elija un tamaño menor para reducirla.",
+                    "Redimensionar imagen");
+                return;
+            }
+
+            await App.Api.UploadProductIconAsync(row.Source.Id, $"icono_{dialog.TargetSize}.png", resized);
+            await RefreshAsync();
+        }, "No se pudo redimensionar la imagen");
+    }
+
+    private static byte[]? ResizeImage(byte[] data, int maxSize)
+    {
+        var image = new BitmapImage();
+        using (var stream = new MemoryStream(data))
+        {
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+        }
+
+        var currentMax = Math.Max(image.PixelWidth, image.PixelHeight);
+        if (currentMax <= maxSize) return null;
+
+        var scale = (double)maxSize / currentMax;
+        var transformed = new TransformedBitmap(image, new ScaleTransform(scale, scale));
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(transformed));
+        using var output = new MemoryStream();
+        encoder.Save(output);
+        return output.ToArray();
     }
 
     private void ToggleProduct()

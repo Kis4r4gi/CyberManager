@@ -824,6 +824,42 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   productos que no están en el catálogo o que quedaron como **Revisar** por empate
   (`SNACHOS`, `raquety`).
 
+### Carpeta de respaldos, menú de producto y punto de venta (2026-11-14)
+
+- **Carpeta de respaldos configurable**: nueva clave `SettingsKeys.BackupFolder`. Vacía significa
+  la carpeta predeterminada `respaldos` junto a la base. `BackupService.DefaultFolder` calcula esa
+  ruta, `Folder` devuelve la efectiva y `SetFolderAsync` valida que sea una ruta absoluta, que la
+  carpeta se pueda crear y que admita escritura (`EnsureWritable` escribe y borra un archivo de
+  prueba) antes de guardar el cambio. La ruta se resuelve una vez por instancia y todos los
+  respaldos, listados, descargas y restauraciones usan la carpeta efectiva.
+- **API**: `BackupListDto.DefaultFolder` informa la carpeta predeterminada y
+  `PUT /api/backups/folder` (solo `Admin`) recibe `SetBackupFolderRequest`; un valor nulo o vacío
+  restablece la predeterminada. `CyberApi.SetBackupFolderAsync` expone la llamada.
+- **Interfaz**: en *Configuración → Respaldos* hay un desplegable con **Predeterminada**, la carpeta
+  actual y las unidades fijas/extraíbles del equipo, un botón **Examinar…** que agrega cualquier
+  ruta y **Aplicar carpeta**. El texto inferior muestra la carpeta efectiva en el servidor y se
+  recuerda que los respaldos anteriores no se mueven al cambiar de ubicación.
+- **Menú contextual de producto**: clic derecho sobre una fila de **Productos** la selecciona y abre
+  **Editar producto…**, **Cambiar imagen…**, **Quitar imagen**, **Redimensionar imagen…**,
+  **Activar / desactivar** y **Eliminar producto**. El menú solo se instala cuando
+  `App.Session.Role == UserRole.Admin`; **Quitar imagen** y **Redimensionar imagen…** se deshabilitan
+  si el producto no tiene imagen. La subida y el borrado usan directamente la API de iconos.
+- **Redimensionar imagen**: `IconResizeDialog` ofrece 64, 96, 128, 160, 256 o 512 px de lado máximo.
+  La imagen se reduce con `TransformedBitmap` manteniendo la proporción y se vuelve a subir como
+  PNG; si ya es igual o menor, se avisa y no se cambia nada.
+- **Punto de venta**: las tarjetas con imagen usan 196 × 198 px (escalados por
+  `ProductCardScale`), la fotografía ocupa todo el espacio libre con `Stretch.Uniform` y el emoji
+  queda como respaldo mientras carga o si la descarga falla. Las tarjetas sin imagen conservan el
+  diseño compacto de 184 × 108 px.
+- **Prueba funcional**: con un servidor temporal (puerto 5099 y base nueva) se verificó la carpeta
+  inicial y la predeterminada, el cambio a una carpeta nueva, la creación de un respaldo visible en
+  la lista, el restablecimiento a la predeterminada y el rechazo de una ruta relativa.
+- **Compilación**: `dotnet build CyberManager.sln -c Release` sin errores (solo los avisos nullable
+  preexistentes). Se generaron los instaladores **1.0.15**
+  (`CyberManager-Servidor-1.0.15.exe` y `CyberManager-Estacion-1.0.15.exe`) y se instaló el de
+  servidor sobre `C:\CyberManager\Servidor`; `/api/health` responde `ok`, la versión instalada es
+  **1.0.15** y la base conserva **424 productos** con **40 imágenes** y **7 respaldos**.
+
 ---
 
 ## Rutas y comandos clave
@@ -893,8 +929,10 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   botón manual abre `PrintDialog` si no hay impresora.
 - Los precios son con IVA incluido; `Sale.Total` incluye IGTF y `Sale.TotalVes` usa la tasa de la
   venta. Solo `Cash`, `CashUsd`, `Card` y `Transfer` generan movimientos de caja.
-- Respaldos: claves `BackupAutoEnabled` (true), `BackupIntervalHours` (24) y `BackupRetention`
-  (30) en `Settings`; el trabajador revisa cada 5 minutos. Carpeta `respaldos` junto a la base.
+- Respaldos: claves `BackupAutoEnabled` (true), `BackupIntervalHours` (24), `BackupRetention`
+  (30) y `BackupFolder` (vacío = `respaldos` junto a la base) en `Settings`; el trabajador revisa
+  cada 5 minutos. La carpeta se puede cambiar desde *Configuración → Respaldos* y debe ser una ruta
+  absoluta escribible. Los respaldos anteriores no se mueven al cambiar de carpeta.
 - Las conexiones SQLite usadas por respaldos/restauraciones deben usar `Pooling=false`; de lo
   contrario el archivo queda bloqueado y la restauración falla en Windows.
 - El autoguardado usa temporizadores de 800 ms para configuración y apariencia; `RefreshAsync`

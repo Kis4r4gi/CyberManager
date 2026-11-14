@@ -515,6 +515,37 @@ public sealed class TransferSessionDialog : FormDialog
     }
 }
 
+/// <summary>Elige el tamaño máximo al que se reducirá la imagen de un producto.</summary>
+public sealed class IconResizeDialog : FormDialog
+{
+    private readonly ComboBox _sizeBox;
+
+    public int TargetSize { get; private set; } = 128;
+
+    public IconResizeDialog(string productName, int currentWidth, int currentHeight)
+        : base("Redimensionar imagen", $"Ajuste la imagen de {productName} al espacio que necesita.")
+    {
+        _sizeBox = AddCombo("Tamaño máximo (píxeles)", new[]
+        {
+            new Option<int>(64, "64 × 64"),
+            new Option<int>(96, "96 × 96"),
+            new Option<int>(128, "128 × 128"),
+            new Option<int>(160, "160 × 160"),
+            new Option<int>(256, "256 × 256"),
+            new Option<int>(512, "512 × 512")
+        });
+
+        AddNote($"Tamaño actual: {currentWidth} × {currentHeight} px. " +
+                "La imagen se reduce manteniendo su proporción y se guarda en PNG.");
+    }
+
+    protected override void OnAccept()
+    {
+        TargetSize = ((Option<int>)_sizeBox.SelectedItem!).Value;
+        base.OnAccept();
+    }
+}
+
 public sealed class PromptDialog : FormDialog
 {
     private readonly TextBox _box;

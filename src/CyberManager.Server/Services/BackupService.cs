@@ -10,7 +10,8 @@ public sealed record DatabaseInfo(string FilePath);
 
 /// <summary>
 /// Respaldos de la base SQLite usando la API de copia en línea.
-/// Los archivos se guardan en la carpeta <c>respaldos</c> junto a la base de datos.
+/// Por omisión los archivos se guardan en la carpeta <c>respaldos</c> junto a la base
+/// de datos; el administrador puede elegir otra carpeta desde la consola.
 /// </summary>
 public sealed class BackupService
 {
@@ -18,6 +19,7 @@ public sealed class BackupService
     private readonly DatabaseInfo _database;
     private readonly SettingsService _settings;
     private readonly ILogger<BackupService> _log;
+    private string? _folder;
 
     public BackupService(DatabaseInfo database, SettingsService settings, ILogger<BackupService> log)
     {
@@ -28,22 +30,46 @@ public sealed class BackupService
 
     public string DatabaseFile => _database.FilePath;
 
-    public string Folder =>
+    /// <summary>Carpeta predeterminada, junto a la base de datos activa.</summary>
+    public string DefaultFolder =>
         Path.Combine(Path.GetDirectoryName(_database.FilePath) ?? AppContext.BaseDirectory, "respaldos");
+
+    /// <summary>Carpeta efectiva. Se resuelve desde la configuración antes de usarla.</summary>
+    public string Folder => _folder ?? DefaultFolder;
 
     public async Task<BackupListDto> GetListAsync(CancellationToken ct = default)
     {
+        await ResolveFolderAsync();
         var enabled = await _settings.GetBoolAsync(SettingsKeys.BackupAutoEnabled, true);
         var interval = Math.Clamp(await _settings.GetIntAsync(SettingsKeys.BackupIntervalHours, 24), 1, 720);
         var retention = Math.Clamp(await _settings.GetIntAsync(SettingsKeys.BackupRetention, 30), 1, 365);
         var files = await ListFilesAsync(ct);
 
         return new BackupListDto(Folder, enabled, interval, retention,
-            files.FirstOrDefault()?.CreatedUtc, files);
+            files.FirstOrDefault()?.CreatedUtc, files, DefaultFolder);
+    }
+
+    /// <summary>
+    /// Cambia la carpeta de respaldos después de comprobar que el servidor puede
+    /// escribir en ella. Un valor vacío restablece la carpeta predeterminada.
+    /// </summary>
+    public async Task<BackupListDto> SetFolderAsync(string? folder, CancellationToken ct = default)
+    {
+        var requested = (folder ?? string.Empty).Trim();
+        var target = requested.Length == 0 ? DefaultFolder : NormalizeFolder(requested);
+
+        EnsureWritable(target);
+
+        await _settings.SetAsync(SettingsKeys.BackupFolder, requested.Length == 0 ? string.Empty : target);
+        _folder = target;
+        _log.LogInformation("Carpeta de respaldos establecida en {Folder}", target);
+
+        return await GetListAsync(ct);
     }
 
     public async Task<List<BackupFileDto>> ListFilesAsync(CancellationToken ct = default)
     {
+        await ResolveFolderAsync();
         if (!Directory.Exists(Folder)) return new List<BackupFileDto>();
 
         return await Task.Run(() =>
@@ -113,6 +139,7 @@ public sealed class BackupService
 
     public async Task<RestoreBackupResultDto> RestoreStoredAsync(string fileName, CancellationToken ct = default)
     {
+        await ResolveFolderAsync();
         var path = StoredPath(fileName);
         if (!File.Exists(path)) throw AppException.NotFound("Respaldo");
 
@@ -122,6 +149,7 @@ public sealed class BackupService
     public async Task<RestoreBackupResultDto> RestoreUploadAsync(Stream source, string originalName,
         CancellationToken ct = default)
     {
+        await ResolveFolderAsync();
         Directory.CreateDirectory(Folder);
         var temp = Path.Combine(Folder, $".upload_{Guid.NewGuid():N}.db");
 
@@ -175,6 +203,7 @@ public sealed class BackupService
 
     private async Task<BackupFileDto> CreateCoreAsync(bool automatic, CancellationToken ct, string? kind = null)
     {
+        await ResolveFolderAsync();
         Directory.CreateDirectory(Folder);
         kind ??= automatic ? "auto" : "manual";
         var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
@@ -209,6 +238,54 @@ public sealed class BackupService
             {
                 _log.LogWarning(ex, "No se pudo eliminar el respaldo {File}", old.FileName);
             }
+        }
+    }
+
+    /// <summary>Lee una sola vez por instancia la carpeta configurada.</summary>
+    private async Task<string> ResolveFolderAsync()
+    {
+        if (_folder is not null) return _folder;
+
+        var configured = (await _settings.GetAsync(SettingsKeys.BackupFolder)).Trim();
+        _folder = configured.Length == 0 ? DefaultFolder : NormalizeFolder(configured);
+        return _folder;
+    }
+
+    private static string NormalizeFolder(string folder)
+    {
+        var expanded = Environment.ExpandEnvironmentVariables(folder.Trim().Trim('"'));
+        if (expanded.Length == 0 || !Path.IsPathRooted(expanded))
+            throw new AppException(
+                "La carpeta de respaldos debe ser una ruta completa, por ejemplo D:\\Respaldos.");
+
+        try
+        {
+            return Path.GetFullPath(expanded);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new AppException($"La carpeta «{folder}» no es una ruta válida.");
+        }
+    }
+
+    /// <summary>Comprueba que la carpeta exista o se pueda crear y admita escritura.</summary>
+    private static void EnsureWritable(string folder)
+    {
+        string? probe = null;
+        try
+        {
+            probe = Path.Combine(folder, $".escritura_{Guid.NewGuid():N}.tmp");
+            Directory.CreateDirectory(folder);
+            using (var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                stream.WriteByte(0);
+            File.Delete(probe);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                       or ArgumentException or NotSupportedException)
+        {
+            if (probe is not null) TryDelete(probe);
+            throw new AppException(
+                $"No se puede escribir en la carpeta «{folder}». Elija otra ubicación. Detalle: {ex.Message}");
         }
     }
 

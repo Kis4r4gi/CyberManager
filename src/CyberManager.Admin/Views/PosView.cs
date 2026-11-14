@@ -386,29 +386,23 @@ public sealed class PosView : UserControl, IRefreshable
     {
         var available = product.IsService || product.Stock > 0;
         var scale = AppearanceService.Current.ProductCardScale / 100.0;
+        var hasImage = product.HasIcon;
+        var stockText = product.IsService ? "Servicio" : product.Stock <= 0 ? "Agotado" : $"{product.Stock:N0} disp.";
 
-        var content = new StackPanel();
+        var layout = new Grid();
 
-        var head = new Grid();
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var name = new TextBlock
+        if (hasImage)
         {
-            Text = product.Name,
-            FontSize = 13 * scale,
-            FontWeight = FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap,
-            MaxHeight = 38 * scale,
-            TextTrimming = TextTrimming.CharacterEllipsis
-        };
+            // La imagen ocupa todo el espacio libre de la tarjeta y se ajusta con
+            // Stretch.Uniform, sin recortar el producto ni deformarlo.
+            layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        if (product.HasIcon || !string.IsNullOrWhiteSpace(product.Icon))
-        {
             var fallback = new TextBlock
             {
-                Text = product.Icon ?? string.Empty,
-                FontSize = Math.Round(17 * scale),
+                Text = string.IsNullOrWhiteSpace(product.Icon) ? "🖼️" : product.Icon!,
+                FontSize = Math.Round(30 * scale),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -417,51 +411,151 @@ public sealed class PosView : UserControl, IRefreshable
             {
                 Stretch = Stretch.Uniform,
                 Visibility = Visibility.Collapsed,
-                Margin = new Thickness(2)
+                Margin = new Thickness(2 * scale)
             };
 
             var iconGrid = new Grid();
             iconGrid.Children.Add(fallback);
             iconGrid.Children.Add(image);
 
-            head.Children.Add(new Border
+            var imageHost = new Border
             {
-                Width = Math.Round(30 * scale),
-                Height = Math.Round(30 * scale),
-                CornerRadius = new CornerRadius(8 * scale),
                 Background = Kit.Brush("SurfaceBrush"),
-                Margin = new Thickness(0, 0, 8 * scale, 0),
+                CornerRadius = new CornerRadius(8 * scale),
+                Margin = new Thickness(0, 0, 0, 7 * scale),
                 ClipToBounds = true,
-                Child = iconGrid
+                Child = iconGrid,
+                MinHeight = Math.Round(80 * scale)
+            };
+            layout.Children.Add(imageHost);
+
+            var name = new TextBlock
+            {
+                Text = product.Name,
+                FontSize = 12.5 * scale,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 34 * scale,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetRow(name, 1);
+            layout.Children.Add(name);
+
+            var bottom = new Grid { Margin = new Thickness(0, 4 * scale, 0, 0) };
+            bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            bottom.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            bottom.Children.Add(new TextBlock
+            {
+                Text = $"$ {product.Price:N2}",
+                FontSize = 12.5 * scale,
+                FontWeight = FontWeights.Bold,
+                Foreground = Kit.Brush("AccentBrush"),
+                VerticalAlignment = VerticalAlignment.Bottom
             });
-            Grid.SetColumn(name, 1);
 
-            if (product.HasIcon)
-                _ = LoadProductIconAsync(product, image, fallback);
+            var stock = new TextBlock
+            {
+                Text = stockText,
+                Style = Kit.Style("Muted"),
+                FontSize = 10 * scale,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            Grid.SetColumn(stock, 1);
+            bottom.Children.Add(stock);
+            Grid.SetRow(bottom, 2);
+            layout.Children.Add(bottom);
+
+            _ = LoadProductIconAsync(product, image, fallback);
         }
+        else
+        {
+            layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        head.Children.Add(name);
-        content.Children.Add(head);
-        content.Children.Add(new TextBlock
-        {
-            Text = product.CategoryName ?? "General",
-            Style = Kit.Style("Muted"),
-            FontSize = 11 * scale,
-            Margin = new Thickness(0, 2 * scale, 0, 0)
-        });
-        content.Children.Add(new TextBlock
-        {
-            Text = $"$ {product.Price:N2}",
-            FontSize = 13 * scale,
-            FontWeight = FontWeights.Bold,
-            Foreground = Kit.Brush("AccentBrush"),
-            Margin = new Thickness(0, 4 * scale, 0, 0)
-        });
+            var content = new StackPanel();
+
+            var head = new Grid();
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            head.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var name = new TextBlock
+            {
+                Text = product.Name,
+                FontSize = 13 * scale,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 38 * scale,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+
+            if (!string.IsNullOrWhiteSpace(product.Icon))
+            {
+                head.Children.Add(new Border
+                {
+                    Width = Math.Round(30 * scale),
+                    Height = Math.Round(30 * scale),
+                    CornerRadius = new CornerRadius(8 * scale),
+                    Background = Kit.Brush("SurfaceBrush"),
+                    Margin = new Thickness(0, 0, 8 * scale, 0),
+                    ClipToBounds = true,
+                    Child = new TextBlock
+                    {
+                        Text = product.Icon,
+                        FontSize = Math.Round(17 * scale),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
+                    }
+                });
+                Grid.SetColumn(name, 1);
+            }
+
+            head.Children.Add(name);
+            content.Children.Add(head);
+            content.Children.Add(new TextBlock
+            {
+                Text = product.CategoryName ?? "General",
+                Style = Kit.Style("Muted"),
+                FontSize = 11 * scale,
+                Margin = new Thickness(0, 2 * scale, 0, 0)
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = $"$ {product.Price:N2}",
+                FontSize = 13 * scale,
+                FontWeight = FontWeights.Bold,
+                Foreground = Kit.Brush("AccentBrush"),
+                Margin = new Thickness(0, 4 * scale, 0, 0)
+            });
+
+            layout.Children.Add(content);
+
+            var foot = new Grid();
+            foot.Children.Add(new TextBlock
+            {
+                Text = stockText,
+                Style = Kit.Style("Muted"),
+                FontSize = 10 * scale,
+                VerticalAlignment = VerticalAlignment.Bottom
+            });
+            var bs = new TextBlock
+            {
+                Text = _rate > 0 ? $"Bs {product.Price * _rate:N2}" : string.Empty,
+                Style = Kit.Style("Muted"),
+                FontSize = 10 * scale,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            foot.Children.Add(bs);
+            Grid.SetRow(foot, 1);
+            layout.Children.Add(foot);
+        }
 
         var tile = new Border
         {
-            Width = Math.Round(184 * scale),
-            Height = Math.Round(108 * scale),
+            Width = Math.Round((hasImage ? 196 : 184) * scale),
+            Height = Math.Round((hasImage ? 198 : 108) * scale),
             Margin = new Thickness(0, 0, 10, 10),
             Padding = new Thickness(Math.Round(12 * scale)),
             CornerRadius = new CornerRadius(10 * scale),
@@ -470,35 +564,10 @@ public sealed class PosView : UserControl, IRefreshable
             BorderThickness = new Thickness(1),
             Cursor = available ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow,
             Opacity = available ? 1 : 0.45,
-            DataContext = product
+            ToolTip = product.Name,
+            DataContext = product,
+            Child = layout
         };
-
-        var layout = new Grid();
-        layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        layout.Children.Add(content);
-
-        var foot = new Grid();
-        foot.Children.Add(new TextBlock
-        {
-            Text = product.IsService ? "Servicio" : product.Stock <= 0 ? "Agotado" : $"{product.Stock:N0} disp.",
-            Style = Kit.Style("Muted"),
-            FontSize = 10 * scale,
-            VerticalAlignment = VerticalAlignment.Bottom
-        });
-        var bs = new TextBlock
-        {
-            Text = _rate > 0 ? $"Bs {product.Price * _rate:N2}" : string.Empty,
-            Style = Kit.Style("Muted"),
-            FontSize = 10 * scale,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom
-        };
-        foot.Children.Add(bs);
-        Grid.SetRow(foot, 1);
-        layout.Children.Add(foot);
-
-        tile.Child = layout;
 
         if (available)
             tile.MouseLeftButtonUp += (_, _) => AddToCart(product);

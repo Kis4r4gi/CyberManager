@@ -37,6 +37,8 @@ public sealed class SettingsView : UserControl, IRefreshable
     private readonly DataGrid _backupsGrid;
     private readonly TextBlock _backupStatus = Kit.Muted("Los respaldos se guardan en el servidor.");
     private readonly TextBlock _backupFolderText = Kit.Muted("Consultando carpeta...");
+    private readonly ComboBox _backupFolderBox = new();
+    private string _backupDefaultFolder = string.Empty;
     private readonly TextBlock _updateDetail = Kit.Muted("Consultando la última versión publicada...");
     private readonly TextBlock _updateStatus = Kit.Muted("El servidor consulta GitHub automáticamente.");
     private readonly TextBlock _emailStatus = Kit.Muted("El envío del cierre diario por correo está desactivado.");
@@ -897,13 +899,40 @@ public sealed class SettingsView : UserControl, IRefreshable
     {
         var panel = new StackPanel();
 
-        panel.Children.Add(Kit.Section("Respaldo automático"));
+        panel.Children.Add(Kit.Section("Carpeta de respaldos"));
         panel.Children.Add(Description(
-            "El servidor crea copias de seguridad de la base de datos sin detener la operación. " +
-            "Los archivos se guardan junto a la base y se conservan según la cantidad indicada."));
+            "Elija dónde guarda el servidor las copias de seguridad. Puede usar una carpeta del " +
+            "servidor o una unidad externa conectada a él. Si elige «Predeterminada», los archivos " +
+            "se guardan en la carpeta «respaldos» junto a la base de datos."));
+
+        var folderRow = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        folderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        folderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        folderRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        _backupFolderBox.ToolTip = "Carpeta del servidor donde se guardarán los respaldos.";
+        _backupFolderBox.Margin = new Thickness(0, 0, 8, 0);
+        folderRow.Children.Add(_backupFolderBox);
+
+        var browseFolder = Kit.Button("Examinar…", "GhostButton", BrowseBackupFolder);
+        browseFolder.Margin = new Thickness(0, 0, 8, 0);
+        Grid.SetColumn(browseFolder, 1);
+        folderRow.Children.Add(browseFolder);
+
+        var applyFolder = Kit.Button("Aplicar carpeta", "PrimaryButton",
+            () => _ = Ui.Run(ApplyBackupFolderAsync, "No se pudo cambiar la carpeta de respaldos"));
+        Grid.SetColumn(applyFolder, 2);
+        folderRow.Children.Add(applyFolder);
+
+        panel.Children.Add(Kit.Field("Carpeta en el servidor", folderRow));
 
         _backupFolderText.Margin = new Thickness(0, 0, 0, 10);
         panel.Children.Add(_backupFolderText);
+
+        panel.Children.Add(Kit.Section("Respaldo automático"));
+        panel.Children.Add(Description(
+            "El servidor crea copias de seguridad de la base de datos sin detener la operación. " +
+            "Los archivos se conservan según la cantidad indicada."));
 
         var auto = new UniformGrid { Columns = 2 };
         AddCheck(auto, "BackupAutoEnabled", "Crear respaldos automáticos", true);
@@ -1219,6 +1248,7 @@ public sealed class SettingsView : UserControl, IRefreshable
             _backupFolder = list.Folder;
             _backups = list.Files.Select(f => new BackupRow(f)).ToList();
             _backupsGrid.ItemsSource = _backups;
+            FillBackupFolders(list);
             _backupFolderText.Text = $"Carpeta en el servidor: {list.Folder}";
             _backupFolderText.ToolTip = list.Folder;
 
@@ -1233,6 +1263,107 @@ public sealed class SettingsView : UserControl, IRefreshable
         {
             _backupStatus.Text = ex.Message;
             _backupStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+    }
+
+    /// <summary>
+    /// Llena el desplegable con la carpeta predeterminada, la actual y las unidades
+    /// disponibles en el equipo donde corre la consola.
+    /// </summary>
+    private void FillBackupFolders(BackupListDto list)
+    {
+        _backupDefaultFolder = string.IsNullOrWhiteSpace(list.DefaultFolder)
+            ? list.Folder
+            : list.DefaultFolder!;
+
+        var options = new List<Option<string?>>
+        {
+            new(null, $"Predeterminada: {_backupDefaultFolder}")
+        };
+
+        if (!string.Equals(list.Folder, _backupDefaultFolder, StringComparison.OrdinalIgnoreCase))
+            options.Add(new Option<string?>(list.Folder, list.Folder));
+
+        try
+        {
+            foreach (var drive in DriveInfo.GetDrives()
+                         .Where(d => d.IsReady && d.DriveType is DriveType.Fixed or DriveType.Removable)
+                         .OrderBy(d => d.Name))
+            {
+                var root = drive.RootDirectory.FullName;
+                if (options.Any(o => string.Equals(o.Value, root, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                options.Add(new Option<string?>(root, root));
+            }
+        }
+        catch
+        {
+            // Si el equipo no permite enumerar unidades, el desplegable conserva las rutas conocidas.
+        }
+
+        _backupFolderBox.ItemsSource = options;
+        _backupFolderBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
+        _backupFolderBox.SelectedItem = options.FirstOrDefault(o =>
+            string.Equals(o.Value ?? _backupDefaultFolder, list.Folder, StringComparison.OrdinalIgnoreCase))
+            ?? options[0];
+    }
+
+    private void BrowseBackupFolder()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Seleccione la carpeta para los respaldos en el servidor",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        var path = dialog.FolderName;
+        var options = _backupFolderBox.ItemsSource as List<Option<string?>> ?? new List<Option<string?>>();
+        var option = options.FirstOrDefault(o =>
+            string.Equals(o.Value, path, StringComparison.OrdinalIgnoreCase));
+        if (option is null)
+        {
+            option = new Option<string?>(path, path);
+            options.Add(option);
+            _backupFolderBox.ItemsSource = null;
+            _backupFolderBox.ItemsSource = options;
+            _backupFolderBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
+        }
+
+        _backupFolderBox.SelectedItem = option;
+    }
+
+    private async Task ApplyBackupFolderAsync()
+    {
+        if (_backupBusy) return;
+        if (_backupFolderBox.SelectedItem is not Option<string?> choice)
+        {
+            Ui.Info("Seleccione una carpeta de la lista o use «Examinar…».", "Respaldos");
+            return;
+        }
+
+        var folder = choice.Value;
+
+        _backupBusy = true;
+        _backupStatus.Text = "Cambiando la carpeta de respaldos...";
+        _backupStatus.Foreground = Kit.Brush("MutedBrush");
+
+        try
+        {
+            var list = await App.Api.SetBackupFolderAsync(folder);
+            await LoadBackupsAsync();
+            _backupStatus.Text = $"Carpeta de respaldos: {list.Folder}. " +
+                                 "Los respaldos anteriores permanecen en su ubicación original.";
+            _backupStatus.Foreground = Kit.Brush("SuccessBrush");
+        }
+        catch (Exception ex)
+        {
+            _backupStatus.Text = ex.Message;
+            _backupStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+        finally
+        {
+            _backupBusy = false;
         }
     }
 
