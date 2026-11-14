@@ -931,6 +931,47 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   clave nueva, así que la consola instalada arranca en modo **Imagen PNG** y la guardará al aplicar
   Apariencia.
 
+### Menú de sesión y borrado automático del fondo (2026-11-14)
+
+- **Menú de sesión**: el pie del panel izquierdo muestra un botón con el usuario actual y su rol
+  (`SessionButton`, `SessionNameText`, `SessionRoleText`). Al pulsarlo se abre un `ContextMenu` con
+  el usuario actual, **Cambiar de usuario…**, la lista de usuarios activos (solo `Admin`, vía
+  `/api/users`, sin repetir al usuario actual) y **Salir de CyberManager**.
+- **Cambio sin cerrar la aplicación**: `SwitchUserAsync` reutiliza `LoginWindow` con el usuario
+  preseleccionado y siempre pide la contraseña. Si el acceso es correcto, `RestartConsoleAsync`
+  cierra la conexión en tiempo real anterior, cierra la ventana y crea otra `MainWindow` con la
+  nueva sesión; `ShutdownMode` pasa temporalmente a `OnExplicitShutdown` y `MainWindow_Closed` no
+  termina la aplicación cuando `_switchingUser` está activo. Al cancelar el login se conserva la
+  sesión anterior.
+- **Cierre cómodo**: la opción **Salir de CyberManager** confirma y cierra la consola con
+  `App.ShutdownApplication`; el servidor sigue en segundo plano.
+- **Borrado de fondo**: nuevo `CyberManager.Shared/Imaging/BackgroundRemoval.cs`. Trabaja sobre
+  píxeles BGRA, calcula el color promedio del borde y exige que al menos el **70 %** del borde sea
+  uniforme; luego rellena desde los bordes con una tolerancia de 44 y vuelve transparentes esos
+  píxeles. No toca imágenes con borde ya transparente (≥ 25 %), ni fotografías de borde irregular,
+  ni imágenes donde el fondo ocupa ≥ 98 % (posible imagen de color plano). Se omiten imágenes de
+  más de 24 Mpx.
+- **Integración**: `ProductIconImage.RemoveBackground` (System.Drawing, `Format32bppArgb` y
+  `LockBits`) en el servidor, aplicado en `POST /api/products/{id}/icon` después de `ToPng` y
+  recalculando el `probe`, lo que cubre también el importador masivo.
+  `ProductImage.RemoveBackground` (WPF, `FormatConvertedBitmap` a Bgra32 y `PngBitmapEncoder`) en la
+  consola, aplicado en `Normalize` (diálogo de producto y **Cambiar imagen…**), en
+  `WebImageSearch.DownloadPngAsync` (búsqueda en internet) y en `ResizeProductIcon`. Todas las
+  funciones devuelven la imagen original si no hay cambios o si algo falla, así que nunca impiden
+  subir una imagen.
+- **Prueba** (`SessionAndBackgroundTest`, STA, .NET 8, servidor 1.0.18 en el puerto 5080):
+  - Fondo blanco con figura roja: algoritmo compartido, servidor y consola dejan la esquina con
+    alfa **0** y el centro con alfa **255**; un BMP se convierte a `producto.png` y queda
+    transparente; un borde con degradado no se modifica y un PNG ya transparente se devuelve con
+    los mismos bytes.
+  - Menú de administrador: **7 elementos** (usuario, cambiar, separador, `Cajero · Cajero`, salir);
+    menú de cajero: **5 elementos** sin lista de usuarios. El pie muestra **Cajero · Cajero** y
+    `LoginWindow("cajero")` preselecciona el usuario.
+  - Cambio de sesión real de administrador a cajero: se creó una **ventana nueva** con la sesión del
+    cajero, las vistas administrativas quedaron en `Collapsed` y `App.IsShuttingDown` siguió en
+    `false`.
+- **Compilación**: `dotnet build CyberManager.sln -c Release` con **0 errores**.
+
 ---
 
 ## Rutas y comandos clave

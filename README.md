@@ -44,6 +44,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - [Instaladores de Windows](#instaladores-de-windows)
 - [Avisos de nuevas versiones](#avisos-de-nuevas-versiones)
 - [Credenciales de demostración](#credenciales-de-demostración)
+- [Cambiar de usuario y cerrar la consola](#cambiar-de-usuario-y-cerrar-la-consola)
 - [Flujo operativo diario](#flujo-operativo-diario)
 - [Moneda, tasa, IVA e IGTF](#moneda-tasa-iva-e-igtf)
 - [Tickets, impresión y lector de códigos](#tickets-impresión-y-lector-de-códigos)
@@ -165,6 +166,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   prueba desde *Configuración → Reportes por correo*.
 - Usuarios con roles: administrador, cajero y técnico, con **eliminación permanente** de cuentas
   (bloqueada para el propio usuario, el último administrador activo y usuarios con cajas abiertas).
+- **Menú de sesión en el panel izquierdo**: muestra el usuario y su rol, permite **cambiar de
+  cajero o administrador** sin cerrar la aplicación y **salir de CyberManager**. El administrador
+  ve la lista de usuarios activos y el cambio siempre pide la contraseña.
 - **Interfaz de cajero simplificada**: oculta y bloquea catálogo, inventario, compras, equipos,
   fondos, promos, reportes, configuración y bitácora; solo quedan tablero, caja/POS, clientes y
   reservas.
@@ -518,6 +522,25 @@ La base de demostración también incluye:
 
 ---
 
+## Cambiar de usuario y cerrar la consola
+
+En el pie del panel izquierdo de la consola hay un botón con el **usuario actual y su rol**. Al
+pulsarlo se abre el menú de sesión:
+
+- **Cambiar de usuario…**: pide el usuario y la contraseña, y vuelve a abrir la consola con la
+  nueva sesión. La aplicación no se cierra y el servidor sigue funcionando.
+- **Lista de usuarios activos** (solo para el administrador): muestra los demás usuarios con su
+  nombre y rol para cambiar con un clic; siempre se pide la contraseña.
+- **Salir de CyberManager**: cierra la consola después de confirmar. El servidor continúa
+  ejecutándose en segundo plano.
+
+El cambio de usuario cierra la conexión en tiempo real de la sesión anterior y la vuelve a abrir con
+el token del nuevo usuario, de modo que la bitácora, el tablero y los permisos corresponden de
+inmediato al rol que acaba de entrar. Si el inicio de sesión se cancela o falla, se mantiene la
+sesión anterior.
+
+---
+
 ## Flujo operativo diario
 
 1. **Abrir caja** con el fondo inicial.
@@ -782,6 +805,14 @@ La consola y las estaciones guardan una copia en disco y en memoria para mostrar
 sistema lo convierte automáticamente a `.png` antes de escribirlo en la base, tanto desde la consola
 como con el importador en bloque. El servidor también convierte cualquier imagen antigua que no sea
 PNG al arrancar, de modo que la API siempre responde `image/png`.
+
+**El fondo se quita automáticamente.** Al aplicar una imagen al producto (desde el diálogo, con
+**Cambiar imagen…**, al buscar en internet, al redimensionarla o al importar varios archivos), el
+sistema detecta el color uniforme de los bordes —por ejemplo el blanco de un logotipo— y lo vuelve
+transparente, de modo que la figura se integra con el tema oscuro. El relleno avanza desde los
+bordes y se detiene en la figura, así que no borra partes internas del producto. Si el borde no es
+uniforme (una fotografía normal) o la imagen ya viene recortada con transparencia, no se modifica.
+El servidor aplica el mismo proceso a toda imagen que reciba, incluso las del importador en bloque.
 
 **Desde la consola:** en **Productos**, pulse **Nuevo** o **Editar**, use **Elegir imagen…** y
 guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** indica si el producto

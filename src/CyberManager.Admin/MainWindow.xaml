@@ -176,7 +176,29 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <StackPanel Grid.Row="1" Margin="18,10,18,14">
+                    <StackPanel Grid.Row="1" Margin="14,10,14,14">
+                        <Button x:Name="SessionButton" Click="SessionMenu_Click"
+                                Style="{StaticResource GhostButton}" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch" Padding="10,8" Margin="0,0,0,10"
+                                ToolTip="Cambiar de usuario o cerrar la sesión actual.">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock x:Name="SessionNameText" Text="Sesión" FontWeight="SemiBold"
+                                               FontSize="11.5" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="SessionRoleText" Text="Administrador"
+                                               Style="{StaticResource Muted}" FontSize="9.5" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"
+                                           FontSize="10" VerticalAlignment="Center" Opacity="0.7" />
+                            </Grid>
+                        </Button>
                         <Separator />
                         <TextBlock x:Name="VersionText" Text="CyberManager 1.0" Style="{StaticResource Muted}" FontSize="10" />
                         <TextBlock x:Name="ConnectionText" Text="Conectando..." Style="{StaticResource Muted}" FontSize="10" />

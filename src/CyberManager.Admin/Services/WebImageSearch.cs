@@ -145,7 +145,9 @@ public static class WebImageSearch
             throw new InvalidOperationException(
                 "No se pudo descargar la imagen. Elija otra o intente de nuevo.");
 
-        return ProductImage.ToPng(data, maxSize);
+        // La imagen se guarda en PNG y se le quita el fondo uniforme para que se
+        // integre con el tema de la consola y del punto de venta.
+        return ProductImage.RemoveBackground(ProductImage.ToPng(data, maxSize));
     }
 
     private static async Task<byte[]?> TryDownloadBytesAsync(string url, int maxBytes,

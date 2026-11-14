@@ -8,13 +8,23 @@ namespace CyberManager.Admin;
 
 public partial class LoginWindow : Window
 {
-    public LoginWindow()
+    public LoginWindow() : this(null)
+    {
+    }
+
+    /// <summary>
+    /// Inicia sesión con un usuario preseleccionado, útil al cambiar de cajero
+    /// desde el menú de sesión de la consola.
+    /// </summary>
+    public LoginWindow(string? username)
     {
         InitializeComponent();
 
         var config = AppConfig.Load("Admin");
         ServerUrlBox.Text = config.ServerUrl;
-        UsernameBox.Text = config.LastUsername ?? "admin";
+        UsernameBox.Text = string.IsNullOrWhiteSpace(username)
+            ? config.LastUsername ?? "admin"
+            : username;
 
         Loaded += (_, _) =>
         {

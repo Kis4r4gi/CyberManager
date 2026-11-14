@@ -273,8 +273,11 @@ public static class CatalogEndpoints
             if (!probe.Valid)
                 throw new AppException("Formato no válido. Use BMP, PNG, JPG o GIF.");
 
-            // Todas las imágenes de producto se guardan en PNG.
+            // Todas las imágenes de producto se guardan en PNG y se les quita el
+            // fondo uniforme (blanco, gris, etc.) para que se integren con el tema.
             (data, probe) = ProductIconImage.ToPng(data);
+            data = ProductIconImage.RemoveBackground(data);
+            probe = ImageInspector.Detect(data);
             if (data.LongLength > ImageInspector.MaxBytes)
                 throw new AppException(
                     $"La imagen convertida a PNG supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB. Use una imagen más pequeña.");

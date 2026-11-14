@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CyberManager.Admin.Services;
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
 
     private string _current = "dashboard";
     private bool? _connected;
+    private bool _switchingUser;
     private AppLanguage _language = L.Language;
 
     public MainWindow()
@@ -36,6 +38,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         UserText.Text = App.Session.FullName;
+        SessionNameText.Text = App.Session.FullName;
         VersionText.Text = $"CyberManager {AppInfo.Version}";
         UpdateWindowTitle();
         UpdateRoleText();
@@ -51,7 +54,10 @@ public partial class MainWindow : Window
     }
 
     private void UpdateRoleText()
-        => RoleText.Text = Labels.RoleName(App.Session.Role);
+    {
+        RoleText.Text = Labels.RoleName(App.Session.Role);
+        SessionRoleText.Text = RoleText.Text;
+    }
 
     private static bool IsCashier => App.Session.Role == UserRole.Cashier;
 
@@ -86,7 +92,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(CancelEventArgs e)
     {
-        if (!App.IsShuttingDown && !App.IsSessionEnding)
+        if (!App.IsShuttingDown && !App.IsSessionEnding && !_switchingUser)
         {
             var message = L.T("¿Cerrar la consola de administración?") + Environment.NewLine +
                           Environment.NewLine +
@@ -190,6 +196,10 @@ public partial class MainWindow : Window
             App.Realtime.StationStateChanged -= OnRealtimeStationState;
         }
 
+        // Al cambiar de usuario la conexión ya se cerró y la ventana nueva la
+        // vuelve a abrir; la aplicación no debe terminar.
+        if (_switchingUser) return;
+
         await App.DisposeRealtimeAsync();
         App.ShutdownApplication();
     }
@@ -260,6 +270,157 @@ public partial class MainWindow : Window
     private void Nav_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { CommandParameter: string key }) Navigate(key);
+    }
+
+    // ===================== Sesión y cambio de cajero =====================
+
+    /// <summary>
+    /// Abre el menú de sesión del panel izquierdo: muestra el usuario actual,
+    /// permite cambiar de usuario (con contraseña) y salir de la consola.
+    /// </summary>
+    private async void SessionMenu_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = await BuildSessionMenuAsync();
+        menu.PlacementTarget = SessionButton;
+        menu.Placement = PlacementMode.Top;
+        menu.IsOpen = true;
+    }
+
+    /// <summary>Construye el menú de sesión con el usuario actual y las opciones.</summary>
+    private async Task<ContextMenu> BuildSessionMenuAsync()
+    {
+        var menu = new ContextMenu
+        {
+            Background = (Brush)FindResource("SurfaceBrush"),
+            Foreground = (Brush)FindResource("TextBrush"),
+            BorderBrush = (Brush)FindResource("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4)
+        };
+
+        menu.Items.Add(new MenuItem
+        {
+            Header = $"{App.Session.FullName} · {Labels.RoleName(App.Session.Role)}",
+            IsEnabled = false,
+            FontWeight = FontWeights.SemiBold,
+            Padding = new Thickness(12, 6, 12, 6),
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Background = Brushes.Transparent
+        });
+
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+        menu.Items.Add(SessionMenuItem(L.T("Cambiar de usuario…"), () => _ = SwitchUserAsync(null)));
+
+        // El administrador ve la lista de usuarios activos para cambiar sin
+        // escribir el nombre; el cajero cambia con el formulario de acceso.
+        if (App.Session.Role == UserRole.Admin)
+        {
+            var users = await LoadActiveUsersAsync();
+            if (users.Count > 0)
+            {
+                menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+                foreach (var user in users)
+                {
+                    var item = SessionMenuItem(
+                        $"{user.FullName} · {Labels.RoleName(user.Role)}",
+                        () => _ = SwitchUserAsync(user.Username));
+                    menu.Items.Add(item);
+                }
+            }
+        }
+
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+        menu.Items.Add(SessionMenuItem(L.T("Salir de CyberManager"), ShutdownFromMenu, danger: true));
+
+        return menu;
+    }
+
+    private static MenuItem SessionMenuItem(string header, Action click, bool danger = false)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            Foreground = (Brush)Application.Current.FindResource(danger ? "DangerBrush" : "TextBrush"),
+            Background = Brushes.Transparent,
+            Padding = new Thickness(12, 7, 12, 7),
+            FontSize = 12.5
+        };
+        item.Click += (_, _) => click();
+        return item;
+    }
+
+    /// <summary>Usuarios activos que se pueden elegir en el menú de sesión.</summary>
+    private static async Task<List<UserDto>> LoadActiveUsersAsync()
+    {
+        try
+        {
+            var users = await App.Api.UsersAsync();
+            return users
+                .Where(u => u.Active &&
+                            !string.Equals(u.Username, App.Session.Username,
+                                StringComparison.OrdinalIgnoreCase))
+                .OrderBy(u => u.FullName)
+                .ToList();
+        }
+        catch
+        {
+            // Si falla la consulta, queda disponible «Cambiar de usuario…».
+            return new List<UserDto>();
+        }
+    }
+
+    /// <summary>
+    /// Pide la contraseña del usuario elegido y, si entra correctamente, vuelve a
+    /// abrir la consola con la nueva sesión sin cerrar la aplicación.
+    /// </summary>
+    private async Task SwitchUserAsync(string? username)
+    {
+        if (_switchingUser) return;
+
+        var login = new LoginWindow(username) { Owner = this };
+        if (login.ShowDialog() != true) return;
+
+        await RestartConsoleAsync();
+    }
+
+    /// <summary>
+    /// Recrea la ventana principal con la sesión recién iniciada. La aplicación
+    /// sigue abierta: solo se cierra la ventana anterior y se abre la nueva.
+    /// </summary>
+    private async Task RestartConsoleAsync()
+    {
+        if (_switchingUser) return;
+        _switchingUser = true;
+
+        var app = Application.Current;
+        var previousMode = app.ShutdownMode;
+        app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        try
+        {
+            // Se cierra el tiempo real de la sesión anterior antes de salir; la
+            // ventana nueva lo abre con el token del usuario que acaba de entrar.
+            await App.DisposeRealtimeAsync();
+            Close();
+
+            var window = new MainWindow();
+            app.MainWindow = window;
+            window.Show();
+        }
+        finally
+        {
+            app.ShutdownMode = previousMode;
+            _switchingUser = false;
+        }
+    }
+
+    private void ShutdownFromMenu()
+    {
+        var message = L.T("¿Cerrar la consola de administración?") + Environment.NewLine +
+                      Environment.NewLine +
+                      L.T("El servidor seguirá ejecutándose en segundo plano.");
+        if (!Ui.Confirm(message, L.T("Salir de CyberManager"))) return;
+
+        App.ShutdownApplication();
     }
 
     private async Task RefreshHeaderAsync()

@@ -550,7 +550,9 @@ public sealed class ProductsView : UserControl, IRefreshable
         encoder.Frames.Add(BitmapFrame.Create(transformed));
         using var output = new MemoryStream();
         encoder.Save(output);
-        return output.ToArray();
+
+        // Las imágenes antiguas pueden conservar el fondo; se quita al redimensionar.
+        return ProductImage.RemoveBackground(output.ToArray());
     }
 
     private void ToggleProduct()
