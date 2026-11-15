@@ -886,6 +886,15 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
     USD, Costo, Existencias, Mínimo, IVA y Estado, sin ComboBox ni botón **Buscar imagen…**;
     **Punto de venta** muestra **0 imágenes** y solo los botones Vaciar/Cobrar/Limpiar.
   - `dotnet build CyberManager.sln -c Release` con **0 errores y 0 advertencias**.
+- **Instaladores 1.0.20**: `CyberManager-Servidor-1.0.20.exe` (268.993.803 bytes) y
+  `CyberManager-Estacion-1.0.20.exe` (150.703.935 bytes). Instalación silenciosa del servidor con
+  las tareas `desktopicon,serverstartup,firewall` (código de salida **0**): `/api/health` responde
+  `ok`, el servidor y la consola quedaron en **1.0.20**, la tarea `CyberManagerServer` está
+  **Running** y la base real quedó con **424 productos**, sin la tabla `ProductIcons` ni las
+  columnas `Icon`, `IconUpdatedUtc` e `ImagePath`.
+- **Release v1.0.20**: publicada en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20> con ambos instaladores y el
+  código fuente GPLv2 de TightVNC 2.8.90.
 
 ---
 
@@ -1049,12 +1058,12 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.19**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.19>) con
-  `CyberManager-Servidor-1.0.19.exe` (269.043.642 bytes) y
-  `CyberManager-Estacion-1.0.19.exe` (150.711.457 bytes), publicada el
-  `2026-11-14T23:43:46Z`. La release anterior publicada es `v1.0.18`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.18>).
+- Release actual: **v1.0.20**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20>) con
+  `CyberManager-Servidor-1.0.20.exe` (268.993.803 bytes) y
+  `CyberManager-Estacion-1.0.20.exe` (150.703.935 bytes), publicada el
+  `2026-11-15T04:43:12Z`. La release anterior publicada es `v1.0.19`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.19>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
