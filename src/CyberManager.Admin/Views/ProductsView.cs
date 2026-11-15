@@ -1,14 +1,10 @@
 using System.Globalization;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using CyberManager.Admin.Services;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
-using Microsoft.Win32;
 
 namespace CyberManager.Admin.Views;
 
@@ -25,15 +21,11 @@ public sealed class ProductsView : UserControl, IRefreshable
     private List<RateDto> _rates = new();
     private List<TimePackageDto> _packages = new();
     private List<ZoneDto> _zones = new();
-    private ComboBox _productDisplayBox = null!;
-    private bool _productDisplayLoading;
 
     public ProductsView()
     {
         _productsGrid = Kit.Table(
             Kit.Col("Código", nameof(ProductRow.Sku), 110),
-            ProductIconColumn(),
-            Kit.Col("Imagen", nameof(ProductRow.HasImage), 70),
             Kit.Col("Producto", nameof(ProductRow.Name)),
             Kit.Col("Categoría", nameof(ProductRow.Category), 140),
             Kit.Col("Precio USD", nameof(ProductRow.Price), 100, "{0:N2}"),
@@ -106,7 +98,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         _packages = await App.Api.PackagesAsync();
         _zones = await App.Api.ZonesAsync();
 
-        await RenderProductsAsync();
+        RenderProducts();
 
         _categoriesGrid.ItemsSource = _categories
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
@@ -140,150 +132,19 @@ public sealed class ProductsView : UserControl, IRefreshable
             Kit.Button("Eliminar", "DangerButton", DeleteProduct)
         };
 
-        // Buscar imágenes en internet es una acción exclusiva del administrador.
-        if (App.Session.Role == UserRole.Admin)
-            buttons.Add(Kit.Button("Buscar imagen…", "GhostButton", SearchProductIcon));
-
-        // Selector rápido: usa la misma preferencia que se guarda en Apariencia.
-        _productDisplayBox = new ComboBox
-        {
-            ItemsSource = ProductDisplayOptions(),
-            DisplayMemberPath = nameof(Option<object>.DisplayText),
-            Width = 150,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        _productDisplayBox.SelectionChanged += (_, _) =>
-        {
-            if (_productDisplayLoading) return;
-            if (_productDisplayBox.SelectedItem is not Option<string> option) return;
-            ApplyProductDisplay(option.Value);
-        };
-
-        var displayRow = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        var displayLabel = Kit.Label("Mostrar:");
-        displayLabel.VerticalAlignment = VerticalAlignment.Center;
-        displayLabel.Margin = new Thickness(12, 0, 6, 0);
-        displayRow.Children.Add(displayLabel);
-        displayRow.Children.Add(_productDisplayBox);
-        buttons.Add(displayRow);
-
         var actions = Kit.HStack(8, buttons.ToArray());
-        SyncProductDisplayBox();
 
         return ListTab("Los precios se capturan con IVA incluido; el sistema desglosa el impuesto al facturar.",
             actions, _productsGrid);
     }
 
-    private static List<Option<string>> ProductDisplayOptions() => new()
+    /// <summary>Vuelve a construir las filas del catálogo.</summary>
+    private void RenderProducts()
     {
-        new("image", "Imagen PNG"),
-        new("icon", "Icono")
-    };
-
-    /// <summary>Columna que muestra la imagen PNG o el icono de texto según la preferencia.</summary>
-    private static DataGridTemplateColumn ProductIconColumn()
-    {
-        var image = new FrameworkElementFactory(typeof(Image));
-        image.SetValue(Image.StretchProperty, Stretch.Uniform);
-        image.SetValue(FrameworkElement.WidthProperty, 32.0);
-        image.SetValue(FrameworkElement.HeightProperty, 32.0);
-        image.SetValue(FrameworkElement.MarginProperty, new Thickness(2));
-        image.SetBinding(Image.SourceProperty, new Binding(nameof(ProductRow.IconImage)));
-        image.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(ProductRow.ImageVisibility)));
-
-        var text = new FrameworkElementFactory(typeof(TextBlock));
-        text.SetValue(TextBlock.FontSizeProperty, 18.0);
-        text.SetValue(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        text.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
-        text.SetBinding(TextBlock.TextProperty, new Binding(nameof(ProductRow.Icon)));
-        text.SetBinding(UIElement.VisibilityProperty, new Binding(nameof(ProductRow.IconVisibility)));
-
-        var panel = new FrameworkElementFactory(typeof(Grid));
-        panel.AppendChild(image);
-        panel.AppendChild(text);
-        return Kit.TemplateCol("Icono", panel, 70);
-    }
-
-    /// <summary>Vuelve a construir las filas con la imagen o el icono que corresponda.</summary>
-    private async Task RenderProductsAsync()
-    {
-        var ordered = _products.OrderBy(p => p.Name).ToList();
-        var images = AppearanceService.Current.ShowProductImages
-            ? await LoadProductImagesAsync(ordered)
-            : new Dictionary<int, ImageSource>();
-
-        _productsGrid.ItemsSource = ordered
-            .Select(p => new ProductRow(p, images.GetValueOrDefault(p.Id)))
+        _productsGrid.ItemsSource = _products
+            .OrderBy(p => p.Name)
+            .Select(p => new ProductRow(p))
             .ToList();
-
-        SyncProductDisplayBox();
-    }
-
-    /// <summary>Carga las miniaturas visibles en el catálogo con un límite de 4 a la vez.</summary>
-    private static async Task<Dictionary<int, ImageSource>> LoadProductImagesAsync(
-        IReadOnlyList<ProductDto> products)
-    {
-        var result = new Dictionary<int, ImageSource>();
-        var targets = products.Where(p => p.HasIcon).ToList();
-        if (targets.Count == 0) return result;
-
-        using var gate = new SemaphoreSlim(4);
-        var tasks = targets.Select(async product =>
-        {
-            await gate.WaitAsync();
-            try
-            {
-                var source = await App.Icons.GetAsync(product.Id, product.IconUpdatedUtc,
-                    App.Api.ProductIconAsync);
-                if (source is null) return;
-                lock (result) result[product.Id] = source;
-            }
-            catch
-            {
-                // Sin conexión o imagen no disponible: se conserva el icono de texto.
-            }
-            finally
-            {
-                gate.Release();
-            }
-        });
-
-        await Task.WhenAll(tasks);
-        return result;
-    }
-
-    /// <summary>Sincroniza el selector rápido con la preferencia guardada.</summary>
-    private void SyncProductDisplayBox()
-    {
-        _productDisplayLoading = true;
-        try
-        {
-            var current = AppearanceSettings.NormalizeProductDisplay(
-                AppearanceService.Current.ProductDisplay);
-            _productDisplayBox.SelectedItem = _productDisplayBox.Items
-                .Cast<Option<string>>()
-                .FirstOrDefault(o => o.Value == current);
-        }
-        finally
-        {
-            _productDisplayLoading = false;
-        }
-    }
-
-    /// <summary>Guarda la preferencia y repinta el catálogo con el modo elegido.</summary>
-    private void ApplyProductDisplay(string value)
-    {
-        var normalized = AppearanceSettings.NormalizeProductDisplay(value);
-        if (AppearanceService.Current.ProductDisplay == normalized) return;
-
-        var settings = AppearanceService.Current.Clone();
-        settings.ProductDisplay = normalized;
-        AppearanceService.Apply(settings, save: true);
-        _ = Ui.Run(RenderProductsAsync, "No se pudo actualizar la vista de productos");
     }
 
     private static Grid ListTab(string description, FrameworkElement actions, DataGrid grid)
@@ -319,8 +180,7 @@ public sealed class ProductsView : UserControl, IRefreshable
 
         _ = Ui.Run(async () =>
         {
-            var saved = await App.Api.SaveProductAsync(null, dialog.Result);
-            await SaveIconAsync(saved.Id, dialog);
+            await App.Api.SaveProductAsync(null, dialog.Result);
             await RefreshAsync();
         }, "No se pudo guardar el producto");
     }
@@ -334,18 +194,8 @@ public sealed class ProductsView : UserControl, IRefreshable
         _ = Ui.Run(async () =>
         {
             await App.Api.SaveProductAsync(row.Source.Id, dialog.Result);
-            await SaveIconAsync(row.Source.Id, dialog);
             await RefreshAsync();
         }, "No se pudo guardar el producto");
-    }
-
-    /// <summary>Sube o quita la imagen del producto después de guardar sus datos.</summary>
-    private static async Task SaveIconAsync(int productId, ProductDialog dialog)
-    {
-        if (dialog.IconData is byte[] data)
-            await App.Api.UploadProductIconAsync(productId, dialog.IconFileName, data);
-        else if (dialog.RemoveIcon)
-            await App.Api.DeleteProductIconAsync(productId);
     }
 
     /// <summary>
@@ -356,9 +206,6 @@ public sealed class ProductsView : UserControl, IRefreshable
     {
         if (App.Session.Role != UserRole.Admin) return;
 
-        var removeIcon = ProductMenuItem("Quitar imagen", RemoveProductIcon, danger: true);
-        var resizeIcon = ProductMenuItem("Redimensionar imagen…", ResizeProductIcon);
-
         var menu = new ContextMenu
         {
             Background = Kit.Brush("SurfaceBrush"),
@@ -368,10 +215,6 @@ public sealed class ProductsView : UserControl, IRefreshable
             Padding = new Thickness(4)
         };
         menu.Items.Add(ProductMenuItem("Editar producto…", EditProduct));
-        menu.Items.Add(ProductMenuItem("Cambiar imagen…", ChangeProductIcon));
-        menu.Items.Add(ProductMenuItem("Buscar imagen en internet…", SearchProductIcon));
-        menu.Items.Add(removeIcon);
-        menu.Items.Add(resizeIcon);
         menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
         menu.Items.Add(ProductMenuItem("Activar / desactivar", ToggleProduct));
         menu.Items.Add(ProductMenuItem("Eliminar producto", DeleteProduct, danger: true));
@@ -381,10 +224,6 @@ public sealed class ProductsView : UserControl, IRefreshable
             var row = _productsGrid.SelectedItem as ProductRow;
             foreach (var item in menu.Items.OfType<MenuItem>())
                 item.IsEnabled = row is not null;
-
-            var hasIcon = row?.Source.HasIcon == true;
-            removeIcon.IsEnabled = hasIcon;
-            resizeIcon.IsEnabled = hasIcon;
         };
 
         _productsGrid.ContextMenu = menu;
@@ -423,138 +262,6 @@ public sealed class ProductsView : UserControl, IRefreshable
         return null;
     }
 
-    /// <summary>Cambia la imagen sin abrir el formulario completo del producto.</summary>
-    private void ChangeProductIcon()
-    {
-        if (_productsGrid.SelectedItem is not ProductRow row) return;
-
-        var dialog = new OpenFileDialog
-        {
-            Title = $"Cambiar imagen de {row.Name}",
-            Filter = "Imágenes|*.bmp;*.png;*.jpg;*.jpeg;*.gif|Todos los archivos|*.*",
-            CheckFileExists = true
-        };
-        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-
-        var fileName = dialog.FileName;
-        _ = Ui.Run(async () =>
-        {
-            var info = new FileInfo(fileName);
-            if (info.Length > ImageInspector.MaxBytes)
-                throw new InvalidOperationException(
-                    $"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
-
-            var data = await File.ReadAllBytesAsync(fileName);
-            if (!ImageInspector.Detect(data).Valid)
-                throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
-
-            // Los BMP se convierten a PNG antes de subirlos.
-            var image = ProductImage.Normalize(data, fileName);
-            await App.Api.UploadProductIconAsync(row.Source.Id, image.FileName, image.Data);
-            await RefreshAsync();
-        }, "No se pudo cambiar la imagen del producto");
-    }
-
-    /// <summary>
-    /// Busca una imagen en internet para el producto seleccionado y la guarda como PNG.
-    /// Solo está disponible para el administrador.
-    /// </summary>
-    private void SearchProductIcon()
-    {
-        if (App.Session.Role != UserRole.Admin) return;
-
-        if (_productsGrid.SelectedItem is not ProductRow row)
-        {
-            Ui.Info("Seleccione un producto de la lista.", "Buscar imagen");
-            return;
-        }
-
-        var dialog = new IconSearchDialog(row.Name, row.Name) { Owner = Window.GetWindow(this) };
-        if (dialog.ShowDialog() != true || dialog.Result is not byte[] data) return;
-
-        _ = Ui.Run(async () =>
-        {
-            await App.Api.UploadProductIconAsync(row.Source.Id, "icono_web.png", data);
-            await RefreshAsync();
-        }, "No se pudo guardar la imagen del producto");
-    }
-
-    private void RemoveProductIcon()
-    {
-        if (_productsGrid.SelectedItem is not ProductRow row || !row.Source.HasIcon) return;
-
-        if (!Ui.Confirm($"¿Quitar la imagen de {row.Name}? El producto conservará su icono de texto.",
-                "Quitar imagen"))
-            return;
-
-        _ = Ui.Run(async () =>
-        {
-            await App.Api.DeleteProductIconAsync(row.Source.Id);
-            await RefreshAsync();
-        }, "No se pudo quitar la imagen del producto");
-    }
-
-    /// <summary>
-    /// Reduce la imagen guardada a un tamaño máximo, manteniendo la proporción. Se
-    /// guarda en PNG para que el archivo sea más liviano que el BMP original.
-    /// </summary>
-    private void ResizeProductIcon()
-    {
-        if (_productsGrid.SelectedItem is not ProductRow row || !row.Source.HasIcon) return;
-
-        _ = Ui.Run(async () =>
-        {
-            var data = await App.Api.ProductIconAsync(row.Source.Id);
-            var probe = ImageInspector.Detect(data);
-            if (!probe.Valid)
-                throw new InvalidOperationException("La imagen actual no se pudo leer.");
-
-            var dialog = new IconResizeDialog(row.Name, probe.Width, probe.Height)
-            {
-                Owner = Window.GetWindow(this)
-            };
-            if (dialog.ShowDialog() != true) return;
-
-            var resized = ResizeImage(data, dialog.TargetSize);
-            if (resized is null)
-            {
-                Ui.Info(
-                    $"La imagen ya mide {probe.Width} × {probe.Height} px; elija un tamaño menor para reducirla.",
-                    "Redimensionar imagen");
-                return;
-            }
-
-            await App.Api.UploadProductIconAsync(row.Source.Id, $"icono_{dialog.TargetSize}.png", resized);
-            await RefreshAsync();
-        }, "No se pudo redimensionar la imagen");
-    }
-
-    private static byte[]? ResizeImage(byte[] data, int maxSize)
-    {
-        var image = new BitmapImage();
-        using (var stream = new MemoryStream(data))
-        {
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-        }
-
-        var currentMax = Math.Max(image.PixelWidth, image.PixelHeight);
-        if (currentMax <= maxSize) return null;
-
-        var scale = (double)maxSize / currentMax;
-        var transformed = new TransformedBitmap(image, new ScaleTransform(scale, scale));
-
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(transformed));
-        using var output = new MemoryStream();
-        encoder.Save(output);
-
-        // Las imágenes antiguas pueden conservar el fondo; se quita al redimensionar.
-        return ProductImage.RemoveBackground(output.ToArray());
-    }
-
     private void ToggleProduct()
     {
         if (_productsGrid.SelectedItem is not ProductRow row) return;
@@ -565,7 +272,7 @@ public sealed class ProductsView : UserControl, IRefreshable
         {
             var request = new SaveProductRequest(product.Sku, product.Name, product.CategoryId,
                 product.Price, product.Cost, product.Stock, product.MinStock, product.Unit,
-                product.IsService, product.TaxRate, !product.Active, product.Icon);
+                product.IsService, product.TaxRate, !product.Active);
             await App.Api.SaveProductAsync(product.Id, request);
             await RefreshAsync();
         }, "No se pudo actualizar el producto");
@@ -822,16 +529,11 @@ public sealed class ProductsView : UserControl, IRefreshable
 // ================= Filas =================
 public sealed class ProductRow
 {
-    public ProductRow(ProductDto product, ImageSource? iconImage = null)
+    public ProductRow(ProductDto product)
     {
         Source = product;
         Sku = product.Sku;
         Name = product.Name;
-        Icon = string.IsNullOrWhiteSpace(product.Icon) ? "—" : product.Icon!;
-        HasImage = product.HasIcon ? "Sí" : "—";
-        IconImage = iconImage;
-        ImageVisibility = iconImage is null ? Visibility.Collapsed : Visibility.Visible;
-        IconVisibility = iconImage is null ? Visibility.Visible : Visibility.Collapsed;
         Category = product.CategoryName ?? "General";
         Stock = product.IsService ? "Servicio" : $"{product.Stock:N0} {product.Unit}";
         MinStock = product.IsService ? "—" : product.MinStock.ToString("N0");
@@ -845,12 +547,6 @@ public sealed class ProductRow
     public ProductDto Source { get; }
     public string Sku { get; }
     public string Name { get; }
-    public string Icon { get; }
-    public string HasImage { get; }
-    /// <summary>Miniatura cargada cuando el catálogo muestra imágenes PNG.</summary>
-    public ImageSource? IconImage { get; }
-    public Visibility ImageVisibility { get; }
-    public Visibility IconVisibility { get; }
     public string Category { get; }
     public decimal Price { get; }
     public decimal Cost { get; }
@@ -942,7 +638,6 @@ public sealed class ProductDialog : FormDialog
 {
     private readonly TextBox _sku;
     private readonly TextBox _name;
-    private readonly ComboBox _icon;
     private readonly ComboBox _category;
     private readonly TextBox _price;
     private readonly TextBox _cost;
@@ -952,18 +647,8 @@ public sealed class ProductDialog : FormDialog
     private readonly TextBox _tax;
     private readonly CheckBox _service;
     private readonly CheckBox _active;
-    private readonly Image _iconPreview;
-    private readonly TextBlock _iconPlaceholder;
-    private byte[]? _iconData;
-    private string _iconFileName = "icono.png";
-    private bool _iconChanged;
 
     public SaveProductRequest? Result { get; private set; }
-    /// <summary>Imagen nueva seleccionada por el usuario (null si no cambió).</summary>
-    public byte[]? IconData { get; private set; }
-    public string IconFileName { get; private set; } = "icono.png";
-    /// <summary>El usuario quitó la imagen que tenía el producto.</summary>
-    public bool RemoveIcon { get; private set; }
 
     public ProductDialog(List<CategoryDto> categories, ProductDto? product = null)
         : base(product is null ? "Nuevo producto" : $"Editar {product.Name}",
@@ -971,62 +656,6 @@ public sealed class ProductDialog : FormDialog
     {
         _sku = Add(new TextBox { Text = product?.Sku ?? string.Empty }, "Código / SKU");
         _name = Add(new TextBox { Text = product?.Name ?? string.Empty }, "Nombre del producto");
-
-        var iconOptions = new List<string>
-        {
-            string.Empty, "🎮", "🖥️", "🎧", "⌨️", "🖱️", "🕹️", "🎫",
-            "🍿", "🥤", "🍕", "☕", "🍫", "🧃", "🎯", "📶", "⭐"
-        };
-        _icon = Add(new ComboBox
-        {
-            ItemsSource = iconOptions,
-            IsEditable = true,
-            FontSize = 14,
-            Text = product?.Icon ?? string.Empty
-        }, "Icono (emoji o texto corto, opcional)");
-
-        var previewGrid = new Grid { Width = 64, Height = 64 };
-        _iconPreview = new Image { Stretch = Stretch.Uniform, Margin = new Thickness(3) };
-        _iconPlaceholder = new TextBlock
-        {
-            Text = "Sin imagen",
-            Style = Kit.Style("Muted"),
-            FontSize = 10,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        previewGrid.Children.Add(_iconPreview);
-        previewGrid.Children.Add(_iconPlaceholder);
-
-        var previewBorder = new Border
-        {
-            Width = 64,
-            Height = 64,
-            CornerRadius = new CornerRadius(8),
-            Background = Kit.Brush("SurfaceBrush"),
-            BorderBrush = Kit.Brush("BorderBrush"),
-            BorderThickness = new Thickness(1),
-            ClipToBounds = true,
-            Child = previewGrid
-        };
-
-        var chooseButton = Kit.Button("Elegir imagen…", "GhostButton", ChooseIcon);
-        var searchButton = Kit.Button("Buscar en internet…", "GhostButton", SearchWebIcon);
-        searchButton.Margin = new Thickness(0, 6, 0, 0);
-        var clearButton = Kit.Button("Quitar", "GhostButton", ClearIcon);
-        clearButton.Margin = new Thickness(0, 6, 0, 0);
-        var iconButtons = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10, 0, 0, 0) };
-        iconButtons.Children.Add(chooseButton);
-        iconButtons.Children.Add(searchButton);
-        iconButtons.Children.Add(clearButton);
-
-        var iconRow = new StackPanel { Orientation = Orientation.Horizontal };
-        iconRow.Children.Add(previewBorder);
-        iconRow.Children.Add(iconButtons);
-        Add(iconRow, "Imagen del producto (.bmp, PNG, JPG o GIF; los BMP se guardan como PNG)");
-
-        if (product?.HasIcon == true)
-            _ = LoadCurrentIconAsync(product);
 
         var categoryOptions = new List<Option<int?>> { new(null, "Sin categoría") };
         categoryOptions.AddRange(categories.Where(c => c.Active).OrderBy(c => c.Name)
@@ -1051,98 +680,6 @@ public sealed class ProductDialog : FormDialog
 
     private static string Money(decimal? value) => (value ?? 0).ToString("N2", CultureInfo.CurrentCulture);
 
-    private void ChooseIcon()
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Seleccione la imagen del producto",
-            Filter = "Imágenes|*.bmp;*.png;*.jpg;*.jpeg;*.gif|Todos los archivos|*.*",
-            CheckFileExists = true
-        };
-
-        if (dialog.ShowDialog(this) != true) return;
-
-        try
-        {
-            var info = new FileInfo(dialog.FileName);
-            if (info.Length > ImageInspector.MaxBytes)
-                throw new InvalidOperationException(
-                    $"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
-
-            var data = File.ReadAllBytes(dialog.FileName);
-            if (!ImageInspector.Detect(data).Valid)
-                throw new InvalidOperationException("Formato no válido. Use BMP, PNG, JPG o GIF.");
-
-            // Los BMP se guardan como PNG para que ocupen menos.
-            (_iconData, _iconFileName) = ProductImage.Normalize(data, dialog.FileName);
-            _iconChanged = true;
-            ShowPreview(_iconData);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, ex.Message, "Imagen no válida",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    private void ClearIcon()
-    {
-        _iconData = null;
-        _iconChanged = true;
-        SetPreview(null);
-    }
-
-    /// <summary>Abre la búsqueda de imágenes en internet y usa la elegida como PNG.</summary>
-    private void SearchWebIcon()
-    {
-        var name = string.IsNullOrWhiteSpace(_name.Text) ? "el producto" : _name.Text.Trim();
-        var query = string.IsNullOrWhiteSpace(_name.Text) ? null : _name.Text.Trim();
-        var dialog = new IconSearchDialog(name, query) { Owner = this };
-        if (dialog.ShowDialog() != true || dialog.Result is not byte[] data) return;
-
-        _iconData = data;
-        _iconFileName = "icono_web.png";
-        _iconChanged = true;
-        ShowPreview(data);
-    }
-
-    private async Task LoadCurrentIconAsync(ProductDto product)
-    {
-        try
-        {
-            var source = await App.Icons.GetAsync(product.Id, product.IconUpdatedUtc, App.Api.ProductIconAsync);
-            if (source is null) return;
-            await Dispatcher.InvokeAsync(() =>
-            {
-                if (!_iconChanged) SetPreview(source);
-            });
-        }
-        catch
-        {
-            // La vista previa es opcional; si falla se muestra "Sin imagen".
-        }
-    }
-
-    private void ShowPreview(byte[] data)
-    {
-        var image = new BitmapImage();
-        using (var stream = new MemoryStream(data))
-        {
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-        }
-        image.Freeze();
-        SetPreview(image);
-    }
-
-    private void SetPreview(ImageSource? source)
-    {
-        _iconPreview.Source = source;
-        _iconPlaceholder.Visibility = source is null ? Visibility.Visible : Visibility.Collapsed;
-    }
-
     protected override void OnAccept()
     {
         if (string.IsNullOrWhiteSpace(_name.Text))
@@ -1161,12 +698,7 @@ public sealed class ProductDialog : FormDialog
 
         Result = new SaveProductRequest(sku, _name.Text.Trim(), categoryId, price, cost, stock, minStock,
             string.IsNullOrWhiteSpace(_unit.Text) ? "und" : _unit.Text.Trim(),
-            _service.IsChecked == true, tax, _active.IsChecked == true,
-            string.IsNullOrWhiteSpace(_icon.Text) ? null : _icon.Text.Trim());
-
-        IconData = _iconChanged ? _iconData : null;
-        IconFileName = _iconFileName;
-        RemoveIcon = _iconChanged && _iconData is null;
+            _service.IsChecked == true, tax, _active.IsChecked == true);
 
         base.OnAccept();
     }

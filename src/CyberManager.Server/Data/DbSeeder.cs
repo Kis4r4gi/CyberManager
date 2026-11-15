@@ -76,20 +76,6 @@ public static class DbSeeder
             );
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Pattern" ON "WebFilterRules" ("Pattern");
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Kind" ON "WebFilterRules" ("Kind");
-
-            CREATE TABLE IF NOT EXISTS "ProductIcons" (
-                "ProductId" INTEGER NOT NULL CONSTRAINT "PK_ProductIcons" PRIMARY KEY,
-                "ContentType" TEXT NOT NULL,
-                "Extension" TEXT NOT NULL,
-                "Data" BLOB NOT NULL,
-                "Width" INTEGER NOT NULL,
-                "Height" INTEGER NOT NULL,
-                "SizeBytes" INTEGER NOT NULL,
-                "Sha256" TEXT NOT NULL,
-                "UpdatedUtc" TEXT NOT NULL,
-                CONSTRAINT "FK_ProductIcons_Products_ProductId"
-                    FOREIGN KEY ("ProductId") REFERENCES "Products" ("Id") ON DELETE CASCADE
-            );
             """);
 
         // Columnas añadidas para el control de consolas de videojuegos.
@@ -97,55 +83,57 @@ public static class DbSeeder
         await AddColumnIfMissingAsync(db, "Stations", "Platform", "TEXT NULL");
         await AddColumnIfMissingAsync(db, "Stations", "Controllers", "INTEGER NULL");
 
-        // Icono corto de los productos (emoji o texto) e imagen asociada.
-        await AddColumnIfMissingAsync(db, "Products", "Icon", "TEXT NULL");
-        await AddColumnIfMissingAsync(db, "Products", "IconUpdatedUtc", "TEXT NULL");
-
-        // Las imágenes de versiones anteriores (BMP, JPG o GIF) se guardan como PNG.
-        await NormalizeProductIconsAsync(db, log);
+        // Las imágenes e iconos de producto se eliminaron en la versión 1.0.20. Se borra
+        // la tabla heredada y las columnas que ya no usa el modelo; en bases nuevas no hay
+        // nada que limpiar.
+        await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS \"ProductIcons\";");
+        await DropColumnIfExistsAsync(db, "Products", "Icon", log);
+        await DropColumnIfExistsAsync(db, "Products", "IconUpdatedUtc", log);
+        await DropColumnIfExistsAsync(db, "Products", "ImagePath", log);
     }
 
     /// <summary>
-    /// Convierte a PNG las imágenes de producto guardadas antes de esta versión. Es
-    /// idempotente: en los arranques siguientes no encuentra filas que cambiar.
+    /// Quita una columna heredada si existe. SQLite antiguo no admite <c>DROP COLUMN</c>;
+    /// en ese caso la columna queda sin usar y no afecta al funcionamiento.
     /// </summary>
-    private static async Task NormalizeProductIconsAsync(AppDbContext db, ILogger? log)
+    private static async Task DropColumnIfExistsAsync(AppDbContext db, string table, string column, ILogger? log)
     {
-        var legacy = await db.ProductIcons
-            .Where(i => i.ContentType != "image/png" || i.Extension != ".png")
-            .ToListAsync();
-        if (legacy.Count == 0) return;
+        var connection = db.Database.GetDbConnection();
+        var wasClosed = connection.State != System.Data.ConnectionState.Open;
+        if (wasClosed) await connection.OpenAsync();
 
-        var converted = 0;
-        foreach (var icon in legacy)
+        var exists = false;
+        try
         {
-            try
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"PRAGMA table_info(\"{table}\");";
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                var (data, probe) = ProductIconImage.ToPng(icon.Data);
-                icon.Data = data;
-                icon.ContentType = probe.ContentType;
-                icon.Extension = probe.Extension;
-                icon.Width = probe.Width;
-                icon.Height = probe.Height;
-                icon.SizeBytes = data.LongLength;
-                icon.Sha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
-                icon.UpdatedUtc = DateTime.UtcNow;
-
-                var product = await db.Products.FirstOrDefaultAsync(p => p.Id == icon.ProductId);
-                if (product is not null) product.IconUpdatedUtc = icon.UpdatedUtc;
-                converted++;
-            }
-            catch (Exception ex)
-            {
-                log?.LogWarning(ex, "No se pudo convertir a PNG la imagen del producto {ProductId}",
-                    icon.ProductId);
+                if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                {
+                    exists = true;
+                    break;
+                }
             }
         }
-
-        if (converted > 0)
+        finally
         {
-            await db.SaveChangesAsync();
-            log?.LogInformation("Imágenes de producto convertidas a PNG: {Count}", converted);
+            if (wasClosed) await connection.CloseAsync();
+        }
+
+        if (!exists) return;
+
+        try
+        {
+            // El nombre de tabla y columna proviene de constantes internas del sembrador.
+#pragma warning disable EF1002
+            await db.Database.ExecuteSqlRawAsync($"ALTER TABLE \"{table}\" DROP COLUMN \"{column}\";");
+#pragma warning restore EF1002
+        }
+        catch (Exception ex)
+        {
+            log?.LogWarning(ex, "No se pudo quitar la columna {Column} de {Table}", column, table);
         }
     }
 

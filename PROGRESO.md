@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-14
+> Última actualización: 2026-11-15
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -627,7 +627,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.8> el `2026-11-09T22:33:29Z`;
   el recordatorio de 2 horas quedará para `2026-11-10T00:33:29Z`.
 
-### Impresoras, interfaz de cajero, iconos y conexión por IP (1.0.9, 2026-11-10)
+### Impresoras, interfaz de cajero y conexión por IP (1.0.9, 2026-11-10)
 
 - **Impresora de tickets e impresora de trabajo**: nueva clave `WorkPrinterName` y campo
   `TicketSettings.WorkPrinterName`. `PrintSale` usa `PrinterName`; `PrintClosing` usa
@@ -641,10 +641,6 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   El botón **Configuración** del tablero y el aviso de actualizaciones quedan ocultos, y
   `StationActionsDialog` recibe `systemActions: false` para no ofrecer control remoto, energía ni
   mantenimiento al cajero.
-- **Iconos de producto**: nueva columna `Product.Icon` (emoji o texto corto) con migración en
-  `DbSeeder.EnsureCompatibilityAsync`, expuesta en `ProductDto` y `SaveProductRequest`. El editor
-  de productos incluye un desplegable editable con iconos sugeridos; el icono se muestra en las
-  tarjetas del POS y en la pantalla de pedidos del cliente.
 - **Eliminación de catálogo**: botones **Eliminar** para productos, categorías, tarifas, paquetes
   de tiempo y zonas. Se reutilizan los `DELETE` existentes con desactivación lógica, de modo que
   las ventas y movimientos históricos se conservan.
@@ -665,8 +661,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
     `http://192.168.1.7:5099` tanto al entrar por `127.0.0.1` como por la IP LAN; `/api/health`
     respondió `{"status":"ok"}`.
   - Catálogo: se crearon y eliminaron una categoría, tarifa, paquete, zona y producto; el producto
-    quedó inactivo tras el borrado lógico. El icono `🎮` se guardó y recuperó con los códigos
-    UTF-16 `55356,57262`.
+    quedó inactivo tras el borrado lógico.
   - Usuarios: se creó un cajero y se eliminó con `DELETE /api/users/{id}/permanent`; la lista
     confirmó que ya no existe. La autoeliminación del administrador respondió **400**.
   - `ApiClient.Normalize`: `192.168.1.7` → `http://192.168.1.7:5080/`, `192.168.1.7:5099` se
@@ -685,9 +680,8 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Proyecto real verificado**: se restauró el repositorio público `Kis4r4gi/CyberManager`
   (rama `main`) en `C:\Users\Justo Lopez\Documents\CyberManager`. Contiene los 7 proyectos, los
   scripts de empaquetado y las funciones de 1.0.9: impresoras separadas de tickets y de trabajo,
-  interfaz de cajero sin opciones administrativas, iconos de producto, borrado permanente de
-  usuarios, conexión por IP/MAC, control remoto/VNC, IGTF, RIF, tooltips a 2 s y videos
-  promocionales.
+  interfaz de cajero sin opciones administrativas, borrado permanente de usuarios, conexión por
+  IP/MAC, control remoto/VNC, IGTF, RIF, tooltips a 2 s y videos promocionales.
 - **Compilación**: `dotnet build CyberManager.sln -c Release` → **0 errores**. Quedan 8
   advertencias de nulabilidad en `CyberManager.Client` (`App.xaml.cs` y `SetupWindow.xaml.cs`)
   que no bloquean la compilación ni el empaquetado.
@@ -798,65 +792,6 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (`Auto`, `None`, `All`) y permite `-DryRun`, `-Database`, `-ServerDir`, `-SkipBackup` y
   `-DeleteDemoProducts`. Documentado en README → *Importar productos desde una lista de stock*.
 
-### Imágenes de producto (2026-11-14)
-
-- **Modelo**: `Product.IconUpdatedUtc` funciona como marca de versión y la tabla `ProductIcons`
-  guarda la imagen (`Data` BLOB, `ContentType`, `Extension`, `Width`, `Height`, `SizeBytes`,
-  `Sha256`, `UpdatedUtc`) en relación 1:1 con `Product`, con borrado en cascada. La migración de
-  compatibilidad crea la tabla y la columna al arrancar el servidor.
-- **API**: `GET/POST/DELETE /api/products/{id}/icon` (POST y DELETE solo administradores) y
-  `GET /api/station/products/{id}/icon` para las estaciones. `ProductDto` expone `HasIcon` e
-  `IconUpdatedUtc`.
-- **Caché**: `ProductIconCache` (memoria + disco) usa la clave `productId + IconUpdatedUtc`,
-  deduplica descargas simultáneas y borra las versiones anteriores de cada producto. La consola y
-  el cliente la comparten.
-- **Interfaz**: el diálogo de producto permite **Elegir imagen…**, muestra vista previa y **Quitar**;
-  el listado tiene la columna **Imagen**. La caja muestra la imagen en la tarjeta y, si no hay
-  imagen o falla la descarga, conserva el emoji. La pantalla del cliente la muestra en cada tarjeta
-  con carga paralela limitada a 4 descargas.
-- **Importación**: `scripts/import-product-icons.ps1` empareja los `.bmp` de
-  `resources\BMP SNACKS` por nombre (ignora mayúsculas, acentos y signos), detecta empates y deja
-  informe en `scripts\iconos-emparejamiento.csv`. `scripts\iconos-mapeo.csv` contiene 40
-  asignaciones verificadas imagen → SKU que tienen prioridad sobre el puntaje automático.
-- **Resultado**: se aplicaron **40 imágenes** (120×110 px, 1.586.160 bytes en total) sobre la base
-  instalada; el respaldo previo es
-  `respaldos\cybermanager_20261114_125331_pre-iconos.db`. Las 120 imágenes restantes corresponden a
-  productos que no están en el catálogo o que quedaron como **Revisar** por empate
-  (`SNACHOS`, `raquety`).
-- **Conversión automática**: al agregar una imagen desde la consola (`ProductImage.Normalize`), un
-  BMP se recodifica como PNG con WPF conservando sus píxeles; por ejemplo, `agua 1lts.bmp` pasó de
-  39.654 a 9.062 bytes. El importador en bloque hace lo mismo con `System.Drawing` antes de escribir
-  en la base (`ContentType = image/png`, `Extension = .png`) y conserva el BMP si la conversión no
-  está disponible.
-
-### Búsqueda de iconos en internet y PNG universal (2026-11-14)
-
-- **Regla PNG universal**: toda imagen de producto se guarda y se sirve como PNG. El servidor
-  agregó `System.Drawing.Common` 8.0.11 y `ProductIconImage.ToPng`; el POST de icono convierte la
-  imagen recibida a PNG antes de guardarla y `DbSeeder.NormalizeProductIconsAsync` migra las filas
-  antiguas al arrancar. La consola usa `ProductImage.Normalize` y `ProductImage.ToPng(data, maxSize)`
-  para la conversión local antes de subir.
-- **Migración verificada**: sobre una copia de la base instalada el arranque del servidor convirtió
-  **39 imágenes**; las **40** con imagen respondieron `image/png`. Una subida BMP de prueba pasó de
-  39.654 a **10.530 bytes** PNG (`89 50 4E 47`). Respaldo usado:
-  `respaldos\cybermanager_20261114_142800_manual.db`.
-- **Búsqueda en internet**: `Services/WebImageSearch.cs` consulta Openverse
-  (`https://api.openverse.org/v1/images/`) con `license=cc0,pdm`, filtro de URLs raster (excluye SVG
-  y TIFF), descarga con límites (16 MB original, 4 MB miniatura), miniaturas y conversión final a
-  PNG de 512 px. Reintenta ante 401/403/429/5xx y conexiones fallidas, y explica el error en
-  español. `page_size` se limita a **20** porque Openverse rechaza valores mayores en peticiones
-  anónimas (`401 {"detail":"page_size may not exceed 20 for anonymous requests"}`).
-- **Diálogo**: `IconSearchDialog` muestra 20 mosaicos en 4 columnas, carga las miniaturas con un
-  límite de 4 descargas simultáneas, permite seleccionar con resaltado, informa la licencia
-  (CC0/dominio público) y lanza la búsqueda automáticamente con el nombre del producto. Se abre
-  desde el formulario del producto (**Buscar en internet…**), desde la barra de **Productos**
-  (**Buscar imagen…**) y desde el menú contextual (**Buscar imagen en internet…**). Todas las
-  entradas están restringidas al rol `Admin`.
-- **Prueba real del diálogo**: búsqueda `hamburger` → **20 resultados**, **18 miniaturas** cargadas
-  (2 sin vista previa), selección de la primera y PNG final de **289.830 bytes, 512×384,
-  `image/png`**. La prueba se ejecutó en STA con el tema oscuro cargado y una captura del diálogo
-  para revisar el diseño.
-
 ### Carpeta de respaldos, menú de producto y punto de venta (2026-11-14)
 
 - **Carpeta de respaldos configurable**: nueva clave `SettingsKeys.BackupFolder`. Vacía significa
@@ -873,17 +808,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   ruta y **Aplicar carpeta**. El texto inferior muestra la carpeta efectiva en el servidor y se
   recuerda que los respaldos anteriores no se mueven al cambiar de ubicación.
 - **Menú contextual de producto**: clic derecho sobre una fila de **Productos** la selecciona y abre
-  **Editar producto…**, **Cambiar imagen…**, **Quitar imagen**, **Redimensionar imagen…**,
-  **Activar / desactivar** y **Eliminar producto**. El menú solo se instala cuando
-  `App.Session.Role == UserRole.Admin`; **Quitar imagen** y **Redimensionar imagen…** se deshabilitan
-  si el producto no tiene imagen. La subida y el borrado usan directamente la API de iconos.
-- **Redimensionar imagen**: `IconResizeDialog` ofrece 64, 96, 128, 160, 256 o 512 px de lado máximo.
-  La imagen se reduce con `TransformedBitmap` manteniendo la proporción y se vuelve a subir como
-  PNG; si ya es igual o menor, se avisa y no se cambia nada.
-- **Punto de venta**: las tarjetas con imagen usan 196 × 198 px (escalados por
-  `ProductCardScale`), la fotografía ocupa todo el espacio libre con `Stretch.Uniform` y el emoji
-  queda como respaldo mientras carga o si la descarga falla. Las tarjetas sin imagen conservan el
-  diseño compacto de 184 × 108 px.
+  **Editar producto…**, **Activar / desactivar** y **Eliminar producto**. El menú solo se instala
+  cuando `App.Session.Role == UserRole.Admin`.
+- **Punto de venta**: las tarjetas compactas de 184 × 108 px (escaladas por `ProductCardScale`)
+  muestran nombre, categoría, precio y existencias del producto.
 - **Prueba funcional**: con un servidor temporal (puerto 5099 y base nueva) se verificó la carpeta
   inicial y la predeterminada, el cambio a una carpeta nueva, la creación de un respaldo visible en
   la lista, el restablecimiento a la predeterminada y el rechazo de una ruta relativa.
@@ -891,47 +819,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   preexistentes). Se generaron los instaladores **1.0.15**
   (`CyberManager-Servidor-1.0.15.exe` y `CyberManager-Estacion-1.0.15.exe`) y se instaló el de
   servidor sobre `C:\CyberManager\Servidor`; `/api/health` responde `ok`, la versión instalada es
-  **1.0.15** y la base conserva **424 productos** con **40 imágenes** y **7 respaldos**.
+  **1.0.15** y la base conserva **424 productos** y **7 respaldos**.
 
-### Elegir imagen PNG o icono en productos y punto de venta (2026-11-14)
-
-- **Preferencia**: nueva clave `AppearanceSettings.ProductDisplay` (`"image"` predeterminado,
-  `"icon"`), con `ShowProductImages` calculado y `NormalizeProductDisplay`. `AppearanceService.Apply`
-  la normaliza y los `appearance.json` antiguos, sin la clave, asumen el modo imagen.
-- **Configuración**: en *Apariencia → Productos y punto de venta* hay una lista **Mostrar en
-  productos y punto de venta** con **Imagen PNG (si existe)** e **Icono (emoji o texto)**; se
-  conserva al cambiar de tema predefinido y al restablecer la apariencia.
-- **Productos**: la columna **Icono** pasó a una plantilla que muestra la miniatura PNG de 32×32 o el
-  emoji/texto. La barra superior agrega el selector rápido **Mostrar:** con la misma preferencia.
-  `RenderProductsAsync` carga hasta 4 miniaturas a la vez mediante `App.Icons.GetAsync` y
-  `LoadProductImagesAsync`; si la descarga falla, se mantiene el icono.
-- **Punto de venta**: `hasImage = AppearanceService.Current.ShowProductImages && product.HasIcon`.
-  Con imagen usa la tarjeta de 196 × 198 px; con icono, la compacta de 184 × 108 px (ambas escaladas
-  por `ProductCardScale`). La vista se suscribe a `AppearanceService.Changed` al cargarse y se
-  desuscribe al descargarse, así que el cambio se repinta al instante.
-- **Fallo corregido al decodificar imágenes**: `ProductIconCache` usaba
-  `BitmapCreateOptions.IgnoreImageCache` junto con `StreamSource`, lo que lanza
-  `ArgumentNullException: Value cannot be null (Parameter 'key')` en WPF sobre .NET 8 y hacía que
-  las 40 imágenes nunca se mostraran (catálogo, punto de venta y cliente). Se quitó esa opción en
-  `ProductIconCache` y en las cargas de fondos (`WallpapersView` y `WallpaperService`).
-- **Prueba** (`ProductDisplayTest`, STA, .NET 8, servidor 1.0.17 en el puerto 5080): 424 productos y
-  40 con PNG. Modo imagen: **40 miniaturas** y 384 iconos visibles; modo icono: **0 miniaturas** y
-  424 iconos. Punto de venta: **198 px** con imagen y **108 px** con icono, la imagen queda visible
-  tras la carga asíncrona y el repintado por `AppearanceService.Changed` cambia la tarjeta a
-  108/198 px. Los selectores de Productos y Apariencia existen y se sincronizan; el JSON guarda
-  `"ProductDisplay":"icon"` y un JSON antiguo asume `"image"`.
-- **Compilación**: `dotnet build CyberManager.sln -c Release` con **0 errores** (8 avisos nullable
-  preexistentes en el cliente).
-- **Instaladores 1.0.18**: `CyberManager-Servidor-1.0.18.exe` (256,6 MB) y
-  `CyberManager-Estacion-1.0.18.exe` (143,7 MB). Instalación silenciosa del servidor con las tareas
-  `desktopicon,serverstartup,firewall` (código de salida **0**): `/api/health` responde `ok`, el
-  servidor y la consola quedaron en **1.0.18**, la tarea `CyberManagerServer` está **Running** y la
-  base conserva **424 productos**, **40 imágenes** `image/png` (AGUA 330: 11.353 bytes) y
-  **8 respaldos** en la carpeta predeterminada. El `appearance.json` real del equipo no tiene la
-  clave nueva, así que la consola instalada arranca en modo **Imagen PNG** y la guardará al aplicar
-  Apariencia.
-
-### Menú de sesión y borrado automático del fondo (2026-11-14)
+### Menú de sesión (2026-11-14)
 
 - **Menú de sesión**: el pie del panel izquierdo muestra un botón con el usuario actual y su rol
   (`SessionButton`, `SessionNameText`, `SessionRoleText`). Al pulsarlo se abre un `ContextMenu` con
@@ -945,25 +835,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   sesión anterior.
 - **Cierre cómodo**: la opción **Salir de CyberManager** confirma y cierra la consola con
   `App.ShutdownApplication`; el servidor sigue en segundo plano.
-- **Borrado de fondo**: nuevo `CyberManager.Shared/Imaging/BackgroundRemoval.cs`. Trabaja sobre
-  píxeles BGRA, calcula el color promedio del borde y exige que al menos el **70 %** del borde sea
-  uniforme; luego rellena desde los bordes con una tolerancia de 44 y vuelve transparentes esos
-  píxeles. No toca imágenes con borde ya transparente (≥ 25 %), ni fotografías de borde irregular,
-  ni imágenes donde el fondo ocupa ≥ 98 % (posible imagen de color plano). Se omiten imágenes de
-  más de 24 Mpx.
-- **Integración**: `ProductIconImage.RemoveBackground` (System.Drawing, `Format32bppArgb` y
-  `LockBits`) en el servidor, aplicado en `POST /api/products/{id}/icon` después de `ToPng` y
-  recalculando el `probe`, lo que cubre también el importador masivo.
-  `ProductImage.RemoveBackground` (WPF, `FormatConvertedBitmap` a Bgra32 y `PngBitmapEncoder`) en la
-  consola, aplicado en `Normalize` (diálogo de producto y **Cambiar imagen…**), en
-  `WebImageSearch.DownloadPngAsync` (búsqueda en internet) y en `ResizeProductIcon`. Todas las
-  funciones devuelven la imagen original si no hay cambios o si algo falla, así que nunca impiden
-  subir una imagen.
-- **Prueba** (`SessionAndBackgroundTest`, STA, .NET 8, servidor 1.0.18 en el puerto 5080):
-  - Fondo blanco con figura roja: algoritmo compartido, servidor y consola dejan la esquina con
-    alfa **0** y el centro con alfa **255**; un BMP se convierte a `producto.png` y queda
-    transparente; un borde con degradado no se modifica y un PNG ya transparente se devuelve con
-    los mismos bytes.
+- **Prueba** (`SessionTest`, STA, .NET 8, servidor 1.0.18 en el puerto 5080):
   - Menú de administrador: **7 elementos** (usuario, cambiar, separador, `Cajero · Cajero`, salir);
     menú de cajero: **5 elementos** sin lista de usuarios. El pie muestra **Cajero · Cajero** y
     `LoginWindow("cajero")` preselecciona el usuario.
@@ -975,13 +847,45 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `CyberManager-Estacion-1.0.19.exe` (150.711.457 bytes). Instalación silenciosa del servidor con
   las tareas `desktopicon,serverstartup,firewall`: `/api/health` responde `ok`, el servidor y la
   consola quedaron en **1.0.19**, la tarea `CyberManagerServer` está **Running** y la base conserva
-  **424 productos**, **40 imágenes** y **8 respaldos**. El proceso de instalación se esperó desde
+  **424 productos** y **8 respaldos**. El proceso de instalación se esperó desde
   PowerShell hasta el tiempo límite porque el servidor iniciado por la tarea es un proceso hijo;
   la instalación y el arranque terminaron correctamente.
-- **Prueba de extremo a extremo del fondo**: se subió al servidor real un PNG de 64 × 48 con fondo
-  blanco y un cuadro rojo (producto 268, sin imagen). La API devolvió `image/png` de 318 bytes, la
-  esquina quedó con **alfa 0** y el centro con **alfa 255**. Después se eliminó la imagen de prueba:
-  el producto volvió a `hasIcon = false` y la base quedó de nuevo en **424 productos y 40 imágenes**.
+
+### Eliminación completa de imágenes e iconos de producto (1.0.20, 2026-11-15)
+
+- **Alcance**: se quitó por completo el sistema de imágenes e iconos de productos en el modelo
+  compartido, los DTOs, el servidor, la API, la consola, el punto de venta y la pantalla del
+  cliente. Los productos conservan solo código, nombre, categoría, precio, costo, existencias,
+  stock mínimo, unidad, IVA, tipo de servicio y estado.
+- **Modelo y base**: se eliminaron `Product.Icon`, `Product.IconUpdatedUtc`, `Product.ImagePath`,
+  la entidad `ProductIcon` y la tabla `ProductIcons`. La migración de arranque
+  (`DbSeeder.EnsureCompatibilityAsync`) borra la tabla heredada y las columnas `Icon`,
+  `IconUpdatedUtc` e `ImagePath` con `DROP TABLE`/`ALTER TABLE ... DROP COLUMN`; si una versión
+  antigua de SQLite no admite `DROP COLUMN`, deja la columna sin usar y registra un aviso.
+- **API**: se quitaron los endpoints `GET/POST/DELETE /api/products/{id}/icon` y
+  `GET /api/station/products/{id}/icon`. `ProductDto` ya no expone `Icon`, `HasIcon` ni
+  `IconUpdatedUtc`, y `SaveProductRequest` ya no recibe `Icon`.
+- **Interfaz**: en **Productos** desaparecieron las columnas **Icono** e **Imagen**, el selector
+  **Mostrar:** y las acciones **Cambiar imagen…**, **Buscar imagen en internet…**, **Quitar
+  imagen** y **Redimensionar imagen…**. El diálogo de producto solo captura sus datos. En **Punto
+  de venta** y **Pedir productos** las tarjetas muestran nombre, categoría, precio y existencias.
+  En **Configuración → Apariencia** se quitó la preferencia de visualización de productos.
+- **Código eliminado**: `ProductIconImage`, `ProductIconCache`, `ProductImage`, `WebImageSearch`,
+  `IconSearchDialog`, `IconResizeDialog`, `BackgroundRemoval` y los scripts
+  `import-product-icons.ps1`, `iconos-mapeo.csv` y `iconos-emparejamiento.csv`. `ImageInspector`
+  se conserva porque lo usan los fondos y los videos promocionales.
+- **Compatibilidad**: los `appearance.json` antiguos siguen cargando porque System.Text.Json
+  ignora la clave `ProductDisplay` que ya no existe en el modelo.
+- **Pruebas**:
+  - Migración sobre una copia de la base real: se eliminaron `ProductIcons` y las columnas `Icon`,
+    `IconUpdatedUtc` e `ImagePath`, y se conservaron **424 productos**.
+  - Servidor temporal en el puerto 5099 con login `admin/admin123`: GET de 424 productos sin
+    `Icon`/`HasIcon`, POST y PUT de producto sin icono correctos y
+    `GET /api/products/{id}/icon` → **404**.
+  - UI con UIAutomation: **Productos** muestra los encabezados Código, Producto, Categoría, Precio
+    USD, Costo, Existencias, Mínimo, IVA y Estado, sin ComboBox ni botón **Buscar imagen…**;
+    **Punto de venta** muestra **0 imágenes** y solo los botones Vaciar/Cobrar/Limpiar.
+  - `dotnet build CyberManager.sln -c Release` con **0 errores y 0 advertencias**.
 
 ---
 

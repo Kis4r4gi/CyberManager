@@ -81,14 +81,6 @@ public static class StationClientEndpoints
                 .Select(c => new CategoryDto(c.Id, c.Name, c.Color, c.SortOrder, c.Active)).ToListAsync());
         });
 
-        g.MapGet("/products/{id:int}/icon", async (int id, HttpContext http, AppDbContext db) =>
-        {
-            await RequireStationAsync(http, db);
-            var icon = await db.ProductIcons.AsNoTracking().FirstOrDefaultAsync(i => i.ProductId == id)
-                       ?? throw AppException.NotFound("Imagen del producto");
-            return Results.File(icon.Data, icon.ContentType, enableRangeProcessing: true);
-        });
-
         g.MapGet("/wallpapers/{id:int}/file", async (int id, HttpContext http, AppDbContext db) =>
         {
             await RequireStationAsync(http, db);

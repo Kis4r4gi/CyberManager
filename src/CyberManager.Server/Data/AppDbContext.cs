@@ -22,7 +22,6 @@ public class AppDbContext : DbContext
 
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Product> Products => Set<Product>();
-    public DbSet<ProductIcon> ProductIcons => Set<ProductIcon>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
@@ -50,12 +49,6 @@ public class AppDbContext : DbContext
         b.Entity<UserAccount>().HasIndex(x => x.Username).IsUnique();
         b.Entity<Setting>().HasKey(x => x.Key);
         b.Entity<Product>().HasIndex(x => x.Sku).IsUnique();
-        b.Entity<ProductIcon>().HasKey(x => x.ProductId);
-        b.Entity<ProductIcon>()
-            .HasOne(x => x.Product)
-            .WithOne()
-            .HasForeignKey<ProductIcon>(x => x.ProductId)
-            .OnDelete(DeleteBehavior.Cascade);
         b.Entity<Station>().HasIndex(x => x.Name).IsUnique();
         b.Entity<DeviceRegistration>().HasIndex(x => x.Token).IsUnique();
         b.Entity<Sale>().HasIndex(x => x.Number).IsUnique();

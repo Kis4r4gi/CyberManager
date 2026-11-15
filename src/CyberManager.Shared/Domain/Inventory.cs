@@ -27,33 +27,7 @@ public class Product
     public bool IsService { get; set; }
     public decimal TaxRate { get; set; }
     public bool Active { get; set; } = true;
-    public string? ImagePath { get; set; }
-    /// <summary>Icono corto (emoji o texto) que se muestra en la caja y la pantalla del cliente.</summary>
-    public string? Icon { get; set; }
-    /// <summary>
-    /// Fecha de la última imagen (.bmp, PNG, JPG o GIF) asociada al producto. Es null cuando
-    /// el producto no tiene imagen. Se usa como marca de versión para la caché de los equipos.
-    /// </summary>
-    public DateTime? IconUpdatedUtc { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
-}
-
-/// <summary>
-/// Imagen del producto guardada en la base de datos. Se mantiene en una tabla aparte para
-/// que las consultas del catálogo no carguen los bytes de todas las imágenes.
-/// </summary>
-public class ProductIcon
-{
-    public int ProductId { get; set; }
-    public Product? Product { get; set; }
-    public string ContentType { get; set; } = "image/bmp";
-    public string Extension { get; set; } = ".bmp";
-    public byte[] Data { get; set; } = Array.Empty<byte>();
-    public int Width { get; set; }
-    public int Height { get; set; }
-    public long SizeBytes { get; set; }
-    public string Sha256 { get; set; } = string.Empty;
-    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }
 
 public class StockMovement

@@ -141,9 +141,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 
 **Inventario y compras**
 
-- Productos por categoría, con SKU, costo, precio, stock, stock mínimo e **imagen o icono** (emoji o
-  texto corto) visible en el punto de venta y en la pantalla del cliente. El menú de clic derecho
-  permite editar, cambiar, quitar o redimensionar la imagen (solo administrador).
+- Productos por categoría, con SKU, costo, precio, stock y stock mínimo, visibles en el punto de
+  venta y en la pantalla del cliente. El menú de clic derecho permite editar, activar, desactivar o
+  eliminar el producto (solo administrador).
 - **Eliminación desde el catálogo** de productos, categorías, tarifas, paquetes de tiempo y zonas;
   las ventas y movimientos históricos se conservan.
 - Servicios sin control de stock (impresión, escaneo, fotocopias).
@@ -795,102 +795,21 @@ mínimo y con precio mayor que cero, para que sigan siendo vendibles. Opciones �
 
 ---
 
-## Imágenes de los productos
+## Imágenes e iconos de productos (eliminados)
 
-Cada producto puede tener una imagen (`.bmp`, `.png`, `.jpg` o `.gif`, hasta 20 MB). La imagen se
-guarda **dentro de la base de datos**, así que viaja con los respaldos y no se pierde al reinstalar.
-La consola y las estaciones guardan una copia en disco y en memoria para mostrarla al instante.
+Las versiones anteriores permitían asignar una imagen o un icono (emoji o texto) a cada producto.
+**A partir de la versión 1.0.20 esa función ya no existe**: los productos solo tienen código, nombre,
+categoría, precio, costo, existencias, stock mínimo, unidad, IVA y estado.
 
-**Todas las imágenes se guardan y se muestran en PNG.** Al agregar un `.bmp`, `.jpg` o `.gif`, el
-sistema lo convierte automáticamente a `.png` antes de escribirlo en la base, tanto desde la consola
-como con el importador en bloque. El servidor también convierte cualquier imagen antigua que no sea
-PNG al arrancar, de modo que la API siempre responde `image/png`.
-
-**El fondo se quita automáticamente.** Al aplicar una imagen al producto (desde el diálogo, con
-**Cambiar imagen…**, al buscar en internet, al redimensionarla o al importar varios archivos), el
-sistema detecta el color uniforme de los bordes —por ejemplo el blanco de un logotipo— y lo vuelve
-transparente, de modo que la figura se integra con el tema oscuro. El relleno avanza desde los
-bordes y se detiene en la figura, así que no borra partes internas del producto. Si el borde no es
-uniforme (una fotografía normal) o la imagen ya viene recortada con transparencia, no se modifica.
-El servidor aplica el mismo proceso a toda imagen que reciba, incluso las del importador en bloque.
-
-**Desde la consola:** en **Productos**, pulse **Nuevo** o **Editar**, use **Elegir imagen…** y
-guarde. La vista previa aparece en el mismo diálogo y la columna **Imagen** indica si el producto
-tiene una. El emoji o texto del campo **Icono** se conserva como respaldo cuando el producto no
-tiene imagen.
-
-También puede hacer **clic derecho sobre cualquier producto** para abrir su menú desplegable:
-**Editar producto…**, **Cambiar imagen…**, **Buscar imagen en internet…**, **Quitar imagen**,
-**Redimensionar imagen…**, **Activar / desactivar** y **Eliminar producto**. **Redimensionar
-imagen…** reduce la imagen guardada a 64, 96, 128, 160, 256 o 512 píxeles como lado máximo, mantiene
-la proporción y la guarda en PNG para que ocupe menos. Estas acciones del menú están disponibles
-**solo para el administrador**; la API también exige el rol `Admin` para modificar imágenes.
-
-### Buscar imágenes en internet
-
-El botón **Buscar imagen…** (barra de **Productos**) y la opción **Buscar imagen en internet…** del
-menú contextual abren un buscador que consulta [Openverse](https://openverse.org) y muestra una
-cuadrícula con las coincidencias. También está disponible dentro del diálogo del producto con
-**Buscar en internet…**.
-
-- Solo se listan imágenes con licencia **CC0** o de **dominio público**, que se pueden usar sin
-  atribución obligatoria. La licencia se muestra en cada miniatura y en la nota del diálogo.
-- Las miniaturas se cargan en paralelo (4 a la vez) y la búsqueda se lanza automáticamente con el
-  nombre del producto; puede cambiarlo y pulsar **Buscar** o **Enter**.
-- Al pulsar **Usar imagen** se descarga la imagen original (o la miniatura si la original falla),
-  se convierte a **PNG** y se limita a **512 px** de lado máximo antes de guardarla en el producto.
-- La búsqueda requiere conexión a internet y no usa claves de API. Openverse puede responder con
-  lentitud o limitar las peticiones anónimas; el sistema reintenta y muestra un mensaje claro si el
-  servicio no está disponible.
-- Solo el administrador puede buscar y asignar imágenes; el cajero no ve estas opciones.
-
-La imagen se muestra en el punto de venta (**Punto de venta** → tarjetas de producto) y en la
-pantalla del cliente (**Pedir productos**). En el punto de venta la tarjeta con imagen le da el
-espacio libre a la fotografía y la ajusta automáticamente con proporción uniforme, sin recortarla
-ni deformarla; el tamaño de la tarjeta sigue la escala configurada en **Apariencia**. Si un equipo
-no puede descargarla, se muestra el emoji de respaldo.
-
-### Elegir entre imagen o icono
-
-El catálogo y el punto de venta pueden mostrar la **imagen PNG** o el **icono** (emoji o texto) de
-cada producto. El ajuste está en dos lugares y comparte el mismo valor:
-
-- En **Productos**, el selector **Mostrar:** de la barra superior (**Imagen PNG** o **Icono**).
-- En **Configuración → Apariencia → Productos y punto de venta**, la lista **Mostrar en productos y
-  punto de venta**.
-
-Con **Imagen PNG** (opción predeterminada) se muestra la fotografía del producto cuando existe; en
-el punto de venta se usa la tarjeta grande que ajusta la imagen al espacio disponible. Con **Icono**
-se muestra siempre el emoji o texto del producto, aunque tenga imagen, y el punto de venta usa la
-tarjeta compacta. Si un producto no tiene imagen, en ambos modos se muestra su icono.
-
-La preferencia se guarda por equipo en `%LOCALAPPDATA%\CyberManager\Admin\appearance.json`, se
-aplica al instante en las vistas abiertas (incluido el punto de venta) y los archivos de
-configuración antiguos, sin esta clave, asumen el modo **Imagen PNG**.
-
-### Importar imágenes en bloque
-
-`scripts/import-product-icons.ps1` empareja por nombre los archivos `.bmp` de una carpeta con los
-productos y guarda la imagen en la base, convertida a `.png`. Por defecto **solo genera un informe**
-(`scripts/iconos-emparejamiento.csv`) sin escribir nada:
-
-```powershell
-# Informe de coincidencias (no escribe)
-.\scripts\import-product-icons.ps1
-
-# Aplicar las coincidencias fuertes (crea respaldo antes de escribir)
-.\scripts\import-product-icons.ps1 -Apply
-```
-
-El emparejamiento automático ignora mayúsculas, acentos y signos, y descarta los casos en que dos
-productos empatan (quedan como **Revisar**). Para los nombres que el sistema anterior escribía de
-otra forma existe `scripts/iconos-mapeo.csv` con dos columnas, `Bmp` y `Sku`: cada fila asigna una
-imagen concreta a un código de producto y tiene prioridad sobre el puntaje automático. Edite ese
-archivo y vuelva a ejecutar con `-Apply` para corregir o ampliar las asignaciones.
-
-Opciones útiles: `-Folder`, `-MinScore`, `-ApplyScore`, `-ApplyFuzzy` (aplica también las dudosas),
-`-Mapping`, `-NoMapping`, `-Database`, `-ServerDir`, `-SkipBackup` y `-Report`. Ejecute el script
-con `pwsh` (PowerShell 7), porque usa las DLL de SQLite del servidor.
+- El catálogo, el punto de venta y la pantalla del cliente muestran únicamente los datos del
+  producto, sin columnas ni tarjetas con imágenes.
+- La API ya no expone los campos `Icon`, `HasIcon` ni `IconUpdatedUtc`, y los endpoints
+  `/api/products/{id}/icon` y `/api/station/products/{id}/icon` responden **404**.
+- Al arrancar, el servidor **elimina automáticamente** la tabla `ProductIcons` y las columnas
+  `Icon`, `IconUpdatedUtc` e `ImagePath` de `Products` si existen en una instalación anterior. Los
+  productos y el resto de los datos se conservan intactos.
+- Los archivos `appearance.json` antiguos siguen cargando sin errores; la clave de visualización de
+  productos se ignora.
 
 ---
 
@@ -1222,7 +1141,6 @@ guarda una copia local del estado:
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
 | `scripts/import-stock.ps1`      | Importa o actualiza productos desde un CSV/HTML de stock.           |
-| `scripts/import-product-icons.ps1` | Asigna imágenes `.bmp` a los productos por nombre y las guarda como PNG. |
 | `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con

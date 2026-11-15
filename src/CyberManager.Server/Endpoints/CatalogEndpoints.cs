@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text.Json;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
@@ -209,7 +208,7 @@ public static class CatalogEndpoints
             {
                 Sku = req.Sku, Name = req.Name, CategoryId = req.CategoryId, Price = req.Price,
                 Cost = req.Cost, Stock = req.Stock, MinStock = req.MinStock, Unit = req.Unit,
-                IsService = req.IsService, TaxRate = req.TaxRate, Active = req.Active, Icon = req.Icon
+                IsService = req.IsService, TaxRate = req.TaxRate, Active = req.Active
             };
             db.Products.Add(p);
             await db.SaveChangesAsync();
@@ -231,7 +230,7 @@ public static class CatalogEndpoints
                     ?? throw AppException.NotFound("Producto");
             p.Sku = req.Sku; p.Name = req.Name; p.CategoryId = req.CategoryId; p.Price = req.Price;
             p.Cost = req.Cost; p.MinStock = req.MinStock; p.Unit = req.Unit;
-            p.IsService = req.IsService; p.TaxRate = req.TaxRate; p.Active = req.Active; p.Icon = req.Icon;
+            p.IsService = req.IsService; p.TaxRate = req.TaxRate; p.Active = req.Active;
             await db.SaveChangesAsync();
             return Results.Ok(Mappers.ToDto(p));
         }).RequireAuthorization("Admin");
@@ -240,81 +239,6 @@ public static class CatalogEndpoints
         {
             var p = await db.Products.FirstOrDefaultAsync(x => x.Id == id) ?? throw AppException.NotFound("Producto");
             p.Active = false;
-            await db.SaveChangesAsync();
-            return Results.NoContent();
-        }).RequireAuthorization("Admin");
-
-        // ---------- Imagen del producto ----------
-        // La imagen se guarda en la base de datos; los equipos la descargan y la cachean.
-        g.MapGet("/{id:int}/icon", async (int id, AppDbContext db) =>
-        {
-            var icon = await db.ProductIcons.AsNoTracking().FirstOrDefaultAsync(i => i.ProductId == id)
-                       ?? throw AppException.NotFound("Imagen del producto");
-            return Results.File(icon.Data, icon.ContentType, enableRangeProcessing: true);
-        });
-
-        g.MapPost("/{id:int}/icon", async (int id, HttpRequest request, AppDbContext db) =>
-        {
-            if (!request.HasFormContentType)
-                throw new AppException("Debe enviar la imagen como formulario multipart.");
-
-            var form = await request.ReadFormAsync();
-            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
-            if (file is null || file.Length == 0)
-                throw new AppException("Seleccione una imagen para el producto.");
-            if (file.Length > ImageInspector.MaxBytes)
-                throw new AppException($"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
-
-            await using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
-            var data = stream.ToArray();
-
-            var probe = ImageInspector.Detect(data);
-            if (!probe.Valid)
-                throw new AppException("Formato no válido. Use BMP, PNG, JPG o GIF.");
-
-            // Todas las imágenes de producto se guardan en PNG y se les quita el
-            // fondo uniforme (blanco, gris, etc.) para que se integren con el tema.
-            (data, probe) = ProductIconImage.ToPng(data);
-            data = ProductIconImage.RemoveBackground(data);
-            probe = ImageInspector.Detect(data);
-            if (data.LongLength > ImageInspector.MaxBytes)
-                throw new AppException(
-                    $"La imagen convertida a PNG supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB. Use una imagen más pequeña.");
-
-            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id)
-                          ?? throw AppException.NotFound("Producto");
-
-            var icon = await db.ProductIcons.FirstOrDefaultAsync(i => i.ProductId == id);
-            if (icon is null)
-            {
-                icon = new ProductIcon { ProductId = id };
-                db.ProductIcons.Add(icon);
-            }
-
-            icon.ContentType = probe.ContentType;
-            icon.Extension = probe.Extension;
-            icon.Data = data;
-            icon.Width = probe.Width;
-            icon.Height = probe.Height;
-            icon.SizeBytes = data.LongLength;
-            icon.Sha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
-            icon.UpdatedUtc = DateTime.UtcNow;
-            product.IconUpdatedUtc = icon.UpdatedUtc;
-
-            await db.SaveChangesAsync();
-            return Results.Ok(Mappers.ToDto(product));
-        }).RequireAuthorization("Admin").DisableAntiforgery();
-
-        g.MapDelete("/{id:int}/icon", async (int id, AppDbContext db) =>
-        {
-            var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id)
-                          ?? throw AppException.NotFound("Producto");
-
-            var icon = await db.ProductIcons.FirstOrDefaultAsync(i => i.ProductId == id);
-            if (icon is not null) db.ProductIcons.Remove(icon);
-            product.IconUpdatedUtc = null;
-
             await db.SaveChangesAsync();
             return Results.NoContent();
         }).RequireAuthorization("Admin");
