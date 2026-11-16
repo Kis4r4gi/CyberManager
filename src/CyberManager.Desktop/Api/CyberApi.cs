@@ -59,7 +59,7 @@ public class CyberApi : ApiClient
         => GetAsync<bool>($"/api/stations/{id}/has-active-sessions");
 
     public Task<StationDto> DeactivateStationAsync(int id)
-        => PutAsync<StationDto>($"/api/stations/{id}/deactivate", new { Active = false });
+        => PostAsync<StationDto>($"/api/stations/{id}/deactivate", new { Active = false });
 
     public Task<StationConfigDto> StationConfigAsync(int id) => GetAsync<StationConfigDto>($"/api/stations/{id}/config");
 
@@ -204,6 +204,22 @@ public class CyberApi : ApiClient
         return PostFileAsync<WallpaperDto>("/api/wallpapers", "file", fileName, contentType, data, fields);
     }
 
+    /// <summary>Reemplaza la imagen de un fondo existente (sincronización desde la carpeta local).</summary>
+    public Task<WallpaperDto> UpdateWallpaperFileAsync(int id, string fileName, byte[] data,
+        string contentType, string? name = null, int? sortOrder = null, bool? active = null)
+    {
+        var fields = new List<KeyValuePair<string, string>>();
+        if (!string.IsNullOrWhiteSpace(name))
+            fields.Add(new KeyValuePair<string, string>("name", name));
+        if (sortOrder is int order)
+            fields.Add(new KeyValuePair<string, string>("sortOrder", order.ToString()));
+        if (active is bool isActive)
+            fields.Add(new KeyValuePair<string, string>("active", isActive.ToString()));
+
+        return PutFileAsync<WallpaperDto>($"/api/wallpapers/{id}/file", "file", fileName,
+            contentType, data, fields);
+    }
+
     public Task<WallpaperDto> UpdateWallpaperAsync(int id, SaveWallpaperRequest req) => PutAsync<WallpaperDto>($"/api/wallpapers/{id}", req);
 
     public Task DeleteWallpaperAsync(int id) => DeleteAsync($"/api/wallpapers/{id}");
@@ -266,11 +282,27 @@ public class CyberApi : ApiClient
     // ---- configuración / usuarios ----
     public Task<Dictionary<string, string>> SettingsAsync() => GetAsync<Dictionary<string, string>>("/api/settings");
     public Task<Dictionary<string, string>> SaveSettingsAsync(Dictionary<string, string> values) => PutAsync<Dictionary<string, string>>("/api/settings", values);
+
+    // ---- logo del negocio ----
+    public Task<BusinessLogoDto> BusinessLogoAsync() => GetAsync<BusinessLogoDto>("/api/settings/business-logo");
+
+    public Task<BusinessLogoDto> SaveBusinessLogoAsync(string dataUrl)
+        => PutAsync<BusinessLogoDto>("/api/settings/business-logo", new SaveBusinessLogoRequest(dataUrl));
+
+    public Task DeleteBusinessLogoAsync() => DeleteAsync("/api/settings/business-logo");
     public Task<List<UserDto>> UsersAsync() => GetAsync<List<UserDto>>("/api/users");
     public Task<UserDto> CreateUserAsync(CreateUserRequest req) => PostAsync<UserDto>("/api/users", req);
     public Task<UserDto> UpdateUserAsync(int id, UpdateUserRequest req) => PutAsync<UserDto>($"/api/users/{id}", req);
     public Task DeactivateUserAsync(int id) => DeleteAsync($"/api/users/{id}");
     public Task DeleteUserPermanentlyAsync(int id) => DeleteAsync($"/api/users/{id}/permanent");
+
+    // ---- notas compartidas ----
+    public Task<List<SharedNoteDto>> SharedNotesAsync() => GetAsync<List<SharedNoteDto>>("/api/shared-notes");
+
+    public Task<SharedNoteDto> CreateSharedNoteAsync(string text)
+        => PostAsync<SharedNoteDto>("/api/shared-notes", new SaveSharedNoteRequest(text));
+
+    public Task DeleteSharedNoteAsync(long id) => DeleteAsync($"/api/shared-notes/{id}");
 
     // ---- actualizaciones publicadas en GitHub ----
     public Task<UpdateInfoDto> LatestUpdateAsync(bool refresh = false, bool cached = false)

@@ -896,6 +896,67 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20> con ambos instaladores y el
   código fuente GPLv2 de TightVNC 2.8.90.
 
+### Carpeta de intercambio y mejoras de la consola (1.1.1, 2026-11-16)
+
+- **Galería de fondos**: el buscador **Buscar fondo** filtra por nombre o estado y el resumen
+  cambia según el filtro. Se agregó **Buscar en internet**, que abre un buscador de
+  [Wallhaven](https://wallhaven.cc/api/v1/search) solo para todo público (SFW), formato 16:9 y
+  resolución mínima de 1920 × 1080, 2560 × 1440 o 3840 × 2160, con categorías General, Anime,
+  Personas o Todas, miniaturas, **Agregar** y paginación **Cargar más**. Se validan las URLs
+  HTTPS de `wallhaven.cc`/`*.wallhaven.cc` y se rechazan imágenes de más de 20 MB antes y después
+  de descargar. El mapeo JSON corrige `file_size` → `FileSize` y `last_page` → `LastPage` con
+  `[JsonPropertyName]`.
+- **Carpeta de intercambio**: **Abrir carpeta** exporta la galería a
+  `%LOCALAPPDATA%\CyberManager\Admin\Fondos` como `NNN - Nombre.ext`, escribe el manifiesto
+  `_sincronizacion.json` (`Id`, `File`, `Sha256`) y `_LEEME.txt`, y abre la carpeta en el
+  Explorador. **Sincronizar carpeta** detecta archivos nuevos y modificados comparando el hash
+  SHA-256, sube los cambios y elimina de la carpeta los fondos borrados en la consola. Los
+  archivos nuevos se agregan con el nombre y el orden indicados al inicio del nombre. El nuevo
+  endpoint `PUT /api/wallpapers/{id}/file` reemplaza la imagen y actualiza nombre, orden y estado,
+  y emite `WallpaperChanged`; `ApiClient.PutFileAsync` y `CyberApi.UpdateWallpaperFileAsync`
+  consumen ese endpoint. Los botones quedaron reorganizados: el encabezado solo conserva **Subir
+  imágenes** y **Buscar en internet**; la barra de la galería tiene **Abrir carpeta**,
+  **Sincronizar carpeta**, **Reenviar a equipos** y **Actualizar**; se quitó el duplicado **Vista
+  previa** del panel lateral.
+- **Notas y Registro**: el panel derecho muestra arriba las **notas** (texto simple, sin tarjetas,
+  con autor y hora) y abajo el **registro** de actividad; se renombraron «Bitácora» → «Registro» y
+  «Notas compartidas» → «Notas». Publicar y borrar una nota registra el contenido y el autor en el
+  registro. El botón **Abrir** del registro lo exporta a
+  `%LOCALAPPDATA%\CyberManager\Admin\registro-AAAAMMDD-HHMMSS.txt` en UTF-8 y lo muestra en el
+  Bloc de notas; se eliminó **Limpiar**.
+- **Identidad del negocio**: el nombre o razón social y el logo configurados en *Configuración →
+  Negocio y facturación* aparecen juntos en una sola línea en la barra superior, sin segunda línea
+  de texto. El logo se guarda en `Settings` (`BusinessLogo`, PNG en data URL), se excluye de
+  `GetAllAsync`, tiene endpoints dedicados y se reescala a un máximo de 512 × 512 px.
+- **Ventanas**: la consola recuerda la posición, el tamaño y el estado (normal o maximizado) de la
+  ventana principal y del inicio de sesión por usuario de la aplicación y de Windows, en
+  `%LOCALAPPDATA%\CyberManager\Admin\windows.json` (`main:<usuario>` y `login:<usuario de
+  Windows>`); el inicio de sesión ahora es redimensionable.
+- **Equipos**: la tabla ya no tiene marco, las columnas se ajustan automáticamente, el buscador
+  **Buscar equipo** mide 200 px y los cuadros del área de equipos quedaron reorganizados. La
+  eliminación de equipos se corrigió con `POST /api/stations/{id}/deactivate` (antes respondía
+  **405**).
+- **Política de versión**: `scripts/build-installer.ps1` ahora incrementa la **versión menor** y
+  reinicia el patch (`1.1.1` → `1.2.0` → `1.3.0`…); `version.props`, el README y los comentarios
+  del script quedaron alineados con esa política.
+- **Pruebas**:
+  - API real: `PUT /api/wallpapers/{id}/file` actualizó nombre, hash, orden y estado; el listado
+    reflejó el hash nuevo y el fondo de prueba se eliminó (30 fondos finales).
+  - UIAutomation: **Abrir carpeta** exportó 31 imágenes + `_sincronizacion.json` (31 entradas) +
+    `_LEEME.txt`; modificar `999 - PRUEBA CARPETA.png` y **Sincronizar carpeta** actualizó el fondo
+    (hash nuevo); copiar `900 - PRUEBA NUEVA.png` y sincronizar creó el fondo con nombre y orden
+    correctos; al eliminar los fondos de prueba y volver a abrir la carpeta quedaron **30 fondos**,
+    30 entradas y ningún archivo de prueba.
+  - Wallhaven: búsqueda «gaming» con 50.382 resultados, página 1 de 2100, tamaños correctos y
+    agregar/eliminar una imagen de prueba sin dejar residuos.
+  - `dotnet build CyberManager.sln -c Release` con **0 errores** (8 advertencias de nulabilidad
+    preexistentes en el cliente).
+- **Instaladores 1.1.1**: `CyberManager-Servidor-1.1.1.exe` (269.033.089 bytes) y
+  `CyberManager-Estacion-1.1.1.exe` (150.713.665 bytes), generados con
+  `-Version 1.1.1 -SkipVncDownload`.
+- **Servidor local**: publicado y reiniciado con el nuevo endpoint; `/api/health` responde `ok` y
+  la consola instalada quedó en **1.1.1** con la galería de 30 fondos.
+
 ---
 
 ## Rutas y comandos clave
@@ -907,11 +968,11 @@ Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberM
 $dotnet = "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
 & $dotnet build CyberManager.sln -v q --nologo
 
-# Generar los dos instaladores unificados (publica x64 y x86; sube el patch)
+# Generar los dos instaladores unificados (publica x64 y x86; sube la versión menor)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
 
 # Fijar una versión concreta o conservar la actual
-pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Version 1.1.0
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -Version 1.2.0
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1 -NoBump
 
 # Recompilar los instaladores con dist\x64 y dist\x86 existentes (sin subir versión)
@@ -1003,7 +1064,8 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   `dist\x64` o `dist\x86`. `[InstallDelete]` limpia los binarios nativos de la arquitectura
   opuesta al reinstalar. No existe un modificador documentado para forzar x86 en un Windows x64.
 - **Versión**: `version.props` es la única fuente; no edite `Version` en los `.csproj`. El script
-  de empaquetado sube el patch al publicar. Los instaladores usan el mismo valor en
+  de empaquetado sube la versión menor y reinicia el patch al publicar. Los instaladores usan el
+  mismo valor en
   `AppVersion`, `OutputBaseFilename` y en la etiqueta visible de la consola.
 - **Lanzador**: `CyberManager.exe` es una copia del apphost del servidor. El apphost conserva el
   nombre `CyberManager.Server.dll` grabado, por eso funciona dentro de `Server\`. El lanzador solo
@@ -1043,7 +1105,7 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
    bloqueo de entrada contra una estación real.
 5. Mantener actualizado `README.md` si se agregan funciones nuevas.
 6. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
-   consola, el servidor, las promos y la localización. El patch sube automáticamente; use
+   consola, el servidor, las promos y la localización. La versión menor sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
 
 ---

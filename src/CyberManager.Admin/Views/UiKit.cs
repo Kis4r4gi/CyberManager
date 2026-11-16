@@ -42,6 +42,7 @@ public static class Kit
         ["Cancelar"] = "Cierra sin guardar cambios.",
         ["Cancelar reserva"] = "Anula la reserva seleccionada.",
         ["Capturar ahora"] = "Toma una captura de la pantalla remota.",
+        ["Cambiar nombre"] = "Cambia el nombre del equipo seleccionado.",
         ["Cerrar"] = "Cierra la ventana.",
         ["Cerrar caja"] = "Cierra la caja y muestra el resumen del turno.",
         ["Cerrar programa"] = "Cierra el programa indicado en el equipo.",
@@ -61,7 +62,9 @@ public static class Kit
         ["Desbloquear entrada"] = "Devuelve el control del teclado y mouse.",
         ["Desinstalar CyberManager"] = "Quita la aplicación y sus datos de este equipo.",
         ["Editar"] = "Abre el registro seleccionado para editarlo.",
+        ["Editar conexión"] = "Cambia la dirección IP y la MAC del equipo.",
         ["Eliminar"] = "Elimina el registro seleccionado.",
+        ["Eliminar equipo"] = "Desactiva el equipo y limpia sus referencias.",
         ["Enviar mensaje"] = "Muestra un mensaje en el equipo.",
         ["Encender monitor"] = "Enciende el monitor del equipo.",
         ["Enviar pedido a la estación"] = "Envía el pedido al administrador.",
@@ -116,13 +119,14 @@ public static class Kit
         ["Subir"] = "Mueve el elemento una posición hacia arriba.",
         ["Subir imágenes"] = "Agrega imágenes a la galería.",
         ["Subir videos"] = "Agrega videos a las promociones.",
+        ["Sincronizar carpeta"] = "Importa las imágenes nuevas o modificadas de la carpeta de fondos.",
         ["Transferir a otro PC"] = "Cambia la sesión a otro equipo.",
         ["Vaciar"] = "Quita todos los productos del pedido.",
-        ["Ver kardex del producto seleccionado"] = "Muestra los movimientos del producto.",
+        ["Ver movimientos del producto"] = "Muestra los movimientos del producto.",
         ["Ver novedades"] = "Abre la página de la nueva versión.",
         ["Ver pantalla"] = "Abre la pantalla remota del equipo.",
         ["Ver pantalla remota"] = "Muestra la pantalla del equipo.",
-        ["Ver todo el kardex"] = "Muestra los movimientos de todos los productos.",
+        ["Ver todos los movimientos"] = "Muestra los movimientos de todos los productos.",
         ["Vista previa"] = "Muestra una vista previa del contenido."
     };
 
@@ -300,7 +304,11 @@ public static class Kit
             Text = L.T(label).ToUpperInvariant(),
             FontSize = 10,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brush("MutedBrush")
+            Foreground = Brush("MutedBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            TextTrimming = TextTrimming.None,
+            LineHeight = 13,
+            Margin = new Thickness(0, 0, 0, 2)
         });
 
         valueText = new TextBlock
@@ -334,6 +342,21 @@ public static class Kit
         var column = new DataGridTextColumn { Header = L.T(header), Binding = new Binding(path) };
         if (format is not null) column.Binding.StringFormat = format;
         if (width > 0) column.Width = new DataGridLength(width);
+        return column;
+    }
+
+    /// <summary>Columna que se ajusta al contenido para no cortar las palabras.</summary>
+    public static DataGridTextColumn AutoCol(string header, string path,
+        double minWidth = 80, string? format = null)
+    {
+        var column = new DataGridTextColumn
+        {
+            Header = L.T(header),
+            Binding = new Binding(path),
+            Width = DataGridLength.Auto,
+            MinWidth = minWidth
+        };
+        if (format is not null) column.Binding.StringFormat = format;
         return column;
     }
 

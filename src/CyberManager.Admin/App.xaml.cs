@@ -15,6 +15,11 @@ public partial class App : Application
 
     public static event Action<string>? NavigationRequested;
 
+    /// <summary>Se dispara cuando cambian el nombre o el logo del negocio.</summary>
+    public static event Action? BusinessIdentityChanged;
+
+    public static void NotifyBusinessIdentityChanged() => BusinessIdentityChanged?.Invoke();
+
     /// <summary>La aplicación ya está cerrando; no se debe pedir confirmación otra vez.</summary>
     public static bool IsShuttingDown { get; set; }
 

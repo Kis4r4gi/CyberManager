@@ -62,6 +62,12 @@ public sealed class SettingsView : UserControl, IRefreshable
     private bool _backupBusy;
     private bool _bcvBusy;
 
+    private readonly Image _logoPreview = new() { Stretch = Stretch.Uniform, Margin = new Thickness(8) };
+    private readonly TextBlock _logoStatus = Kit.Muted("Sin logo configurado.");
+    private string? _logoDataUrl;
+    private bool _logoChanged;
+    private bool _logoRemoved;
+
     private static readonly (string Value, string Label)[] ClosingFormats =
     {
         ("ticket80", "Ticket 80 mm (térmico)"),
@@ -164,6 +170,35 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddText(identity, "BusinessAddress", "Dirección fiscal", "");
         panel.Children.Add(identity);
 
+        panel.Children.Add(Kit.Section("Logo de la empresa"));
+        panel.Children.Add(Description(
+            "Se muestra a la izquierda del nombre en la barra superior de la consola. " +
+            "La imagen se ajusta automáticamente a un máximo de 512 × 512 px."));
+
+        var logoBox = new Border
+        {
+            Width = 84,
+            Height = 84,
+            CornerRadius = new CornerRadius(12),
+            Background = Kit.Brush("ChipBrush"),
+            BorderBrush = Kit.Brush("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 0, 14, 0),
+            Child = _logoPreview
+        };
+
+        var logoButtons = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
+        logoButtons.Children.Add(Kit.Button("Elegir logo", "PrimaryButton", ChooseLogo));
+        logoButtons.Children.Add(Kit.Button("Quitar logo", "GhostButton", RemoveLogo));
+
+        var logoRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+        logoRow.Children.Add(logoBox);
+        logoRow.Children.Add(logoButtons);
+        panel.Children.Add(logoRow);
+
+        _logoStatus.Margin = new Thickness(0, 0, 0, 12);
+        panel.Children.Add(_logoStatus);
+
         panel.Children.Add(Kit.Section("Facturación"));
         var billing = new UniformGrid { Columns = 2 };
         AddText(billing, "CurrencySymbol", "Símbolo de moneda base", "$");
@@ -231,6 +266,49 @@ public sealed class SettingsView : UserControl, IRefreshable
         return Scroll(panel);
     }
 
+    private void ChooseLogo()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Elegir logo de la empresa",
+            Filter = "Imágenes (*.png;*.jpg;*.jpeg;*.gif;*.bmp)|*.png;*.jpg;*.jpeg;*.gif;*.bmp|Todos los archivos (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            _logoDataUrl = Branding.LoadLogoDataUrl(dialog.FileName);
+            _logoChanged = true;
+            _logoRemoved = false;
+            ApplyLogoPreview();
+            _logoStatus.Text = "Logo listo. Pulse «Aplicar y guardar» para publicarlo.";
+            _logoStatus.Foreground = Kit.Brush("MutedBrush");
+        }
+        catch (Exception ex)
+        {
+            _logoStatus.Text = ex.Message;
+            _logoStatus.Foreground = Kit.Brush("DangerBrush");
+        }
+    }
+
+    private void RemoveLogo()
+    {
+        _logoDataUrl = null;
+        _logoChanged = true;
+        _logoRemoved = true;
+        ApplyLogoPreview();
+        _logoStatus.Text = "El logo se quitará al pulsar «Aplicar y guardar».";
+        _logoStatus.Foreground = Kit.Brush("MutedBrush");
+    }
+
+    private void ApplyLogoPreview()
+    {
+        _logoPreview.Source = Branding.Decode(_logoDataUrl);
+        _logoPreview.Visibility = _logoPreview.Source is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     /// <summary>Guarda la configuración del servidor y la apariencia local en una sola acción.</summary>
     private async Task SaveAllAsync()
     {
@@ -263,7 +341,26 @@ public sealed class SettingsView : UserControl, IRefreshable
         try
         {
             await App.Api.SaveSettingsAsync(values);
+
+            if (_logoChanged)
+            {
+                if (_logoRemoved)
+                    await App.Api.DeleteBusinessLogoAsync();
+                else
+                    await App.Api.SaveBusinessLogoAsync(_logoDataUrl ?? string.Empty);
+
+                _logoChanged = false;
+                _logoRemoved = false;
+                _logoStatus.Text = string.IsNullOrWhiteSpace(_logoDataUrl)
+                    ? "Sin logo configurado."
+                    : "Logo guardado en el servidor.";
+                _logoStatus.Foreground = Kit.Brush("MutedBrush");
+            }
+
             AppearanceService.Apply(appearance, save: true);
+
+            // El encabezado de la consola se actualiza con el nombre y el logo nuevos.
+            App.NotifyBusinessIdentityChanged();
 
             _clearSmtpPassword = false;
             _smtpPassword.Password = string.Empty;
@@ -1853,6 +1950,24 @@ public sealed class SettingsView : UserControl, IRefreshable
             ? "El envío automático del cierre diario por correo está activo."
             : "El envío del cierre diario por correo está desactivado.";
         _emailStatus.Foreground = Kit.Brush(emailEnabled ? "SuccessBrush" : "MutedBrush");
+
+        try
+        {
+            var logo = await App.Api.BusinessLogoAsync();
+            _logoDataUrl = logo.DataUrl;
+            _logoChanged = false;
+            _logoRemoved = false;
+            ApplyLogoPreview();
+            _logoStatus.Text = string.IsNullOrWhiteSpace(_logoDataUrl)
+                ? "Sin logo configurado."
+                : "Logo cargado desde el servidor.";
+            _logoStatus.Foreground = Kit.Brush("MutedBrush");
+        }
+        catch (Exception ex)
+        {
+            _logoStatus.Text = "No se pudo cargar el logo: " + ex.Message;
+            _logoStatus.Foreground = Kit.Brush("DangerBrush");
+        }
 
         _businessLoaded = true;
         _businessStatus.Text =

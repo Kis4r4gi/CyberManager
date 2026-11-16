@@ -28,19 +28,28 @@ public sealed class StationsView : UserControl, IRefreshable
     public StationsView()
     {
         _grid = Kit.Table(
-            Kit.Col("Equipo", nameof(StationRow.Name), 140),
-            Kit.Col("Tipo", nameof(StationRow.Kind), 80),
-            Kit.Col("Plataforma", nameof(StationRow.Platform), 130),
-            Kit.Col("Mandos", nameof(StationRow.Controllers), 70),
-            Kit.Col("Zona", nameof(StationRow.Zone), 110),
-            Kit.Col("Dirección IP", nameof(StationRow.Ip), 120),
-            Kit.Col("Tarifa", nameof(StationRow.Rate), 150),
+            Kit.AutoCol("Equipo", nameof(StationRow.Name), 140),
+            Kit.AutoCol("Tipo", nameof(StationRow.Kind), 80),
+            Kit.AutoCol("Plataforma", nameof(StationRow.Platform), 120),
+            Kit.Col("Mandos", nameof(StationRow.Controllers), 75),
+            Kit.AutoCol("Zona", nameof(StationRow.Zone), 110),
+            Kit.AutoCol("Dirección IP", nameof(StationRow.Ip), 120),
+            Kit.AutoCol("Tarifa", nameof(StationRow.Rate), 130),
             Kit.Col("USD/hora", nameof(StationRow.RatePerHour), 95, "{0:N2}"),
             Kit.TemplateCol("Estado", Kit.Pill(nameof(StationRow.Status), nameof(StationRow.StatusBrush)), 130),
-            Kit.Col("Sesión", nameof(StationRow.Session), 90),
-            Kit.Col("Última conexión", nameof(StationRow.LastSeen), 145),
-            Kit.Col("Usuario Windows", nameof(StationRow.CurrentUser), 140),
-            Kit.Col("Activo", nameof(StationRow.Active), 80));
+            Kit.Col("Sesión", nameof(StationRow.Session), 85),
+            Kit.AutoCol("Última conexión", nameof(StationRow.LastSeen), 140),
+            Kit.AutoCol("Usuario Windows", nameof(StationRow.CurrentUser), 140),
+            Kit.Col("Activo", nameof(StationRow.Active), 75));
+
+        // La lista de equipos se muestra sin el marco grande: sin borde, sin fondo
+        // sólido y sin franjas alternas. Cada columna se ajusta a su contenido.
+        _grid.Background = Brushes.Transparent;
+        _grid.RowBackground = Brushes.Transparent;
+        _grid.AlternatingRowBackground = Brushes.Transparent;
+        _grid.BorderThickness = new Thickness(0);
+        foreach (var column in _grid.Columns)
+            column.Width = DataGridLength.Auto;
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -64,41 +73,82 @@ public sealed class StationsView : UserControl, IRefreshable
 
         var content = new Grid();
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        var toolbar = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-        toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
-        toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // ---- Fila 1: buscador a la izquierda, resumen a la derecha ----
+        var searchRow = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+        searchRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        searchRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
+        _searchBox.Width = 200;
+        _searchBox.VerticalAlignment = VerticalAlignment.Center;
         _searchBox.ToolTip = "Buscar equipo por nombre, IP o zona";
         _searchBox.TextChanged += (_, _) => Render();
-        toolbar.Children.Add(_searchBox);
 
-        var actions = Kit.HStack(8,
-            Kit.Button("Subir", "GhostButton", () => MoveStation(-1)),
-            Kit.Button("Bajar", "GhostButton", () => MoveStation(1)),
-            Kit.Button("Editar", "GhostButton", EditStation),
-            Kit.Button("Eliminar", "DangerButton", DeleteStation),
-            Kit.Button("Configuración / token", "BlueButton", ShowConfig),
-            Kit.Button("Ver pantalla", "BlueButton", ShowScreen),
-            Kit.Button("Mantenimiento", "WarningButton", ToggleMaintenance),
-            Kit.Button("Bloquear", "GhostButton", LockStation),
-            Kit.Button("Mensaje", "GhostButton", SendMessage),
-            Kit.Button("Activar / desactivar", "GhostButton", ToggleActive));
-        actions.HorizontalAlignment = HorizontalAlignment.Right;
-        Grid.SetColumn(actions, 1);
-        toolbar.Children.Add(actions);
+        var search = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        search.Children.Add(new TextBlock
+        {
+            Text = L.T("Buscar equipo"),
+            Style = Kit.Style("Label"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0)
+        });
+        search.Children.Add(_searchBox);
+        searchRow.Children.Add(search);
 
-        content.Children.Add(toolbar);
+        _summaryText.VerticalAlignment = VerticalAlignment.Center;
+        _summaryText.HorizontalAlignment = HorizontalAlignment.Right;
+        _summaryText.Margin = new Thickness(8, 0, 0, 0);
+        Grid.SetColumn(_summaryText, 1);
+        searchRow.Children.Add(_summaryText);
 
-        Grid.SetRow(_grid, 1);
+        content.Children.Add(searchRow);
+
+        // ---- Fila 2: acciones agrupadas; «Eliminar» siempre al final ----
+        var actions = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        void AddAction(Button button, bool newGroup = false)
+        {
+            button.Margin = new Thickness(newGroup ? 10 : 0, 0, 8, 8);
+            actions.Children.Add(button);
+        }
+
+        AddAction(Kit.Button("Subir", "GhostButton", () => MoveStation(-1)));
+        AddAction(Kit.Button("Bajar", "GhostButton", () => MoveStation(1)));
+
+        AddAction(Kit.Button("Editar", "GhostButton", EditStation), newGroup: true);
+        AddAction(Kit.Button("Cambiar nombre", "GhostButton", RenameStation));
+        AddAction(Kit.Button("Editar conexión", "GhostButton", EditConnection));
+
+        AddAction(Kit.Button("Configuración / token", "BlueButton", ShowConfig), newGroup: true);
+        AddAction(Kit.Button("Ver pantalla", "BlueButton", ShowScreen));
+        AddAction(Kit.Button("Bloquear", "GhostButton", LockStation));
+        AddAction(Kit.Button("Mensaje", "GhostButton", SendMessage));
+        AddAction(Kit.Button("Mantenimiento", "WarningButton", ToggleMaintenance));
+        AddAction(Kit.Button("Activar / desactivar", "GhostButton", ToggleActive));
+
+        AddAction(Kit.Button("Eliminar equipo", "DangerButton", DeleteStation), newGroup: true);
+
+        Grid.SetRow(actions, 1);
+        content.Children.Add(actions);
+
+        Grid.SetRow(_grid, 2);
         content.Children.Add(_grid);
 
         Grid.SetRow(content, 2);
         root.Children.Add(content);
 
         var footer = new Grid { Margin = new Thickness(0, 10, 0, 0) };
-        footer.Children.Add(_summaryText);
         var hint = Kit.Muted("Use «Subir» y «Bajar» para el orden manual. Cada equipo necesita su ID y token; use la IP LAN del servidor, no localhost.");
         hint.HorizontalAlignment = HorizontalAlignment.Right;
         footer.Children.Add(hint);
@@ -108,6 +158,12 @@ public sealed class StationsView : UserControl, IRefreshable
         Content = root;
 
         _grid.MouseDoubleClick += (_, _) => EditStation();
+
+        if (App.Session.Role == UserRole.Admin)
+        {
+            _grid.ContextMenu = BuildStationMenu();
+            _grid.PreviewMouseRightButtonDown += OnGridRightButtonDown;
+        }
 
         Loaded += async (_, _) => await Ui.Run(RefreshAsync, "No se pudieron cargar los equipos");
     }
@@ -121,6 +177,58 @@ public sealed class StationsView : UserControl, IRefreshable
     }
 
     private StationDto? Selected => (_grid.SelectedItem as StationRow)?.Source;
+
+    /// <summary>Menú contextual de cada equipo con las acciones del administrador.</summary>
+    private ContextMenu BuildStationMenu()
+    {
+        var menu = new ContextMenu
+        {
+            Background = Kit.Brush("SurfaceBrush"),
+            Foreground = Kit.Brush("TextBrush"),
+            BorderBrush = Kit.Brush("BorderBrush"),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(4)
+        };
+
+        menu.Items.Add(StationMenuItem("Cambiar nombre", RenameStation));
+        menu.Items.Add(StationMenuItem("Editar conexión", EditConnection));
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+        menu.Items.Add(StationMenuItem("Eliminar equipo", DeleteStation, danger: true));
+
+        return menu;
+    }
+
+    private static MenuItem StationMenuItem(string header, Action click, bool danger = false)
+    {
+        var item = new MenuItem
+        {
+            Header = L.T(header),
+            Foreground = Kit.Brush(danger ? "DangerBrush" : "TextBrush"),
+            Background = Brushes.Transparent,
+            Padding = new Thickness(12, 7, 12, 7),
+            FontSize = 12.5
+        };
+        item.Click += (_, _) => click();
+        return item;
+    }
+
+    /// <summary>Selecciona la fila sobre la que se hizo clic derecho antes de abrir el menú.</summary>
+    private void OnGridRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (FindAncestor<DataGridRow>(e.OriginalSource as DependencyObject) is not { Item: StationRow row })
+            return;
+
+        _grid.SelectedItem = row;
+        _grid.CurrentCell = new DataGridCellInfo(row, _grid.Columns[0]);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject
+    {
+        while (source is not null && source is not T)
+            source = VisualTreeHelper.GetParent(source);
+
+        return source as T;
+    }
 
     public async Task RefreshAsync()
     {
@@ -231,6 +339,57 @@ public sealed class StationsView : UserControl, IRefreshable
             await RefreshAsync();
         }, "No se pudo guardar el equipo");
     }
+
+    /// <summary>Cambia solo el nombre visible del equipo.</summary>
+    private void RenameStation()
+    {
+        if (Selected is not { } station)
+        {
+            Ui.Info("Seleccione un equipo de la lista.", "Equipos");
+            return;
+        }
+
+        var dialog = new PromptDialog("Cambiar nombre", "Nuevo nombre del equipo",
+            station.Name, "El nombre se muestra en el tablero y en la pantalla del cliente.")
+        { Owner = Window.GetWindow(this) };
+
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.Result)) return;
+
+        var newName = dialog.Result.Trim();
+        if (string.Equals(newName, station.Name, StringComparison.Ordinal)) return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.SaveStationAsync(station.Id,
+                ToSaveRequest(station, newName, station.IpAddress, station.MacAddress));
+            await RefreshAsync();
+        }, "No se pudo cambiar el nombre del equipo");
+    }
+
+    /// <summary>Edita la dirección IP y la MAC del equipo seleccionado.</summary>
+    private void EditConnection()
+    {
+        if (Selected is not { } station)
+        {
+            Ui.Info("Seleccione un equipo de la lista.", "Equipos");
+            return;
+        }
+
+        var dialog = new StationConnectionDialog(station) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true) return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.SaveStationAsync(station.Id,
+                ToSaveRequest(station, station.Name, dialog.IpAddress, dialog.MacAddress));
+            await RefreshAsync();
+        }, "No se pudo guardar la conexión del equipo");
+    }
+
+    private static SaveStationRequest ToSaveRequest(StationDto station, string name,
+        string? ip, string? mac)
+        => new(name, ip, mac, station.ZoneId, station.RateId, station.Notes, station.SortOrder,
+            station.Active, station.Kind, station.Platform, station.Controllers);
 
     private void ShowConfig()
     {
@@ -425,6 +584,36 @@ public sealed class StationRow
     public string LastSeen { get; }
     public string CurrentUser { get; }
     public string Active { get; }
+}
+
+/// <summary>Edita únicamente la dirección de red del equipo.</summary>
+public sealed class StationConnectionDialog : FormDialog
+{
+    private readonly TextBox _ip;
+    private readonly TextBox _mac;
+
+    public string? IpAddress { get; private set; }
+    public string? MacAddress { get; private set; }
+
+    public StationConnectionDialog(StationDto station)
+        : base($"Conexión de {station.Name}",
+            "Dirección de red que usa el equipo para reportar al servidor.")
+    {
+        _ip = Add(new TextBox { Text = station.IpAddress ?? string.Empty },
+            "Dirección IP (opcional)");
+        _mac = Add(new TextBox { Text = station.MacAddress ?? string.Empty },
+            "Dirección MAC (opcional)");
+
+        AddNote("La MAC se usa para encender el equipo con Wake on LAN. " +
+                "El token de vinculación se consulta en «Configuración / token».");
+    }
+
+    protected override void OnAccept()
+    {
+        IpAddress = string.IsNullOrWhiteSpace(_ip.Text) ? null : _ip.Text.Trim();
+        MacAddress = string.IsNullOrWhiteSpace(_mac.Text) ? null : _mac.Text.Trim();
+        base.OnAccept();
+    }
 }
 
 public sealed class StationDialog : FormDialog

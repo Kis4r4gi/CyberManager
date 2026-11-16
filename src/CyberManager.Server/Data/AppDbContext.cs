@@ -41,6 +41,7 @@ public class AppDbContext : DbContext
     public DbSet<Wallpaper> Wallpapers => Set<Wallpaper>();
     public DbSet<PromoVideo> PromoVideos => Set<PromoVideo>();
     public DbSet<WebFilterRule> WebFilterRules => Set<WebFilterRule>();
+    public DbSet<SharedNote> SharedNotes => Set<SharedNote>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -105,5 +106,6 @@ public class AppDbContext : DbContext
         b.Entity<SupplierPayment>().HasIndex(x => x.DateUtc);
         b.Entity<WebFilterRule>().HasIndex(x => x.Pattern);
         b.Entity<WebFilterRule>().HasIndex(x => x.Kind);
+        b.Entity<SharedNote>().HasIndex(x => x.CreatedUtc);
     }
 }

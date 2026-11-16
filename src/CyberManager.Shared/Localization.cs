@@ -90,11 +90,11 @@ public static class L
             ["Configuración"] = "Settings",
             ["Consola de administración"] = "Administration console",
             ["Actividad de los terminales"] = "Station activity",
-            ["BITÁCORA"] = "LOG",
+            ["REGISTRO"] = "LOG",
             ["0 eventos"] = "0 events",
             ["● En vivo"] = "● Live",
             ["Limpiar"] = "Clear",
-            ["Borrar los eventos de la bitácora"] = "Clear log events",
+            ["Borrar los eventos del registro"] = "Clear log events",
             ["TASA DEL DÍA"] = "TODAY'S RATE",
             ["Conectando..."] = "Connecting...",
             ["Usuario"] = "User",
@@ -547,7 +547,7 @@ public static class L
             ["Cerrar caja"] = "Close register",
             ["Capturar ahora"] = "Capture now",
             ["Actualizar automáticamente"] = "Refresh automatically",
-            ["Borrar los eventos de la bitácora"] = "Clear the log events",
+            ["Borrar los eventos del registro"] = "Clear the log events",
             ["Cambia el orden de la lista."] = "Changes the order of the list.",
             ["Aumenta la cantidad."] = "Increases the quantity.",
             ["Disminuye la cantidad."] = "Decreases the quantity.",
@@ -671,6 +671,41 @@ public static class L
             ["Buscar producto por nombre o código"] = "Search for a product by name or code",
             ["Número que aparece en Administración > Equipos"] =
                 "Number shown in Administration > Stations",
+            ["Inventario"] = "Inventory",
+            ["Movimientos de inventario"] = "Inventory movements",
+            ["Ver movimientos del producto"] = "View product movements",
+            ["Ver todos los movimientos"] = "View all movements",
+            ["Seleccione un producto para ver sus movimientos."] =
+                "Select a product to view its movements.",
+            ["Consulta las existencias y los movimientos del inventario."] =
+                "Views stock and inventory movements.",
+            ["Cambiar nombre"] = "Rename",
+            ["Cambia el nombre del equipo seleccionado."] = "Renames the selected station.",
+            ["Editar conexión"] = "Edit connection",
+            ["Cambia la dirección IP y la MAC del equipo."] =
+                "Changes the station IP address and MAC.",
+            ["Eliminar equipo"] = "Delete station",
+            ["Desactiva el equipo y limpia sus referencias."] =
+                "Deactivates the station and clears its references.",
+            ["Visibles para todos los usuarios"] = "Visible to all users",
+            ["Publicar nota"] = "Post note",
+            ["Publica la nota para todos los usuarios."] = "Posts the note for all users.",
+            ["Escriba una nota breve para compartirla con todos los usuarios."] =
+                "Write a short note to share it with all users.",
+            ["Escriba una nota antes de publicarla."] = "Write a note before posting it.",
+            ["Publicando..."] = "Posting...",
+            ["Nota publicada para todos los usuarios."] = "Note posted for all users.",
+            ["No se pudieron cargar las notas."] = "The notes could not be loaded.",
+            ["Aún no hay notas. Escriba la primera para compartirla con el equipo."] =
+                "There are no notes yet. Write the first one to share it with the team.",
+            ["Nombre del negocio configurado."] = "Configured business name.",
+            ["Arrastre para ajustar la altura del registro y las notas"] =
+                "Drag to adjust the height of the log and notes",
+            ["Buscar fondo"] = "Search wallpaper",
+            ["Buscar fondo por nombre o estado"] = "Search wallpaper by name or status",
+            ["Abre el registro completo en el Bloc de notas."] = "Opens the full log in Notepad.",
+            ["El registro está vacío. Todavía no hay eventos para mostrar."] =
+                "The log is empty. There are no events to show yet.",
         };
 
         return map;

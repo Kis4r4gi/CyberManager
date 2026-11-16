@@ -11,6 +11,8 @@ public static class SettingsKeys
     public const string BusinessTaxId = "BusinessTaxId";
     public const string BusinessAddress = "BusinessAddress";
     public const string BusinessPhone = "BusinessPhone";
+    /// <summary>Logo del negocio codificado como data URL. Se consulta por un endpoint aparte.</summary>
+    public const string BusinessLogo = "BusinessLogo";
     public const string CurrencySymbol = "CurrencySymbol";
     public const string LocalCurrencySymbol = "LocalCurrencySymbol";
     public const string DefaultTaxRate = "DefaultTaxRate";
@@ -95,8 +97,9 @@ public class SettingsService
 
     public async Task<Dictionary<string, string>> GetAllAsync()
         => await _db.Settings.AsNoTracking()
-            // La contraseña SMTP nunca se expone a las consolas ni a las estaciones.
-            .Where(x => x.Key != SettingsKeys.SmtpPassword)
+            // La contraseña SMTP y el logo nunca se exponen en el volcado general;
+            // el logo se consulta mediante /api/settings/business-logo.
+            .Where(x => x.Key != SettingsKeys.SmtpPassword && x.Key != SettingsKeys.BusinessLogo)
             .ToDictionaryAsync(x => x.Key, x => x.Value);
 
     public async Task SetAsync(string key, string value, string? description = null)

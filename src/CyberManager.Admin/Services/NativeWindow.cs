@@ -70,4 +70,76 @@ public static class NativeWindow
         window.Left = area.Left + (area.Width - width) / 2;
         window.Top = area.Top + (area.Height - height) / 2;
     }
+
+    /// <summary>
+    /// Aplica una posición y un tamaño guardados. Si no hay datos, centra la
+    /// ventana como antes. También evita que quede fuera de las pantallas.
+    /// </summary>
+    public static void RestorePlacement(Window window, WindowPlacement? placement)
+    {
+        if (placement is null || placement.Width <= 0 || placement.Height <= 0)
+        {
+            FitToWorkArea(window);
+            return;
+        }
+
+        var virtualLeft = SystemParameters.VirtualScreenLeft;
+        var virtualTop = SystemParameters.VirtualScreenTop;
+        var virtualWidth = SystemParameters.VirtualScreenWidth;
+        var virtualHeight = SystemParameters.VirtualScreenHeight;
+        if (virtualWidth <= 0 || virtualHeight <= 0)
+        {
+            FitToWorkArea(window);
+            return;
+        }
+
+        var maxWidth = Math.Max(480, virtualWidth - 24);
+        var maxHeight = Math.Max(360, virtualHeight - 24);
+
+        if (window.MinWidth > maxWidth) window.MinWidth = maxWidth;
+        if (window.MinHeight > maxHeight) window.MinHeight = maxHeight;
+
+        var width = Math.Min(Math.Max(placement.Width, window.MinWidth), maxWidth);
+        var height = Math.Min(Math.Max(placement.Height, window.MinHeight), maxHeight);
+
+        // Deje visible al menos una franja de la ventana aunque haya cambiado
+        // la disposición de los monitores.
+        const double visibleEdge = 80;
+        var left = Math.Clamp(placement.Left,
+            virtualLeft - width + visibleEdge,
+            virtualLeft + virtualWidth - visibleEdge);
+        var top = Math.Clamp(placement.Top,
+            virtualTop,
+            virtualTop + virtualHeight - 40);
+
+        window.Width = width;
+        window.Height = height;
+        window.Left = left;
+        window.Top = top;
+
+        if (placement.Maximized) window.WindowState = WindowState.Maximized;
+    }
+
+    /// <summary>Mantiene la ventana dentro del escritorio sin recentrarla.</summary>
+    public static void EnsureVisible(Window window)
+    {
+        if (window.WindowState != WindowState.Normal) return;
+
+        var virtualLeft = SystemParameters.VirtualScreenLeft;
+        var virtualTop = SystemParameters.VirtualScreenTop;
+        var virtualWidth = SystemParameters.VirtualScreenWidth;
+        var virtualHeight = SystemParameters.VirtualScreenHeight;
+        if (virtualWidth <= 0 || virtualHeight <= 0) return;
+
+        var width = window.ActualWidth > 0 ? window.ActualWidth : window.Width;
+        var height = window.ActualHeight > 0 ? window.ActualHeight : window.Height;
+
+        const double visibleEdge = 80;
+        window.Left = Math.Clamp(window.Left,
+            virtualLeft - width + visibleEdge,
+            virtualLeft + virtualWidth - visibleEdge);
+        window.Top = Math.Clamp(window.Top,
+            virtualTop,
+            virtualTop + virtualHeight - 40);
+    }
 }

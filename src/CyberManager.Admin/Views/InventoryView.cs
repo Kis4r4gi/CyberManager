@@ -16,7 +16,7 @@ public sealed class InventoryView : UserControl, IRefreshable
     private readonly TextBox _costBox = new();
     private readonly TextBox _referenceBox = new();
     private readonly TextBox _notesBox = new();
-    private readonly TextBlock _kardexTitle = Kit.Muted("Kardex general");
+    private readonly TextBlock _kardexTitle = Kit.Muted("Movimientos de inventario");
     private readonly TextBlock _summaryText = Kit.Muted("Cargando inventario...");
 
     private List<ProductDto> _products = new();
@@ -28,7 +28,7 @@ public sealed class InventoryView : UserControl, IRefreshable
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        root.Children.Add(Kit.PageHeader("Inventario y kardex",
+        root.Children.Add(Kit.PageHeader("Inventario",
             "Existencias, ajustes, mermas y trazabilidad de cada producto.",
             Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync())));
 
@@ -119,7 +119,7 @@ public sealed class InventoryView : UserControl, IRefreshable
 
         var stockHeader = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         stockHeader.Children.Add(Kit.Section("Existencias"));
-        var kardexButton = Kit.SmallButton("Ver kardex del producto seleccionado", "GhostButton", FilterKardex);
+        var kardexButton = Kit.SmallButton("Ver movimientos del producto", "GhostButton", FilterKardex);
         kardexButton.HorizontalAlignment = HorizontalAlignment.Right;
         stockHeader.Children.Add(kardexButton);
 
@@ -136,7 +136,7 @@ public sealed class InventoryView : UserControl, IRefreshable
 
         var kardexHeader = new Grid { Margin = new Thickness(0, 0, 0, 8) };
         kardexHeader.Children.Add(_kardexTitle);
-        var allButton = Kit.SmallButton("Ver todo el kardex", "GhostButton", ShowAllKardex);
+        var allButton = Kit.SmallButton("Ver todos los movimientos", "GhostButton", ShowAllKardex);
         allButton.HorizontalAlignment = HorizontalAlignment.Right;
         kardexHeader.Children.Add(allButton);
 
@@ -204,25 +204,27 @@ public sealed class InventoryView : UserControl, IRefreshable
         _movementsGrid.ItemsSource = movements.Select(m => new KardexRow(m)).ToList();
 
         var product = _products.FirstOrDefault(p => p.Id == _kardexProductId);
-        _kardexTitle.Text = product is null ? "Kardex general" : $"Kardex · {product.Name}";
+        _kardexTitle.Text = product is null
+            ? "Movimientos de inventario"
+            : $"Movimientos · {product.Name}";
     }
 
     private void FilterKardex()
     {
         if (_productBox.SelectedItem is not Option<ProductDto> option)
         {
-            Ui.Info("Seleccione un producto para ver su kardex.", "Kardex");
+            Ui.Info("Seleccione un producto para ver sus movimientos.", "Inventario");
             return;
         }
 
         _kardexProductId = option.Value.Id;
-        _ = Ui.Run(LoadKardexAsync, "No se pudo cargar el kardex");
+        _ = Ui.Run(LoadKardexAsync, "No se pudieron cargar los movimientos");
     }
 
     private void ShowAllKardex()
     {
         _kardexProductId = null;
-        _ = Ui.Run(LoadKardexAsync, "No se pudo cargar el kardex");
+        _ = Ui.Run(LoadKardexAsync, "No se pudieron cargar los movimientos");
     }
 
     private void SubmitMovement()

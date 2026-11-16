@@ -1,4 +1,9 @@
+using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -20,7 +25,17 @@ public sealed class WallpapersView : UserControl, IRefreshable
         new(WallpaperMode.Slideshow, "Presentación rotativa")
     };
 
+    /// <summary>Carpeta de intercambio para administrar los fondos como archivos.</summary>
+    private static readonly string ExchangeFolder = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "CyberManager", "Admin", "Fondos");
+
+    private const string ExchangeManifest = "_sincronizacion.json";
+    private const string ExchangeReadme = "_LEEME.txt";
+    private static readonly string[] ImageExtensions = { ".png", ".jpg", ".jpeg", ".gif", ".bmp" };
+
     private readonly WrapPanel _gallery = new() { Margin = new Thickness(0, 4, 0, 0) };
+    private readonly TextBox _searchBox = new();
     private readonly TextBlock _galleryStatus = Kit.Muted("Cargando galería...");
     private readonly ComboBox _modeCombo = Kit.Combo(Modes);
     private readonly ComboBox _singleCombo = new() { DisplayMemberPath = nameof(Option<object>.DisplayText) };
@@ -66,20 +81,64 @@ public sealed class WallpapersView : UserControl, IRefreshable
         root.Children.Add(Kit.PageHeader("Fondos de pantalla",
             "Imágenes que verán los clientes mientras el equipo está bloqueado. Los cambios se envían al instante.",
             Kit.Button("Subir imágenes", "PrimaryButton", Upload),
-            Kit.Button("Reenviar a equipos", "GhostButton", RefreshClients),
-            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync())));
+            Kit.Button("Buscar en internet", "GhostButton", SearchOnInternet)));
 
         var body = new Grid { Margin = new Thickness(0, 4, 0, 0) };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(370) });
 
         // ---------- Galería ----------
-        var galleryHeader = Kit.HStack(12, _galleryStatus);
-        galleryHeader.Margin = new Thickness(0, 0, 0, 6);
+        _searchBox.Width = 200;
+        _searchBox.VerticalAlignment = VerticalAlignment.Center;
+        _searchBox.ToolTip = L.T("Buscar fondo por nombre o estado");
+        _searchBox.TextChanged += (_, _) => BuildGallery();
+
+        var search = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        search.Children.Add(new TextBlock
+        {
+            Text = L.T("Buscar fondo"),
+            Style = Kit.Style("Label"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0)
+        });
+        search.Children.Add(_searchBox);
+
+        _galleryStatus.HorizontalAlignment = HorizontalAlignment.Right;
+        _galleryStatus.VerticalAlignment = VerticalAlignment.Center;
+        _galleryStatus.Margin = new Thickness(8, 0, 0, 0);
+
+        var galleryHeader = new Grid { Margin = new Thickness(0, 0, 0, 6) };
+        galleryHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        galleryHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        galleryHeader.Children.Add(search);
+        Grid.SetColumn(_galleryStatus, 1);
+        galleryHeader.Children.Add(_galleryStatus);
+
+        var toolbarRight = Kit.HStack(8,
+            Kit.Button("Reenviar a equipos", "GhostButton", RefreshClients),
+            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync()));
+        toolbarRight.HorizontalAlignment = HorizontalAlignment.Right;
+        toolbarRight.VerticalAlignment = VerticalAlignment.Center;
+
+        var galleryToolbar = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        galleryToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        galleryToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        galleryToolbar.Children.Add(Kit.HStack(8,
+            Kit.Button("Abrir carpeta", "GhostButton", OpenExchangeFolder),
+            Kit.Button("Sincronizar carpeta", "GhostButton", () => _ = SyncExchangeFolderAsync())));
+        Grid.SetColumn(toolbarRight, 1);
+        galleryToolbar.Children.Add(toolbarRight);
 
         var galleryContent = new Grid();
         galleryContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        galleryContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         galleryContent.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        galleryContent.Children.Add(galleryToolbar);
+        Grid.SetRow(galleryHeader, 1);
         galleryContent.Children.Add(galleryHeader);
 
         var scroll = new ScrollViewer
@@ -88,7 +147,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
-        Grid.SetRow(scroll, 1);
+        Grid.SetRow(scroll, 2);
         galleryContent.Children.Add(scroll);
 
         var galleryCard = Kit.Card(galleryContent, 16);
@@ -120,9 +179,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
             Kit.Field("Modo", _modeCombo),
             Kit.Field("Fondo fijo", _singleCombo),
             Kit.Field("Segundos entre imágenes (5 a 3600)", _secondsBox),
-            Kit.HStack(8,
-                Kit.Button("Guardar y aplicar", "PrimaryButton", ApplySettings),
-                Kit.Button("Vista previa", "GhostButton", RefreshClients)),
+            Kit.Button("Guardar y aplicar", "PrimaryButton", ApplySettings),
             _applyStatus);
 
         var detailBody = Kit.VStack(8,
@@ -188,10 +245,31 @@ public sealed class WallpapersView : UserControl, IRefreshable
             return;
         }
 
-        var active = _wallpapers.Count(w => w.Active);
-        _galleryStatus.Text = $"{_wallpapers.Count} fondo(s) · {active} activo(s) para la presentación.";
+        var term = _searchBox.Text.Trim();
+        var filtered = term.Length == 0
+            ? _wallpapers
+            : _wallpapers.Where(w =>
+                w.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                StatusText(w).Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        foreach (var wallpaper in _wallpapers.OrderBy(w => w.SortOrder).ThenBy(w => w.Name))
+        var active = _wallpapers.Count(w => w.Active);
+        _galleryStatus.Text = term.Length == 0
+            ? $"{_wallpapers.Count} fondo(s) · {active} activo(s) para la presentación."
+            : $"{filtered.Count} de {_wallpapers.Count} fondo(s) · {active} activo(s).";
+
+        if (filtered.Count == 0)
+        {
+            _gallery.Children.Add(new Border
+            {
+                Style = Kit.Style("Panel"),
+                Padding = new Thickness(20),
+                Margin = new Thickness(0, 4, 8, 8),
+                Child = Kit.Muted($"No hay fondos que coincidan con «{term}».")
+            });
+            return;
+        }
+
+        foreach (var wallpaper in filtered.OrderBy(w => w.SortOrder).ThenBy(w => w.Name))
             _gallery.Children.Add(BuildCard(wallpaper));
 
         UpdateSelectionVisuals();
@@ -438,6 +516,20 @@ public sealed class WallpapersView : UserControl, IRefreshable
         _ = UploadFilesAsync(dialog.FileNames);
     }
 
+    /// <summary>Abre el buscador de fondos en internet y refresca la galería si se agregó alguno.</summary>
+    private void SearchOnInternet()
+    {
+        var window = new InternetWallpapersWindow();
+        var owner = Window.GetWindow(this);
+        if (owner is not null && !ReferenceEquals(owner, window))
+            window.Owner = owner;
+
+        window.ShowDialog();
+
+        if (window.AddedCount > 0)
+            _ = Ui.Run(RefreshAsync, "No se pudo actualizar la galería");
+    }
+
     private async Task UploadFilesAsync(IEnumerable<string> files)
     {
         var list = files.ToList();
@@ -467,6 +559,244 @@ public sealed class WallpapersView : UserControl, IRefreshable
             Ui.Error(string.Join("\n", errors), $"No se subieron {errors.Count} imagen(es)");
         else if (uploaded > 0)
             Ui.Info($"{uploaded} fondo(s) agregados a la galería.", "Galería actualizada");
+    }
+
+    // ============================================================
+    //  Carpeta de intercambio
+    // ============================================================
+
+    /// <summary>Exporta la galería a una carpeta local y la abre en el Explorador.</summary>
+    private async void OpenExchangeFolder()
+    {
+        await Ui.Run(async () =>
+        {
+            Directory.CreateDirectory(ExchangeFolder);
+            await ExportToExchangeFolderAsync();
+            Process.Start(new ProcessStartInfo { FileName = ExchangeFolder, UseShellExecute = true });
+        }, "No se pudo abrir la carpeta de fondos");
+    }
+
+    /// <summary>Copia a la carpeta los fondos que aún no tienen archivo y actualiza el manifiesto.</summary>
+    private async Task ExportToExchangeFolderAsync()
+    {
+        Directory.CreateDirectory(ExchangeFolder);
+
+        var entries = LoadExchangeEntries();
+
+        // Los fondos eliminados desde la consola también se quitan de la carpeta.
+        foreach (var stale in entries.Values.Where(e => _wallpapers.All(w => w.Id != e.Id)).ToList())
+        {
+            var stalePath = Path.Combine(ExchangeFolder, stale.File);
+            if (File.Exists(stalePath)) File.Delete(stalePath);
+            entries.Remove(stale.Id);
+        }
+
+        var usedNames = new HashSet<string>(
+            entries.Values.Select(e => e.File), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var wallpaper in _wallpapers.OrderBy(w => w.SortOrder).ThenBy(w => w.Name))
+        {
+            if (entries.TryGetValue(wallpaper.Id, out var entry) &&
+                File.Exists(Path.Combine(ExchangeFolder, entry.File)))
+                continue;
+
+            var fileName = BuildExchangeFileName(wallpaper, usedNames);
+            var path = Path.Combine(ExchangeFolder, fileName);
+            var data = await App.Api.WallpaperFileAsync(wallpaper.Id);
+            await File.WriteAllBytesAsync(path, data);
+
+            entries[wallpaper.Id] = new ExchangeEntry
+            {
+                Id = wallpaper.Id,
+                File = fileName,
+                Sha256 = wallpaper.Sha256
+            };
+            usedNames.Add(fileName);
+        }
+
+        SaveExchangeEntries(entries);
+        WriteExchangeReadme();
+    }
+
+    /// <summary>
+    /// Importa las imágenes nuevas y reemplaza las que cambiaron en la carpeta de intercambio.
+    /// La comparación se hace con el hash guardado en el manifiesto.
+    /// </summary>
+    private async Task SyncExchangeFolderAsync()
+    {
+        if (!Directory.Exists(ExchangeFolder))
+        {
+            Ui.Info("La carpeta todavía no existe. Use «Abrir carpeta» para crearla.", "Carpeta de fondos");
+            return;
+        }
+
+        var entries = LoadExchangeEntries();
+        var byFile = entries.Values
+            .GroupBy(e => e.File, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var files = Directory.EnumerateFiles(ExchangeFolder)
+            .Where(f => ImageExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
+            .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var added = 0;
+        var updated = 0;
+        var errors = new List<string>();
+        var nextOrder = (_wallpapers.Count == 0 ? 0 : _wallpapers.Max(w => w.SortOrder)) + 1;
+
+        foreach (var file in files)
+        {
+            var fileName = Path.GetFileName(file);
+            try
+            {
+                var data = await File.ReadAllBytesAsync(file);
+                if (data.Length == 0) continue;
+                if (data.Length > ImageInspector.MaxBytes)
+                {
+                    errors.Add($"{fileName}: supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
+                    continue;
+                }
+
+                var sha = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+                var contentType = ContentType(fileName);
+
+                if (byFile.TryGetValue(fileName, out var entry) &&
+                    _wallpapers.FirstOrDefault(w => w.Id == entry.Id) is { } current)
+                {
+                    if (string.Equals(entry.Sha256, sha, StringComparison.OrdinalIgnoreCase))
+                        continue; // Sin cambios desde la última exportación.
+
+                    await App.Api.UpdateWallpaperFileAsync(entry.Id, fileName, data, contentType,
+                        current.Name, current.SortOrder, current.Active);
+                    entry.Sha256 = sha;
+                    updated++;
+                }
+                else
+                {
+                    if (entry is not null) entries.Remove(entry.Id); // Referencia a un fondo eliminado.
+
+                    var (name, order) = ParseExchangeFileName(fileName, nextOrder);
+                    var created = await App.Api.UploadWallpaperAsync(fileName, data, contentType, name, order);
+
+                    var createdEntry = new ExchangeEntry
+                    {
+                        Id = created.Id,
+                        File = fileName,
+                        Sha256 = created.Sha256
+                    };
+                    entries[created.Id] = createdEntry;
+                    byFile[fileName] = createdEntry;
+                    nextOrder = Math.Max(nextOrder, order + 1);
+                    added++;
+                }
+
+                SaveExchangeEntries(entries);
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{fileName}: {ex.Message}");
+            }
+        }
+
+        await RefreshAsync();
+
+        if (errors.Count > 0)
+            Ui.Error(string.Join("\n", errors), "Sincronización incompleta");
+        else if (added == 0 && updated == 0)
+            Ui.Info("No hay imágenes nuevas ni modificadas en la carpeta.", "Carpeta de fondos");
+        else
+            Ui.Info($"{added} fondo(s) agregados y {updated} actualizado(s).", "Carpeta de fondos");
+    }
+
+    private static Dictionary<int, ExchangeEntry> LoadExchangeEntries()
+    {
+        var path = Path.Combine(ExchangeFolder, ExchangeManifest);
+        try
+        {
+            if (!File.Exists(path)) return new();
+
+            var list = JsonSerializer.Deserialize<List<ExchangeEntry>>(File.ReadAllText(path));
+            return (list ?? new List<ExchangeEntry>())
+                .Where(e => e.Id > 0 && !string.IsNullOrWhiteSpace(e.File))
+                .GroupBy(e => e.Id)
+                .ToDictionary(g => g.Key, g => g.First());
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    private static void SaveExchangeEntries(Dictionary<int, ExchangeEntry> entries)
+    {
+        var path = Path.Combine(ExchangeFolder, ExchangeManifest);
+        var json = JsonSerializer.Serialize(entries.Values.OrderBy(e => e.Id).ToList(),
+            new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(path, json, new UTF8Encoding(true));
+    }
+
+    private static void WriteExchangeReadme()
+    {
+        var lines = new[]
+        {
+            "CyberManager · Carpeta de fondos",
+            string.Empty,
+            "Esta carpeta sincroniza la galería de fondos con el servidor.",
+            string.Empty,
+            "· Para agregar un fondo, copie una imagen PNG, JPG, GIF o BMP aquí",
+            "  y pulse «Sincronizar carpeta» en la consola.",
+            "· Para reemplazar un fondo, edite su archivo y guárdelo con el mismo nombre.",
+            "  Al sincronizar, la galería se actualiza con la nueva imagen.",
+            "· El número al inicio del nombre indica el orden (001, 002, ...).",
+            "· Para eliminar un fondo, use el botón «Eliminar» de la consola.",
+            "· Las imágenes pueden pesar hasta 20 MB.",
+            string.Empty,
+            "El archivo _sincronizacion.json lo usa la consola para detectar cambios; no lo edite."
+        };
+
+        File.WriteAllText(Path.Combine(ExchangeFolder, ExchangeReadme),
+            string.Join(Environment.NewLine, lines), new UTF8Encoding(true));
+    }
+
+    private static string BuildExchangeFileName(WallpaperDto wallpaper, HashSet<string> used)
+    {
+        var name = SanitizeFileName(wallpaper.Name);
+        if (name.Length == 0) name = $"Fondo {wallpaper.Id}";
+
+        var baseName = $"{wallpaper.SortOrder:000} - {name}";
+        var candidate = baseName + wallpaper.Extension;
+        var copy = 2;
+        while (used.Contains(candidate))
+            candidate = $"{baseName} ({copy++}){wallpaper.Extension}";
+
+        return candidate;
+    }
+
+    private static (string Name, int SortOrder) ParseExchangeFileName(string fileName, int fallbackOrder)
+    {
+        var bare = Path.GetFileNameWithoutExtension(fileName).Trim();
+        var match = Regex.Match(bare, @"^(\d{1,4})\s*[-–]\s*(.+)$");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var order))
+            return (match.Groups[2].Value.Trim(), order);
+
+        return (bare.Length == 0 ? "Fondo" : bare, fallbackOrder);
+    }
+
+    private static string SanitizeFileName(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(value.Select(c => invalid.Contains(c) ? '-' : c).ToArray())
+            .Trim()
+            .TrimEnd('.');
+        return cleaned.Length > 80 ? cleaned[..80].TrimEnd() : cleaned;
+    }
+
+    private sealed class ExchangeEntry
+    {
+        public int Id { get; set; }
+        public string File { get; set; } = string.Empty;
+        public string Sha256 { get; set; } = string.Empty;
     }
 
     private async void ApplySettings()

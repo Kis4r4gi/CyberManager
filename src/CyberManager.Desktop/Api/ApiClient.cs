@@ -109,8 +109,17 @@ public class ApiClient
     }
 
     /// <summary>Envía un archivo como formulario multipart junto con campos adicionales.</summary>
-    public async Task<T> PostFileAsync<T>(string path, string fieldName, string fileName,
+    public Task<T> PostFileAsync<T>(string path, string fieldName, string fileName,
         string contentType, byte[] data, IEnumerable<KeyValuePair<string, string>>? fields = null)
+        => SendFileAsync<T>(HttpMethod.Post, path, fieldName, fileName, contentType, data, fields);
+
+    /// <summary>Reemplaza un archivo existente mediante un formulario multipart.</summary>
+    public Task<T> PutFileAsync<T>(string path, string fieldName, string fileName,
+        string contentType, byte[] data, IEnumerable<KeyValuePair<string, string>>? fields = null)
+        => SendFileAsync<T>(HttpMethod.Put, path, fieldName, fileName, contentType, data, fields);
+
+    private async Task<T> SendFileAsync<T>(HttpMethod method, string path, string fieldName,
+        string fileName, string contentType, byte[] data, IEnumerable<KeyValuePair<string, string>>? fields)
     {
         using var content = new MultipartFormDataContent();
         var file = new ByteArrayContent(data);
@@ -123,7 +132,7 @@ public class ApiClient
                 content.Add(new StringContent(field.Value ?? string.Empty), field.Key);
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, path.TrimStart('/')) { Content = content };
+        using var request = new HttpRequestMessage(method, path.TrimStart('/')) { Content = content };
         if (Token is not null) request.Headers.Authorization = new("Bearer", Token);
         foreach (var header in Headers)
             request.Headers.TryAddWithoutValidation(header.Key, header.Value);

@@ -76,6 +76,15 @@ public static class DbSeeder
             );
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Pattern" ON "WebFilterRules" ("Pattern");
             CREATE INDEX IF NOT EXISTS "IX_WebFilterRules_Kind" ON "WebFilterRules" ("Kind");
+
+            CREATE TABLE IF NOT EXISTS "SharedNotes" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_SharedNotes" PRIMARY KEY AUTOINCREMENT,
+                "Text" TEXT NOT NULL,
+                "UserId" INTEGER NULL,
+                "AuthorName" TEXT NOT NULL,
+                "CreatedUtc" TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_SharedNotes_CreatedUtc" ON "SharedNotes" ("CreatedUtc");
             """);
 
         // Columnas añadidas para el control de consolas de videojuegos.

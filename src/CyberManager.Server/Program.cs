@@ -188,6 +188,7 @@ app.MapNotificationEndpoints();
 app.MapWallpaperEndpoints();
 app.MapPromoVideoEndpoints();
 app.MapWebFilterEndpoints();
+app.MapSharedNoteEndpoints();
 app.MapBackupEndpoints();
 app.MapUpdateEndpoints();
 

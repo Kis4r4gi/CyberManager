@@ -513,6 +513,41 @@ public static class CatalogEndpoints
             await settings.SetManyAsync(values);
             return Results.Ok(await settings.GetAllAsync());
         }).RequireAuthorization("Admin");
+
+        // El logo se guarda aparte para no inflar el volcado general de configuración.
+        g.MapGet("/business-logo", async (SettingsService settings) =>
+        {
+            var dataUrl = await settings.GetAsync(SettingsKeys.BusinessLogo);
+            return Results.Ok(new BusinessLogoDto(string.IsNullOrWhiteSpace(dataUrl) ? null : dataUrl));
+        });
+
+        g.MapPut("/business-logo", async (SaveBusinessLogoRequest req, SettingsService settings) =>
+        {
+            var dataUrl = req.DataUrl?.Trim() ?? string.Empty;
+
+            if (dataUrl.Length == 0)
+            {
+                await settings.SetAsync(SettingsKeys.BusinessLogo, string.Empty);
+                return Results.Ok(new BusinessLogoDto(null));
+            }
+
+            if (!dataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
+                || !dataUrl.Contains(";base64,", StringComparison.OrdinalIgnoreCase))
+                throw new AppException("El logo debe ser una imagen válida.");
+
+            // 512 × 512 en PNG suele ocupar menos de 1 MB; el límite protege la base.
+            if (dataUrl.Length > 4_000_000)
+                throw new AppException("El logo es demasiado grande. Use una imagen más pequeña.");
+
+            await settings.SetAsync(SettingsKeys.BusinessLogo, dataUrl);
+            return Results.Ok(new BusinessLogoDto(dataUrl));
+        }).RequireAuthorization("Admin");
+
+        g.MapDelete("/business-logo", async (SettingsService settings) =>
+        {
+            await settings.SetAsync(SettingsKeys.BusinessLogo, string.Empty);
+            return Results.NoContent();
+        }).RequireAuthorization("Admin");
     }
 
     private static void MapBootstrap(IEndpointRouteBuilder app)

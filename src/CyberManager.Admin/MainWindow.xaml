@@ -23,15 +23,20 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
-                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentBrush}">
-                        <TextBlock Text="C" FontSize="20" FontWeight="Bold" Foreground="#04131B"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="CyberManager" FontSize="15" FontWeight="Bold" />
-                        <TextBlock x:Name="BusinessText" Text="Consola de administración"
-                                   Style="{StaticResource Muted}" FontSize="11" />
-                    </StackPanel>
+                    <Grid Width="34" Height="34">
+                        <Border x:Name="LogoFallback" CornerRadius="10" Background="{StaticResource AccentBrush}">
+                            <TextBlock Text="C" FontSize="20" FontWeight="Bold" Foreground="#04131B"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border x:Name="LogoFrame" CornerRadius="10" Background="Transparent"
+                                ClipToBounds="True" Visibility="Collapsed">
+                            <Image x:Name="LogoImage" Stretch="Uniform" />
+                        </Border>
+                    </Grid>
+                    <TextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="16" FontWeight="Bold"
+                               Margin="11,0,0,0" VerticalAlignment="Center" MaxWidth="260"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="Consola de administración" />
                 </StackPanel>
 
                 <Border Grid.Column="2" Background="{StaticResource ChipBrush}" BorderBrush="{StaticResource BorderBrush}"
@@ -107,10 +112,10 @@
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavButton}" CommandParameter="inventory" Click="Nav_Click"
-                                    ToolTip="Consulta el inventario y el kardex.">
+                                    ToolTip="Consulta las existencias y los movimientos del inventario.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
-                                    <TextBlock Text="Inventario y kardex" />
+                                    <TextBlock Text="Inventario" />
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavButton}" CommandParameter="purchases" Click="Nav_Click"
@@ -210,38 +215,94 @@
                 <ContentControl x:Name="ContentHost" Margin="18" />
             </Grid>
 
-            <!-- ================= Bitácora de terminales ================= -->
+            <!-- ================= Notas y registro de terminales ================= -->
             <Border x:Name="LogHost" Grid.Column="4" Background="{StaticResource SidebarBrush}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition x:Name="NotesRow" Height="3*" MinHeight="190" />
+                        <RowDefinition x:Name="LogSplitRow" Height="4" />
+                        <RowDefinition x:Name="LogRow" Height="2*" MinHeight="150" />
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="14,14,12,8" LastChildFill="False">
-                        <StackPanel DockPanel.Dock="Left">
-                            <TextBlock Text="BITÁCORA" Style="{StaticResource Label}" Margin="0" />
-                            <TextBlock Text="Actividad de los terminales" Style="{StaticResource Muted}" FontSize="11" />
-                        </StackPanel>
-                        <Button DockPanel.Dock="Right" Content="Limpiar" Style="{StaticResource GhostButton}"
-                                FontSize="11" Padding="10,4" VerticalAlignment="Top"
-                                Click="ClearLog_Click" ToolTip="Borrar los eventos de la bitácora" />
-                    </DockPanel>
+                    <!-- Registro de terminales -->
+                    <Grid x:Name="LogSection" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                    <ScrollViewer x:Name="LogScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="LogPanel" Margin="12,0,10,8" />
-                    </ScrollViewer>
+                        <DockPanel Grid.Row="0" Margin="14,14,12,8" LastChildFill="False">
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="REGISTRO" Style="{StaticResource Label}" Margin="0" />
+                                <TextBlock Text="Actividad de los terminales" Style="{StaticResource Muted}" FontSize="11" />
+                            </StackPanel>
+                            <Button DockPanel.Dock="Right" Content="Abrir" Style="{StaticResource GhostButton}"
+                                    FontSize="11" Padding="10,4" VerticalAlignment="Top"
+                                    Click="OpenLogInNotepad_Click" ToolTip="Abre el registro completo en el Bloc de notas." />
+                        </DockPanel>
 
-                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,8">
-                        <Grid>
-                            <TextBlock x:Name="LogCountText" Text="0 eventos" Style="{StaticResource Muted}" FontSize="10" />
-                            <TextBlock Text="● En vivo" FontSize="10" Foreground="{StaticResource SuccessBrush}"
-                                       HorizontalAlignment="Right" />
-                        </Grid>
-                    </Border>
+                        <ScrollViewer x:Name="LogScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="LogPanel" Margin="12,0,10,8" />
+                        </ScrollViewer>
+
+                        <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,8">
+                            <Grid>
+                                <TextBlock x:Name="LogCountText" Text="0 eventos" Style="{StaticResource Muted}" FontSize="10" />
+                                <TextBlock Text="● En vivo" FontSize="10" Foreground="{StaticResource SuccessBrush}"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <GridSplitter x:Name="LogSectionSplitter" Grid.Row="1" Height="4"
+                                  HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                  Background="{StaticResource BorderBrush}"
+                                  ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                                  ShowsPreview="False" Cursor="SizeNS"
+                                  ToolTip="Arrastre para ajustar la altura del registro y las notas" />
+
+                    <!-- Notas visibles para todos los usuarios -->
+                    <Grid x:Name="NotesSection" Grid.Row="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Grid.Row="0" Margin="14,12,12,8" LastChildFill="False">
+                            <StackPanel DockPanel.Dock="Left">
+                                <TextBlock Text="NOTAS" Style="{StaticResource Label}" Margin="0" />
+                                <TextBlock Text="Visibles para todos los usuarios" Style="{StaticResource Muted}" FontSize="11" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ScrollViewer x:Name="NotesScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="NotesPanel" Margin="12,0,10,8" />
+                        </ScrollViewer>
+
+                        <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBox x:Name="NoteInput" MinHeight="52" MaxHeight="150" AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         ToolTip="Escriba una nota breve para compartirla con todos los usuarios." />
+                                <Grid Grid.Row="1" Margin="0,6,0,0">
+                                    <TextBlock x:Name="NoteStatusText" Style="{StaticResource Muted}" FontSize="10"
+                                               VerticalAlignment="Center" />
+                                    <Button Content="Publicar nota" Style="{StaticResource PrimaryButton}"
+                                            FontSize="11" Padding="10,4" HorizontalAlignment="Right"
+                                            Click="PublishNote_Click" ToolTip="Publica la nota para todos los usuarios." />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
 
@@ -254,7 +315,7 @@
                           VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}"
                           ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
                           ShowsPreview="False" Cursor="SizeWE"
-                          ToolTip="Arrastre para ajustar el ancho de la bitácora" />
+                          ToolTip="Arrastre para ajustar el ancho del panel derecho" />
         </Grid>
     </Grid>
     </Border>

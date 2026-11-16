@@ -10,8 +10,8 @@
     instalación, por lo que se mantiene la separación entre servidor y estación.
 
 .PARAMETER Version
-    Versión explícita (por ejemplo 1.0.5). Si se omite, el número de compilación
-    (patch) se incrementa automáticamente en version.props antes de publicar.
+    Versión explícita (por ejemplo 1.1.1). Si se omite, la versión menor se incrementa
+    automáticamente y el patch vuelve a cero (1.1.1 -> 1.2.0) en version.props antes de publicar.
 
 .PARAMETER NoBump
     Usa la versión actual de version.props sin incrementarla.
@@ -48,7 +48,7 @@
     .\scripts\build-installer.ps1
 
 .EXAMPLE
-    .\scripts\build-installer.ps1 -Version 1.1.0
+    .\scripts\build-installer.ps1 -Version 1.2.0
 
 .EXAMPLE
     .\scripts\build-installer.ps1 -Architecture x86 -SkipInstaller
@@ -150,8 +150,8 @@ function Write-ProjectVersion([string]$Path, [string]$Value) {
     $content = @"
 <Project>
   <!--
-    Versión de todos los ensamblados. ``scripts/build-installer.ps1`` incrementa el
-    número de compilación (patch) automáticamente en cada empaquetado.
+    Versión de todos los ensamblados. ``scripts/build-installer.ps1`` incrementa la
+    versión menor y reinicia el patch (1.1.1 -> 1.2.0) en cada empaquetado.
   -->
   <PropertyGroup>
     <CyberManagerVersion>$Value</CyberManagerVersion>
@@ -163,13 +163,12 @@ function Write-ProjectVersion([string]$Path, [string]$Value) {
     [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
 }
 
-function Get-NextPatchVersion([string]$Current) {
+function Get-NextMinorVersion([string]$Current) {
     $parts = $Current.Split('.')
     if ($parts.Count -lt 2) { throw "Versión no válida en version.props: $Current" }
     $major = [int]$parts[0]
     $minor = [int]$parts[1]
-    $patch = if ($parts.Count -ge 3) { [int]$parts[2] } else { 0 }
-    return "$major.$minor.$($patch + 1)"
+    return "$major.$($minor + 1).0"
 }
 
 $currentVersion = Read-ProjectVersion $versionFile
@@ -181,7 +180,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
         $Version = $currentVersion
     }
     else {
-        $Version = Get-NextPatchVersion $currentVersion
+        $Version = Get-NextMinorVersion $currentVersion
     }
 }
 

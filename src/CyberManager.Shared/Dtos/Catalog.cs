@@ -1,5 +1,9 @@
 namespace CyberManager.Shared.Dtos;
 
+/// <summary>Logo del negocio como data URL (base64). Null cuando no hay logo configurado.</summary>
+public record BusinessLogoDto(string? DataUrl);
+public record SaveBusinessLogoRequest(string DataUrl);
+
 public record ZoneDto(int Id, string Name, string Color, int SortOrder, bool Active);
 public record SaveZoneRequest(string Name, string Color, int SortOrder, bool Active);
 

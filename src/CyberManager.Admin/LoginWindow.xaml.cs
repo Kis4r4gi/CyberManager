@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using CyberManager.Admin.Services;
 using CyberManager.Desktop.Api;
 using CyberManager.Desktop.Services;
 using CyberManager.Shared;
@@ -8,6 +9,8 @@ namespace CyberManager.Admin;
 
 public partial class LoginWindow : Window
 {
+    private readonly string _placementKey;
+
     public LoginWindow() : this(null)
     {
     }
@@ -19,6 +22,9 @@ public partial class LoginWindow : Window
     public LoginWindow(string? username)
     {
         InitializeComponent();
+
+        // La ventana de inicio de sesión se recuerda por usuario de Windows.
+        _placementKey = "login:" + Environment.UserName;
 
         var config = AppConfig.Load("Admin");
         ServerUrlBox.Text = config.ServerUrl;
@@ -33,6 +39,15 @@ public partial class LoginWindow : Window
             if (string.IsNullOrWhiteSpace(UsernameBox.Text)) UsernameBox.Focus();
             else PasswordBox.Focus();
         };
+
+        Closed += (_, _) => WindowPlacementStore.SaveWindow(_placementKey, this);
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        NativeWindow.ApplyDarkTitleBar(this);
+        NativeWindow.RestorePlacement(this, WindowPlacementStore.Load(_placementKey));
     }
 
     private void Password_KeyDown(object sender, KeyEventArgs e)

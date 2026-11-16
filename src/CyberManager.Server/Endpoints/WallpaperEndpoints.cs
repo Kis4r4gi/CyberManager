@@ -90,6 +90,55 @@ public static class WallpaperEndpoints
             return Results.Ok(ToDto(wallpaper));
         }).DisableAntiforgery();
 
+        // Reemplazo del archivo de un fondo existente (sincronización desde la carpeta local).
+        g.MapPut("/{id:int}/file", async (int id, HttpRequest request, AppDbContext db,
+            WallpaperService wallpapers, RealtimeService realtime) =>
+        {
+            if (!request.HasFormContentType)
+                throw new AppException("Debe enviar la imagen como formulario multipart.");
+
+            var form = await request.ReadFormAsync();
+            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                throw new AppException("Seleccione una imagen para subir.");
+            if (file.Length > ImageInspector.MaxBytes)
+                throw new AppException($"La imagen supera el máximo de {ImageInspector.MaxBytes / 1024 / 1024} MB.");
+
+            await using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            var data = stream.ToArray();
+
+            var probe = ImageInspector.Detect(data);
+            if (!probe.Valid)
+                throw new AppException("Formato no válido. Use PNG, JPG, GIF o BMP.");
+
+            var wallpaper = await db.Wallpapers.FirstOrDefaultAsync(w => w.Id == id)
+                            ?? throw AppException.NotFound("Fondo de pantalla");
+
+            wallpaper.Data = data;
+            wallpaper.ContentType = probe.ContentType;
+            wallpaper.Extension = probe.Extension;
+            wallpaper.Width = probe.Width;
+            wallpaper.Height = probe.Height;
+            wallpaper.SizeBytes = data.LongLength;
+            wallpaper.Sha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
+
+            var name = form["name"].ToString().Trim();
+            if (!string.IsNullOrWhiteSpace(name))
+                wallpaper.Name = name;
+
+            if (int.TryParse(form["sortOrder"].ToString(), out var sortOrder))
+                wallpaper.SortOrder = sortOrder;
+            if (bool.TryParse(form["active"].ToString(), out var active))
+                wallpaper.Active = active;
+
+            wallpaper.UpdatedUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            await realtime.WallpaperChangedAsync(await wallpapers.PlaylistAsync());
+            return Results.Ok(ToDto(wallpaper));
+        }).DisableAntiforgery();
+
         g.MapPut("/{id:int}", async (int id, SaveWallpaperRequest req, AppDbContext db,
             WallpaperService wallpapers, RealtimeService realtime) =>
         {

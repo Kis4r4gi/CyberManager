@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="CyberManager · Iniciar sesión" Width="980" Height="600"
-        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        WindowStartupLocation="Manual" ResizeMode="CanResize"
+        MinWidth="900" MinHeight="560"
         Background="{StaticResource BgBrush}">
 
     <Grid>

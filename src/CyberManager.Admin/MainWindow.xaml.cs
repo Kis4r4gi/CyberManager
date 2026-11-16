@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -32,10 +34,18 @@ public partial class MainWindow : Window
     private bool? _connected;
     private bool _switchingUser;
     private AppLanguage _language = L.Language;
+    private List<SharedNoteDto> _sharedNotes = new();
+    private readonly List<LogEntry> _logEntries = new();
+    private readonly string _placementKey;
+
+    private sealed record LogEntry(DateTime Time, string Title, string Message);
 
     public MainWindow()
     {
         InitializeComponent();
+
+        // Cada usuario de la consola conserva su propia posición y tamaño.
+        _placementKey = "main:" + App.Session.Username;
 
         UserText.Text = App.Session.FullName;
         SessionNameText.Text = App.Session.FullName;
@@ -45,6 +55,7 @@ public partial class MainWindow : Window
         ApplyRoleVisibility();
 
         App.NavigationRequested += OnNavigationRequested;
+        App.BusinessIdentityChanged += OnBusinessIdentityChanged;
         AppearanceService.Changed += ApplyAppearance;
         ApplyAppearance(AppearanceService.Current);
         Loaded += MainWindow_Loaded;
@@ -78,12 +89,15 @@ public partial class MainWindow : Window
         CatalogLabel.Visibility = Visibility.Collapsed;
         SystemLabel.Visibility = Visibility.Collapsed;
 
-        // La bitácora de terminales es información administrativa.
-        LogHost.Visibility = Visibility.Collapsed;
-        LogSplitter.Visibility = Visibility.Collapsed;
-        LogColumn.Width = new GridLength(0);
-        LogColumn.MinWidth = 0;
-        LogColumn.MaxWidth = 0;
+        // El registro de terminales es información administrativa. Las notas
+        // compartidas siguen visibles para todos los usuarios.
+        LogSection.Visibility = Visibility.Collapsed;
+        LogSectionSplitter.Visibility = Visibility.Collapsed;
+        LogRow.Height = new GridLength(0);
+        LogRow.MinHeight = 0;
+        LogSplitRow.Height = new GridLength(0);
+        NotesRow.Height = new GridLength(1, GridUnitType.Star);
+        NotesRow.MinHeight = 0;
     }
 
     /// <summary>Muestra el nombre y la versión del software en la barra de título de Windows.</summary>
@@ -116,13 +130,13 @@ public partial class MainWindow : Window
 
         // Barra de título nativa de Windows: los iconos de minimizar/cerrar siempre son visibles.
         NativeWindow.ApplyDarkTitleBar(this);
-        NativeWindow.FitToWorkArea(this);
+        NativeWindow.RestorePlacement(this, WindowPlacementStore.Load(_placementKey));
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        Dispatcher.BeginInvoke(() => NativeWindow.FitToWorkArea(this));
+        Dispatcher.BeginInvoke(() => NativeWindow.EnsureVisible(this));
     }
 
     /// <summary>Ajusta el tamaño de los iconos y textos del menú lateral.</summary>
@@ -160,13 +174,15 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        NativeWindow.FitToWorkArea(this);
+        NativeWindow.EnsureVisible(this);
         Loc.Apply(this);
         UpdateRoleText();
         AddLog(L.T("Consola"), "Sesión iniciada en la consola de administración.", "#22D3EE");
 
         await App.InitializeRealtimeAsync();
         await RefreshHeaderAsync();
+        await RefreshLogoAsync();
+        await RefreshNotesAsync();
         Navigate("dashboard");
         _headerTimer.Start();
 
@@ -184,7 +200,9 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Closed(object? sender, EventArgs e)
     {
+        WindowPlacementStore.SaveWindow(_placementKey, this);
         App.NavigationRequested -= OnNavigationRequested;
+        App.BusinessIdentityChanged -= OnBusinessIdentityChanged;
         AppearanceService.Changed -= ApplyAppearance;
         SystemParameters.StaticPropertyChanged -= OnSystemParametersChanged;
         _headerTimer.Stop();
@@ -207,8 +225,15 @@ public partial class MainWindow : Window
     private void OnSystemParametersChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(SystemParameters.WorkArea) && WindowState == WindowState.Normal)
-            Dispatcher.BeginInvoke(() => NativeWindow.FitToWorkArea(this));
+            Dispatcher.BeginInvoke(() => NativeWindow.EnsureVisible(this));
     }
+
+    private void OnBusinessIdentityChanged()
+        => Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _ = RefreshHeaderAsync();
+            _ = RefreshLogoAsync();
+        }));
 
     private void OnNavigationRequested(string key) => Dispatcher.Invoke(() => Navigate(key));
 
@@ -423,6 +448,26 @@ public partial class MainWindow : Window
         App.ShutdownApplication();
     }
 
+    /// <summary>
+    /// Carga el logo del negocio. Se hace aparte del refresco periódico del
+    /// encabezado porque la imagen puede pesar varios megabytes.
+    /// </summary>
+    private async Task RefreshLogoAsync()
+    {
+        try
+        {
+            var logo = await App.Api.BusinessLogoAsync();
+            var image = Branding.Decode(logo.DataUrl);
+            LogoImage.Source = image;
+            LogoFrame.Visibility = image is null ? Visibility.Collapsed : Visibility.Visible;
+            LogoFallback.Visibility = image is null ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch
+        {
+            // Si el logo no está disponible se conserva la marca de respaldo.
+        }
+    }
+
     private async Task RefreshHeaderAsync()
     {
         try
@@ -431,8 +476,15 @@ public partial class MainWindow : Window
             RateText.Text = rate.Rate > 0 ? $"1 USD = {rate.Rate:N2} Bs" : L.T("Tasa sin definir");
 
             var settings = await App.Api.SettingsAsync();
-            if (settings.TryGetValue("BusinessName", out var business) && !string.IsNullOrWhiteSpace(business))
-                BusinessText.Text = business;
+            var businessName = settings.TryGetValue("BusinessName", out var business)
+                ? business?.Trim()
+                : null;
+
+            // El encabezado muestra una sola línea con el nombre del negocio.
+            BusinessNameText.Text = string.IsNullOrWhiteSpace(businessName)
+                ? "CyberManager"
+                : businessName;
+            BusinessNameText.ToolTip = L.T("Consola de administración");
 
             var stations = await App.Api.StationsAsync();
             foreach (var station in stations)
@@ -514,7 +566,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // ===================== Bitácora de terminales =====================
+    // ===================== Registro de terminales =====================
 
     private void OnRealtimeEvent(RealtimeEvent e) => Dispatcher.BeginInvoke(() =>
     {
@@ -532,10 +584,14 @@ public partial class MainWindow : Window
             "CommandSent" => ("Comando enviado", "#22D3EE"),
             "CommandResult" => ("Resultado de comando", "#8FA4C4"),
             "WallpaperChanged" => ("Fondos actualizados", "#8B5CF6"),
+            "SharedNoteAdded" => ("Nota agregada", "#22D3EE"),
+            "SharedNoteDeleted" => ("Nota eliminada", "#F59E0B"),
             _ => (e.Type, "#8FA4C4")
         };
 
         AddLog(title, string.IsNullOrWhiteSpace(e.Message) ? e.Type : e.Message!, color);
+
+        if (e.Type is "SharedNoteAdded" or "SharedNoteDeleted") _ = RefreshNotesAsync();
     });
 
     private void OnRealtimeStationState(StationStateEvent e) => Dispatcher.BeginInvoke(() =>
@@ -557,19 +613,13 @@ public partial class MainWindow : Window
     private void AddLog(string title, string message, string colorHex)
     {
         var accent = ParseColor(colorHex);
+        var now = DateTime.Now;
 
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _logEntries.Add(new LogEntry(now, title, message));
+        while (_logEntries.Count > MaxLogEntries)
+            _logEntries.RemoveAt(0);
 
-        grid.Children.Add(new Border
-        {
-            Background = new SolidColorBrush(accent),
-            CornerRadius = new CornerRadius(2),
-            Margin = new Thickness(0, 0, 9, 0)
-        });
-
-        var texts = new StackPanel { Margin = new Thickness(4, 0, 0, 0) };
+        var texts = new StackPanel();
 
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -587,7 +637,7 @@ public partial class MainWindow : Window
 
         var time = new TextBlock
         {
-            Text = DateTime.Now.ToString("HH:mm:ss"),
+            Text = now.ToString("HH:mm:ss"),
             FontSize = 10,
             Foreground = (Brush)FindResource("MutedBrush"),
             Margin = new Thickness(8, 0, 0, 0),
@@ -603,21 +653,17 @@ public partial class MainWindow : Window
             FontSize = 11.5,
             Foreground = (Brush)FindResource("TextBrush"),
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 3, 0, 0)
+            Margin = new Thickness(0, 1, 0, 0)
         });
 
-        Grid.SetColumn(texts, 1);
-        grid.Children.Add(texts);
-
+        // Lista simple: sin tarjeta, solo una línea tenue que separa cada evento.
         LogPanel.Children.Add(new Border
         {
-            Background = (Brush)FindResource("SurfaceAltBrush"),
             BorderBrush = (Brush)FindResource("GridLineBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(10, 7, 10, 7),
-            Margin = new Thickness(0, 0, 0, 7),
-            Child = grid
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding = new Thickness(0, 0, 0, 3),
+            Margin = new Thickness(0, 0, 0, 3),
+            Child = texts
         });
 
         while (LogPanel.Children.Count > MaxLogEntries)
@@ -634,9 +680,199 @@ public partial class MainWindow : Window
         catch { return Color.FromRgb(0x8F, 0xA4, 0xC4); }
     }
 
-    private void ClearLog_Click(object sender, RoutedEventArgs e)
+    /// <summary>Guarda el registro visible en un archivo de texto y lo abre con el Bloc de notas.</summary>
+    private void OpenLogInNotepad_Click(object sender, RoutedEventArgs e)
     {
-        LogPanel.Children.Clear();
-        LogCountText.Text = "0 eventos";
+        if (_logEntries.Count == 0)
+        {
+            Ui.Info("El registro está vacío. Todavía no hay eventos para mostrar.", "Registro");
+            return;
+        }
+
+        try
+        {
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "CyberManager", "Admin");
+            Directory.CreateDirectory(folder);
+
+            var file = Path.Combine(folder, $"registro-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
+            var lines = new List<string>
+            {
+                "CyberManager · Registro de actividad",
+                $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
+                new string('-', 70)
+            };
+
+            foreach (var entry in _logEntries)
+            {
+                lines.Add($"{entry.Time:dd/MM/yyyy HH:mm:ss}  {entry.Title}");
+                lines.Add(entry.Message);
+                lines.Add(string.Empty);
+            }
+
+            File.WriteAllLines(file, lines, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "notepad.exe",
+                Arguments = $"\"{file}\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Ui.Error(ex.Message, "Registro");
+        }
+    }
+
+    // ===================== Notas =====================
+
+    private async Task RefreshNotesAsync()
+    {
+        try
+        {
+            _sharedNotes = await App.Api.SharedNotesAsync();
+            RenderNotes();
+        }
+        catch
+        {
+            NoteStatusText.Text = L.T("No se pudieron cargar las notas.");
+        }
+    }
+
+    private void RenderNotes()
+    {
+        NotesPanel.Children.Clear();
+
+        if (_sharedNotes.Count == 0)
+        {
+            NotesPanel.Children.Add(new TextBlock
+            {
+                Text = L.T("Aún no hay notas. Escriba la primera para compartirla con el equipo."),
+                Style = (Style)FindResource("Muted"),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+            return;
+        }
+
+        foreach (var note in _sharedNotes)
+            NotesPanel.Children.Add(BuildNoteCard(note));
+
+        // Las notas más recientes se muestran primero.
+        NotesScroll.ScrollToTop();
+    }
+
+    private Border BuildNoteCard(SharedNoteDto note)
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var texts = new StackPanel();
+
+        var header = new Grid();
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.Children.Add(new TextBlock
+        {
+            Text = note.AuthorName,
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("AccentBrush"),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        var time = new TextBlock
+        {
+            Text = note.CreatedUtc.ToLocalTime().ToString("dd/MM HH:mm"),
+            FontSize = 10,
+            Foreground = (Brush)FindResource("MutedBrush"),
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(time, 1);
+        header.Children.Add(time);
+        texts.Children.Add(header);
+
+        texts.Children.Add(new TextBlock
+        {
+            Text = note.Text,
+            FontSize = 11.5,
+            Foreground = (Brush)FindResource("TextBrush"),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 1, 0, 0)
+        });
+        grid.Children.Add(texts);
+
+        if (App.Session.Role == UserRole.Admin)
+        {
+            var delete = new Button
+            {
+                Content = "✕",
+                Style = (Style)FindResource("IconButton"),
+                FontSize = 10,
+                Padding = new Thickness(4, 0, 4, 0),
+                Margin = new Thickness(6, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Top,
+                ToolTip = "Eliminar esta nota para todos los usuarios."
+            };
+            ToolTipService.SetInitialShowDelay(delete, 2000);
+            delete.Click += (_, _) => DeleteNote(note);
+            Grid.SetColumn(delete, 1);
+            grid.Children.Add(delete);
+        }
+
+        // Lista simple: sin tarjeta, solo una línea tenue que separa cada nota.
+        return new Border
+        {
+            BorderBrush = (Brush)FindResource("GridLineBrush"),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Padding = new Thickness(0, 0, 0, 3),
+            Margin = new Thickness(0, 0, 0, 3),
+            Child = grid
+        };
+    }
+
+    private async void PublishNote_Click(object sender, RoutedEventArgs e)
+    {
+        var text = NoteInput.Text.Trim();
+        if (text.Length == 0)
+        {
+            NoteStatusText.Text = L.T("Escriba una nota antes de publicarla.");
+            return;
+        }
+
+        NoteStatusText.Text = L.T("Publicando...");
+        try
+        {
+            await App.Api.CreateSharedNoteAsync(text);
+            NoteInput.Text = string.Empty;
+            NoteStatusText.Text = L.T("Nota publicada para todos los usuarios.");
+            await RefreshNotesAsync();
+        }
+        catch (Exception ex)
+        {
+            NoteStatusText.Text = ex.Message;
+        }
+    }
+
+    private async void DeleteNote(SharedNoteDto note)
+    {
+        if (!Ui.Confirm(
+                $"¿Eliminar la nota de {note.AuthorName}? Se quitará para todos los usuarios.",
+                "Notas"))
+            return;
+
+        try
+        {
+            await App.Api.DeleteSharedNoteAsync(note.Id);
+            await RefreshNotesAsync();
+        }
+        catch (Exception ex)
+        {
+            Ui.Error(ex.Message, "Notas");
+        }
     }
 }

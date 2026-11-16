@@ -115,9 +115,11 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   presentación rotativa controlada desde la consola.
 - **Videos promocionales** en los terminales bloqueados, con reproducción silenciada, orden
   configurable y sincronización inmediata desde el servidor.
-- **Bitácora lateral en vivo**: panel derecho con la hora y el detalle de cada evento de los
+- **Notas y Registro en vivo**: el panel derecho muestra arriba las **notas** compartidas (con
+  autor y hora; se registran al publicar y al borrar) y abajo el **registro** de actividad de los
   terminales (conexión/desconexión, inicio y cierre de sesión, cambios de estado, comandos,
-  mantenimiento, avisos y tiempo agotado). Se puede limpiar sin afectar la operación.
+  mantenimiento, avisos y tiempo agotado). El registro se puede exportar a un archivo de texto con
+  el botón **Abrir**, que lo muestra en el Bloc de notas.
 - **Visualizador de pantalla remoto**: desde el tablero o desde *Equipos* puede abrir la pantalla
   de una estación y verla en vivo (actualización automática cada 2 segundos o captura manual). La
   captura la realiza el cliente WPF en la sesión del usuario y viaja por SignalR al servidor.
@@ -170,7 +172,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   cajero o administrador** sin cerrar la aplicación y **salir de CyberManager**. El administrador
   ve la lista de usuarios activos y el cambio siempre pide la contraseña.
 - **Interfaz de cajero simplificada**: oculta y bloquea catálogo, inventario, compras, equipos,
-  fondos, promos, reportes, configuración y bitácora; solo quedan tablero, caja/POS, clientes y
+  fondos, promos, reportes, configuración y registro; solo quedan tablero, caja/POS, clientes y
   reservas.
 - Configuración del negocio, IVA, IGTF, avisos, ticket, **impresora de tickets e impresora de
   trabajo** y datos de instalación.
@@ -325,10 +327,11 @@ Para generar los **instaladores unificados** (x64 + x86):
 .\scripts\build-installer.ps1
 ```
 
-La versión vive en `version.props` y **se incrementa automáticamente en cada empaquetado**
-(`1.0.0` → `1.0.1` → `1.0.2`…). Ese valor se aplica a todos los ensamblados, al servidor, a la
-consola y al nombre de los instaladores. Para fijar una versión concreta use
-`.\scripts\build-installer.ps1 -Version 1.1.0`; para conservar la actual, `-NoBump`.
+La versión vive en `version.props` y **se incrementa automáticamente en cada empaquetado**:
+sube la versión menor y reinicia el patch (`1.1.1` → `1.2.0` → `1.3.0`…). Ese valor se aplica a
+todos los ensamblados, al servidor, a la consola y al nombre de los instaladores. Para fijar una
+versión concreta use `.\scripts\build-installer.ps1 -Version 1.1.1`; para conservar la actual,
+`-NoBump`.
 
 El script publica los cinco proyectos en modo autocontenido para `win-x64` y `win-x86`, copia los
 scripts de configuración en `dist\x64` y `dist\x86`, publica el desinstalador independiente en
@@ -535,7 +538,7 @@ pulsarlo se abre el menú de sesión:
   ejecutándose en segundo plano.
 
 El cambio de usuario cierra la conexión en tiempo real de la sesión anterior y la vuelve a abrir con
-el token del nuevo usuario, de modo que la bitácora, el tablero y los permisos corresponden de
+el token del nuevo usuario, de modo que el registro, el tablero y los permisos corresponden de
 inmediato al rol que acaba de entrar. Si el inicio de sesión se cancela o falla, se mantiene la
 sesión anterior.
 
@@ -580,6 +583,10 @@ sesión anterior.
 - **IGTF (3 % por defecto).** Se aplica **solo** cuando el pago se registra en efectivo en
   dólares (`CashUsd`). Puede desactivarlo o cambiar el porcentaje en
   *Configuración → Negocio y facturación*.
+- **Nombre y logo del negocio.** El nombre o razón social y el logo configurados en
+  *Configuración → Negocio y facturación* aparecen juntos en una sola línea en la barra superior
+  de la consola. El logo se ajusta a un máximo de 512 × 512 px, se guarda en el servidor y se
+  comparte con todas las consolas.
 - **Formas de pago y moneda del monto recibido**:
   - `Cash`: el monto recibido y el cambio se expresan en **Bs**.
   - `CashUsd`: el monto recibido y el cambio se expresan en **USD**; genera IGTF.
@@ -706,7 +713,7 @@ leyenda) está oculta por defecto; pulse **Configuración** en el encabezado del
 mostrarla u **Ocultar configuración** para plegarla.
 
 **Barras laterales ajustables**: arrastre los separadores a los lados del área central para
-cambiar el ancho del menú de navegación y de la bitácora de terminales. Cada barra tiene un ancho
+cambiar el ancho del menú de navegación y del registro de actividad. Cada barra tiene un ancho
 mínimo y máximo para no perder accesos ni contenido.
 La paleta trae bordes más luminosos que el tema original y la consola dibuja un marco de 1 píxel
 alrededor de la ventana, de modo que los límites de paneles y tarjetas se distinguen con claridad.
@@ -715,7 +722,10 @@ La consola usa la **barra de título nativa de Windows**, de modo que los botone
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
 instalada (por ejemplo, `CyberManager · Administración · v1.0.11`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
-reajusta al cambiar de monitor o de escala (DPI).
+reajusta al cambiar de monitor o de escala (DPI). La consola **recuerda la posición, el tamaño y el
+estado (normal o maximizado) de la ventana principal y de la pantalla de inicio de sesión** para
+cada usuario de Windows y de la aplicación; se guardan en
+`%LOCALAPPDATA%\CyberManager\Admin\windows.json`.
 
 La apariencia se guarda por usuario en
 `%LOCALAPPDATA%\CyberManager\Admin\appearance.json` y se aplica al abrir la consola, antes de la
@@ -949,14 +959,26 @@ versión del paquete en `DbSeeder` y se reconstruye el instalador.
 1. Pulse **Subir imágenes** y seleccione uno o varios archivos **PNG, JPG, GIF o BMP** (máximo
    20 MB por imagen). Cada fondo se guarda como BLOB en la tabla `Wallpapers` de SQLite, por lo
    que no depende de carpetas compartidas ni de rutas locales.
-2. Elija el modo de presentación:
+2. **Buscar en internet** abre un buscador de fondos de [Wallhaven](https://wallhaven.cc) con
+   resultados solo para todo público (SFW), formato 16:9 y resolución mínima de 1920 × 1080,
+   2560 × 1440 o 3840 × 2160. Elija una miniatura y pulse **Agregar** para incorporarla a la
+   galería; **Cargar más** sigue paginando los resultados. También puede filtrar por categoría
+   (General, Anime, Personas o Todas).
+3. **Abrir carpeta** exporta la galería como archivos a
+   `%LOCALAPPDATA%\CyberManager\Admin\Fondos` y abre la carpeta en el Explorador. Desde allí puede
+   reemplazar una imagen conservando el nombre, o copiar imágenes nuevas. **Sincronizar carpeta**
+   detecta los archivos nuevos o modificados (por hash SHA-256) y los sube al servidor: el número
+   al inicio del nombre define el orden y las imágenes nuevas se agregan con su nombre de archivo.
+   Para eliminar un fondo siga usando **Eliminar** en la consola.
+4. Elija el modo de presentación:
    - **Sin fondos**: se mantiene el degradado original del cliente.
    - **Fondo fijo**: un único fondo seleccionado.
    - **Presentación rotativa**: todos los fondos activos, con rotación entre **5 y 3600**
      segundos.
-3. Use **Guardar y aplicar** para publicar los cambios. También puede activar/desactivar fondos,
-   cambiar su nombre y orden, o eliminarlos desde el panel derecho.
-4. **Reenviar a equipos** vuelve a publicar la galería sin cambiar la configuración (útil si un
+5. Use **Guardar y aplicar** para publicar los cambios. También puede activar/desactivar fondos,
+   cambiar su nombre y orden, o eliminarlos desde el panel derecho. El buscador **Buscar fondo**
+   filtra la galería por nombre o estado.
+6. **Reenviar a equipos** vuelve a publicar la galería sin cambiar la configuración (útil si un
    equipo estuvo desconectado).
 
 La lista se envía por SignalR (`WallpaperChanged`) en cuanto se guarda, de modo que los clientes
