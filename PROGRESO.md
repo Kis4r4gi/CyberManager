@@ -13,8 +13,7 @@ estación), unificados por arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
-La solución compila con **0 errores** (quedan 2 advertencias de nulabilidad en el cliente, no
-bloqueantes). Se generan **dos instaladores unificados**
+La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores unificados**
 (Servidor y Estación), cada uno con los payloads de x64 y x86 y selección automática de la
 arquitectura al instalar. El **servidor está instalado y corriendo** como tarea programada en este
 equipo (`C:\CyberManager\Servidor`, puerto 5080).
@@ -1001,7 +1000,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `PC-PRUEBA-ESCANEO` (id 11) y devolvió `configured: 1`; `/api/client-update/notify` respondió
   `sent: true`; un respondedor UDP de PowerShell en 5092 permitió capturar `PC-UDP-TEST`
   (`isNew: true`, `needsToken: true`) de extremo a extremo. `dotnet build CyberManager.sln -c Debug`
-  y `-c Release` con **0 errores** (solo 2 advertencias CS8604 en `SetupWindow.xaml.cs`).
+  y `-c Release` con **0 errores** y **0 advertencias**.
 
 ---
 

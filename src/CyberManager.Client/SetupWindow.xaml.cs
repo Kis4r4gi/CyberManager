@@ -102,8 +102,8 @@ public partial class SetupWindow : Window
         try
         {
             // El token es la credencial principal; IP/MAC se usan como respaldo.
-            var api = new StationApi(ServerUrlBox.Text, stationId, stationIpAddress,
-                stationMacAddress, stationToken);
+            var api = new StationApi(ServerUrlBox.Text, stationId,
+                stationIpAddress ?? string.Empty, stationMacAddress ?? string.Empty, stationToken);
             var state = await api.StateAsync();
 
             var session = state.Session is null
