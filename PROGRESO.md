@@ -15,8 +15,8 @@ estación), unificados por arquitectura (x86/x64).
 
 La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores unificados**
 (Servidor y Estación), cada uno con los payloads de x64 y x86 y selección automática de la
-arquitectura al instalar. El **servidor está instalado y corriendo** como tarea programada en este
-equipo (`C:\CyberManager\Servidor`, puerto 5080).
+arquitectura al instalar. El **servidor 1.2.0 está instalado y corriendo** como tarea programada en
+este equipo (`C:\CyberManager\Servidor`, puerto 5080).
 
 ---
 
@@ -1001,6 +1001,18 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `sent: true`; un respondedor UDP de PowerShell en 5092 permitió capturar `PC-UDP-TEST`
   (`isNew: true`, `needsToken: true`) de extremo a extremo. `dotnet build CyberManager.sln -c Debug`
   y `-c Release` con **0 errores** y **0 advertencias**.
+- **Instaladores 1.2.0**: `CyberManager-Servidor-1.2.0.exe` (**396.164.653 bytes**) y
+  `CyberManager-Estacion-1.2.0.exe` (**150.758.922 bytes**), generados con
+  `build-installer.ps1 -SkipVncDownload`. El paquete del cliente quedó en
+  `dist\x64\Server\ClientUpdate\client.zip` (67.536.484 bytes, SHA-256
+  `9ce57489…f259d9`) y `dist\x86` (61.788.403 bytes).
+- **Release v1.2.0**: publicada en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.2.0> el `2026-11-16T17:48:34Z` con
+  ambos instaladores y `tightvnc-2.8.90-src-gpl.zip` (3.018.194 bytes).
+- **Servidor local 1.2.0**: detenido, respaldado en
+  `C:\CyberManager\Servidor\_preupdate_20261116_134528`, actualizado desde `dist\x64` y
+  reiniciado; `/api/health` responde `ok`, la tarea `CyberManagerServer` está **Running**, la
+  consola quedó en **1.2.0** y `Server\ClientUpdate` contiene el paquete 1.2.0.
 
 ---
 
@@ -1146,26 +1158,19 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 
 ## Pendientes / siguientes pasos
 
-1. **Commit y push** de la iteración 1.2.0 (escaneo UDP, UI adaptable, filtro de estado y
-   actualización de clientes). **No publicar la release** hasta que el usuario lo pida.
-2. (Opcional) Publicar servidor y consola y copiarlos a `C:\CyberManager\Servidor\Server` /
-   `Admin` con respaldo previo; probar **Escanear la red** y el box **Clientes** en la consola
-   local.
-3. Al publicar: `scripts\build-installer.ps1` sube la versión a **1.2.0**; verificar que el
-   instalador del servidor incluye `Server\ClientUpdate\client.zip` + `manifest.json` y que el
-   de estación crea la regla de firewall UDP 5092/5093.
-4. (Opcional) Con una sesión **elevada**, probar los dos instaladores unificados en modo silencioso
-   y verificar: selección automática de x64 en este equipo, archivos instalados, tarea programada,
-   firewall, servicio del agente, reinstalación cruzada x64/x86, confirmación al cerrar procesos,
-   reinicio posterior y desinstalación. No se ejecutó una instalación real porque la sesión actual
-   no es administrador.
-5. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
+1. Probar **Escanear la red** y el box **Clientes** desde la consola local 1.2.0 con una estación
+   real encendida.
+2. (Opcional) Con una sesión **elevada**, probar los dos instaladores 1.2.0 en modo silencioso y
+   verificar: selección automática de x64 en este equipo, archivos instalados, tarea programada,
+   firewall UDP 5092/5093, servicio del agente, reinstalación cruzada x64/x86, confirmación al
+   cerrar procesos, reinicio posterior y desinstalación.
+3. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
    equivalente se validó con un instalador Inno de prueba en x64.
-6. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
+4. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
    `%ProgramData%\CyberManager\server-elevated.marker` y los comandos remotos de volumen, monitor y
    bloqueo de entrada contra una estación real.
-7. Mantener actualizado `README.md` si se agregan funciones nuevas.
-8. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
+5. Mantener actualizado `README.md` si se agregan funciones nuevas.
+6. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
    consola, el servidor, las promos y la localización. La versión menor sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
 
@@ -1181,15 +1186,13 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.1.1**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1>) con
-  `CyberManager-Servidor-1.1.1.exe` (269.033.089 bytes),
-  `CyberManager-Estacion-1.1.1.exe` (150.713.665 bytes) y
-  `tightvnc-2.8.90-src-gpl.zip` (3.018.194 bytes), publicada el `2026-11-16T17:03:32Z`. La
-  release anterior publicada es `v1.0.20`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20>).
-- La iteración del escaneo de red, la interfaz adaptable y la actualización de clientes está en
-  `main` sin release: al publicarla, `build-installer.ps1` subirá la versión a **1.2.0**.
+- Release actual: **v1.2.0**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.2.0>) con
+  `CyberManager-Servidor-1.2.0.exe` (396.164.653 bytes),
+  `CyberManager-Estacion-1.2.0.exe` (150.758.922 bytes) y
+  `tightvnc-2.8.90-src-gpl.zip` (3.018.194 bytes), publicada el `2026-11-16T17:48:34Z`. La
+  release anterior publicada es `v1.1.1`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
