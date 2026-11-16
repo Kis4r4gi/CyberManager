@@ -220,7 +220,7 @@ public static class StationEndpoints
     /// Construye la URL que debe configurar el equipo cliente. Si la consola se conecta
     /// desde el mismo servidor (loopback), se devuelve la IPv4 de la red local.
     /// </summary>
-    private static string ServerUrlFor(HttpRequest request)
+    internal static string ServerUrlFor(HttpRequest request)
     {
         var port = request.Host.Port ?? 5080;
         var host = request.Host.Host;

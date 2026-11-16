@@ -137,14 +137,40 @@ public static class StationClientEndpoints
     {
         var idText = http.Request.Headers["X-Station-Id"].ToString();
         var token = http.Request.Headers["X-Station-Token"].ToString();
+        var ip = http.Request.Headers["X-Station-Ip"].ToString();
+        var mac = http.Request.Headers["X-Station-Mac"].ToString();
 
-        if (!int.TryParse(idText, out var id) || string.IsNullOrWhiteSpace(token))
+        if (!int.TryParse(idText, out var id))
             throw new AppException("Estación no identificada.", 401);
 
         var station = await db.Stations.Include(s => s.Zone).FirstOrDefaultAsync(s => s.Id == id);
-        if (station is null || string.IsNullOrWhiteSpace(station.DeviceToken) || station.DeviceToken != token)
-            throw new AppException("Token de estación inválido.", 401);
+        if (station is null)
+            throw new AppException("Estación no identificada.", 401);
 
-        return station;
+        // El token es la credencial principal. La IP/MAC se aceptan para equipos
+        // instalados antes de que el escaneo les asignara un token.
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            if (string.IsNullOrWhiteSpace(station.DeviceToken) || station.DeviceToken != token)
+                throw new AppException("Token de estación inválido.", 401);
+            return station;
+        }
+
+        var normalizedMac = NormalizeMac(mac);
+        if (normalizedMac.Length > 0 &&
+            string.Equals(NormalizeMac(station.MacAddress), normalizedMac, StringComparison.Ordinal))
+            return station;
+
+        if (!string.IsNullOrWhiteSpace(ip) &&
+            string.Equals(station.IpAddress, ip, StringComparison.OrdinalIgnoreCase))
+            return station;
+
+        throw new AppException("Estación no autenticada.", 401);
     }
+
+    private static string NormalizeMac(string? mac)
+        => (mac ?? string.Empty).Replace(":", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(" ", string.Empty)
+            .ToUpperInvariant();
 }

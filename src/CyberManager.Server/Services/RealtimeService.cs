@@ -66,6 +66,17 @@ public class RealtimeService
     public Task UpdateAvailableAsync(UpdateInfoDto update)
         => _admin.Clients.All.SendAsync("UpdateAvailable", update);
 
+    /// <summary>Avisa a estaciones, agentes y consolas que hay un paquete de cliente nuevo.</summary>
+    public async Task ClientUpdateAvailableAsync(ClientUpdateManifestDto manifest)
+    {
+        await _station.Clients.All.SendAsync("ClientUpdateAvailable", manifest);
+        await _agent.Clients.All.SendAsync("ClientUpdateAvailable", manifest);
+        await _admin.Clients.All.SendAsync("ClientUpdateAvailable", manifest);
+        await _admin.Clients.All.SendAsync("Event",
+            new RealtimeEvent("ClientUpdateAvailable",
+                $"Paquete de cliente {manifest.Version} disponible", manifest));
+    }
+
     public Task SendAgentCommandAsync(int stationId, AgentCommandType type, string? argument = null, int? durationSeconds = null)
     {
         var cmd = new AgentCommand(Guid.NewGuid(), type, argument, durationSeconds);

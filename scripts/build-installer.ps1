@@ -171,6 +171,42 @@ function Get-NextMinorVersion([string]$Current) {
     return "$major.$($minor + 1).0"
 }
 
+<#
+    Empaqueta la carpeta Client publicada en dist\<arch>\Client dentro de
+    dist\<arch>\Server\ClientUpdate\client.zip y escribe el manifiesto con la
+    versión y el SHA-256. El servidor distribuye ese paquete a las estaciones
+    para actualizarlas sin reinstalar.
+#>
+function New-ClientUpdatePackage([string]$DistArch, [string]$Version) {
+    $clientDir = Join-Path $DistArch "Client"
+    if (-not (Test-Path $clientDir)) {
+        throw "No existe $clientDir. Publique primero el cliente para generar el paquete de actualización."
+    }
+
+    $updateDir = Join-Path $DistArch "Server\ClientUpdate"
+    New-Item -ItemType Directory -Force -Path $updateDir | Out-Null
+    $zipPath = Join-Path $updateDir "client.zip"
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory(
+        $clientDir, $zipPath,
+        [System.IO.Compression.CompressionLevel]::Optimal, $false)
+
+    $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $size = (Get-Item $zipPath).Length
+    $manifest = [ordered]@{
+        version      = $Version
+        fileName     = "client.zip"
+        size         = $size
+        sha256       = $hash
+        publishedUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+    }
+    $manifest | ConvertTo-Json | Set-Content -Path (Join-Path $updateDir "manifest.json") -Encoding UTF8
+
+    Write-Host "    Paquete del cliente: $zipPath ($([Math]::Round($size / 1MB, 1)) MB)" -ForegroundColor DarkGray
+}
+
 $currentVersion = Read-ProjectVersion $versionFile
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -278,6 +314,9 @@ if (-not $SkipPublish) {
         New-Item -ItemType Directory -Force -Path $scriptsTarget | Out-Null
         Copy-Item -Path (Join-Path $installerDir "scripts\*") -Destination $scriptsTarget -Recurse -Force
         Copy-Item -Path (Join-Path $repoRoot "README.md") -Destination $distArch -Force
+
+        Write-Step "Generando el paquete de actualización del cliente para $arch..."
+        New-ClientUpdatePackage $distArch $Version
     }
 }
 else {
@@ -292,6 +331,9 @@ else {
         New-Item -ItemType Directory -Force -Path $scriptsTarget | Out-Null
         Copy-Item -Path (Join-Path $installerDir "scripts\*") -Destination $scriptsTarget -Recurse -Force
         Copy-Item -Path (Join-Path $repoRoot "README.md") -Destination $distArch -Force
+
+        Write-Step "Regenerando el paquete de actualización del cliente en dist\$arch..."
+        New-ClientUpdatePackage $distArch $Version
     }
 }
 

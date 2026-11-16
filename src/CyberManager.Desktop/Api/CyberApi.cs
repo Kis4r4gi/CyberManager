@@ -67,6 +67,23 @@ public class CyberApi : ApiClient
     public Task ReorderStationsAsync(List<int> stationIds)
         => PostAsync("/api/stations/reorder", new ReorderStationsRequest(stationIds));
 
+    // ---- descubrimiento y actualización de clientes ----
+    /// <summary>Busca en la red local las estaciones instaladas (UDP 5092/5093).</summary>
+    public Task<List<DiscoveredStationDto>> ScanNetworkAsync()
+        => PostAsync<List<DiscoveredStationDto>>("/api/stations/scan", new { });
+
+    /// <summary>Da de alta o actualiza los equipos encontrados y les envía su token.</summary>
+    public Task<DiscoveryApplyResult> ApplyDiscoveryAsync(List<DiscoveryApplyItem> stations)
+        => PostAsync<DiscoveryApplyResult>("/api/stations/scan/apply",
+            new ApplyDiscoveryRequest(stations));
+
+    public Task<ClientUpdateStatusDto> ClientUpdateStatusAsync()
+        => GetAsync<ClientUpdateStatusDto>("/api/client-update/status");
+
+    /// <summary>Avisa a estaciones y agentes que hay un paquete de cliente nuevo.</summary>
+    public Task NotifyClientUpdateAsync()
+        => PostAsync("/api/client-update/notify", new { });
+
     // ---- catálogo ----
     public Task<List<ProductDto>> ProductsAsync(bool includeInactive = false)
         => GetAsync<List<ProductDto>>($"/api/products?includeInactive={includeInactive.ToString().ToLower()}");

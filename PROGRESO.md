@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-15
+> Última actualización: 2026-11-16
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -13,7 +13,7 @@ estación), unificados por arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
-La solución compila con **0 errores** (quedan 8 advertencias de nulabilidad en el cliente, no
+La solución compila con **0 errores** (quedan 2 advertencias de nulabilidad en el cliente, no
 bloqueantes). Se generan **dos instaladores unificados**
 (Servidor y Estación), cada uno con los payloads de x64 y x86 y selección automática de la
 arquitectura al instalar. El **servidor está instalado y corriendo** como tarea programada en este
@@ -954,8 +954,54 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Instaladores 1.1.1**: `CyberManager-Servidor-1.1.1.exe` (269.033.089 bytes) y
   `CyberManager-Estacion-1.1.1.exe` (150.713.665 bytes), generados con
   `-Version 1.1.1 -SkipVncDownload`.
+- **Release v1.1.1**: publicada en
+  <https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1> con ambos instaladores y el
+  código fuente GPLv2 de TightVNC 2.8.90.
 - **Servidor local**: publicado y reiniciado con el nuevo endpoint; `/api/health` responde `ok` y
   la consola instalada quedó en **1.1.1** con la galería de 30 fondos.
+
+### Escaneo de red, interfaz adaptable y actualización de clientes (1.2.0, 2026-11-16)
+
+- **Escaneo de la red local**: el servidor difunde y barre la red por UDP (**5092** cliente,
+  **5093** agente). El cliente y el agente responden con nombre de equipo, IP, MAC, versión,
+  rol, `StationId` y token (`CyberManager.Shared.Discovery`, `DiscoveryMessage`,
+  `NetworkIdentity`). `NetworkScanService` recibe las respuestas durante unos segundos y
+  `POST /api/stations/scan` devuelve los equipos encontrados con `IsNew`, `NeedsToken` y la
+  estación ya registrada si coincide por ID, IP o MAC.
+- **Alta y configuración automática**: `POST /api/stations/scan/apply` crea o actualiza los
+  equipos seleccionados, les asigna token si falta y se lo envía por UDP
+  (`DiscoveryMessage` de configuración). El cliente lo guarda en `config.json` y el agente en
+  `appsettings.json` (`AgentConfigStore`), y ambos reconectan solos. En la consola,
+  **Equipos → Escanear la red** abre `NetworkScanDialog` con selección por fila, IP, MAC,
+  versión y estado.
+- **Interfaz adaptable**: `Kit.PageHeader` usa un `WrapPanel` y pasa los botones a una segunda
+  fila cuando el ancho baja de 760 px; `FormDialog` limita ancho y alto al área de trabajo y
+  desplaza el contenido en pantallas pequeñas.
+- **Equipos compacto**: se quitaron las tarjetas de métricas; junto al buscador **Buscar equipo**
+  hay un `ComboBox` de estado (Todos, En línea, Disponibles, En uso, En pausa, Mantenimiento,
+  Desconectados) y el resumen de equipos visibles/en línea/en pausa.
+- **Actualización automática de los clientes**: `ClientUpdateService` publica el manifiesto
+  (`version`, `fileName`, `size`, `sha256`, `publishedUtc`) y el ZIP del cliente desde
+  `Server/ClientUpdate`; endpoints anónimos `/api/client-update/manifest` y `/download`, y
+  `/status` + `/notify` para administradores. `ClientUpdateInstaller` descarga, verifica el
+  SHA-256, extrae, reemplaza los archivos (renombrando los que están en uso a `.old`) y deja
+  `update.pending`; la estación se reinicia con los binarios nuevos.
+- **Agente y cliente**: `ClientUpdateApplier` del agente (SYSTEM) aplica el paquete; el cliente
+  también lo consulta cada 10 minutos y se autoactualiza si puede escribir su carpeta. El
+  servidor difunde `ClientUpdateAvailable` por SignalR a estaciones, agentes y consola.
+- **Box Clientes**: en *Equipos* muestra la versión del paquete, equipos al día, pendientes y
+  sin versión, con **Actualizar clientes** (aviso inmediato) y **Revisar**.
+- **Instalador del servidor**: `scripts/build-installer.ps1` genera
+  `dist\<arch>\Server\ClientUpdate\client.zip` + `manifest.json` y el instalador copia la carpeta
+  completa. El instalador de estación habilita el firewall UDP 5092/5093 y
+  `configurar-agente.ps1` permite dejar el agente sin ID/token a la espera del escaneo.
+- **Pruebas** (servidor temporal en el puerto **5099** con copia de la base real):
+  `/api/health` → `ok`; login admin; `/api/client-update/status` y `/manifest` con el paquete de
+  prueba; `/api/stations/scan` vacío sin respondedores; `/api/stations/scan/apply` creó
+  `PC-PRUEBA-ESCANEO` (id 11) y devolvió `configured: 1`; `/api/client-update/notify` respondió
+  `sent: true`; un respondedor UDP de PowerShell en 5092 permitió capturar `PC-UDP-TEST`
+  (`isNew: true`, `needsToken: true`) de extremo a extremo. `dotnet build CyberManager.sln -c Debug`
+  y `-c Release` con **0 errores** (solo 2 advertencias CS8604 en `SetupWindow.xaml.cs`).
 
 ---
 
@@ -1050,7 +1096,8 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   `StationDto` (zona, tipo, usuario) porque `StationSummaryDto` no incluye esos campos.
 - El icono se genera con `return ,$bytes` y una tabla hash normal (`@{}`), no `[ordered]@{}`:
   PowerShell interpreta las claves enteras ordenadas como índices y falla al asignar `byte[]`.
-- No hay repositorio git; los cambios están solo en disco.
+- Repositorio git en `main`: <https://github.com/Kis4r4gi/CyberManager.git>. `dist/`,
+  `artifacts/`, `installer/vnc/`, `bin/` y `obj/` están ignorados.
 - `dist/` y `artifacts/` son salidas generadas. La publicación usa `dist\x64` y `dist\x86`.
 - **Localización**: `L.T` traduce español→inglés y inglés→español; el diccionario usa asignaciones
   por indexador, por lo que las claves repetidas no lanzan excepción (gana la última). Las cadenas
@@ -1085,26 +1132,41 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - El README se copia a `dist\x64` y `dist\x86` al compilar; tras editar la documentación hay que
   recompilar con `-SkipPublish` para que el instalador incluya la versión nueva.
 - `SatelliteResourceLanguages=en;es` y la limpieza de PDB/XML reducen el tamaño de los instaladores.
+- **Descubrimiento**: el servidor usa UDP **5092** (cliente) y **5093** (agente) con mensajes JSON
+  (`magic` de petición, respuesta y configuración). El escaneo difunde a la red y barre cada /24;
+  espera unos segundos y agrupa por MAC/IP. La autenticación de estación acepta `X-Station-Token`
+  o, como compatibilidad, IP/MAC; el token es la credencial principal.
+- **Actualización de clientes**: el paquete se genera en `dist\<arch>\Server\ClientUpdate`
+  (`client.zip` + `manifest.json` con versión y SHA-256) y el instalador del servidor copia la
+  carpeta. El agente (SYSTEM) y el cliente comparan con `VersionUtil`; para reemplazar archivos en
+  uso se renombran a `.old` y se deja `update.pending` para que la estación se reinicie.
+- **Versiones**: `CyberManager.Shared.VersionUtil` centraliza la comparación numérica usada por el
+  servidor, el agente y el cliente.
 
 ---
 
 ## Pendientes / siguientes pasos
 
-1. (Opcional) Con una sesión **elevada**, probar los dos instaladores unificados en modo silencioso
+1. **Commit y push** de la iteración 1.2.0 (escaneo UDP, UI adaptable, filtro de estado y
+   actualización de clientes). **No publicar la release** hasta que el usuario lo pida.
+2. (Opcional) Publicar servidor y consola y copiarlos a `C:\CyberManager\Servidor\Server` /
+   `Admin` con respaldo previo; probar **Escanear la red** y el box **Clientes** en la consola
+   local.
+3. Al publicar: `scripts\build-installer.ps1` sube la versión a **1.2.0**; verificar que el
+   instalador del servidor incluye `Server\ClientUpdate\client.zip` + `manifest.json` y que el
+   de estación crea la regla de firewall UDP 5092/5093.
+4. (Opcional) Con una sesión **elevada**, probar los dos instaladores unificados en modo silencioso
    y verificar: selección automática de x64 en este equipo, archivos instalados, tarea programada,
    firewall, servicio del agente, reinstalación cruzada x64/x86, confirmación al cerrar procesos,
    reinicio posterior y desinstalación. No se ejecutó una instalación real porque la sesión actual
    no es administrador.
-2. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
+5. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
    equivalente se validó con un instalador Inno de prueba en x64.
-3. (Opcional) Desplegar la nueva versión en `C:\CyberManager\Servidor`, comprobar el acceso directo
-   **CyberManager** (lanzador único), la versión en la barra lateral y en Configuración, el orden
-   manual con Subir/Bajar, y probar el desinstalador desde el menú Inicio y desde la consola.
-4. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
+6. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
    `%ProgramData%\CyberManager\server-elevated.marker` y los comandos remotos de volumen, monitor y
    bloqueo de entrada contra una estación real.
-5. Mantener actualizado `README.md` si se agregan funciones nuevas.
-6. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
+7. Mantener actualizado `README.md` si se agregan funciones nuevas.
+8. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
    consola, el servidor, las promos y la localización. La versión menor sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
 
@@ -1120,12 +1182,15 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.0.20**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20>) con
-  `CyberManager-Servidor-1.0.20.exe` (268.993.803 bytes) y
-  `CyberManager-Estacion-1.0.20.exe` (150.703.935 bytes), publicada el
-  `2026-11-15T04:43:12Z`. La release anterior publicada es `v1.0.19`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.19>).
+- Release actual: **v1.1.1**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1>) con
+  `CyberManager-Servidor-1.1.1.exe` (269.033.089 bytes),
+  `CyberManager-Estacion-1.1.1.exe` (150.713.665 bytes) y
+  `tightvnc-2.8.90-src-gpl.zip` (3.018.194 bytes), publicada el `2026-11-16T17:03:32Z`. La
+  release anterior publicada es `v1.0.20`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.0.20>).
+- La iteración del escaneo de red, la interfaz adaptable y la actualización de clientes está en
+  `main` sin release: al publicarla, `build-installer.ps1` subirá la versión a **1.2.0**.
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).

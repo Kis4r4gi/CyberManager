@@ -71,6 +71,8 @@ builder.Services.AddScoped<RealtimeService>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddSingleton<UpdateService>();
 builder.Services.AddScoped<UpdateReminderService>();
+builder.Services.AddScoped<NetworkScanService>();
+builder.Services.AddSingleton<ClientUpdateService>();
 builder.Services.AddSingleton(new DatabaseInfo(dbFile));
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddHostedService<StationMonitorService>();
@@ -191,6 +193,8 @@ app.MapWebFilterEndpoints();
 app.MapSharedNoteEndpoints();
 app.MapBackupEndpoints();
 app.MapUpdateEndpoints();
+app.MapNetworkScanEndpoints();
+app.MapClientUpdateEndpoints();
 
 app.MapHub<AdminHub>("/hubs/admin");
 app.MapHub<AgentHub>("/hubs/agent");

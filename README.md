@@ -85,6 +85,12 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   Todas las preferencias se guardan por equipo y sobreviven al cambio de tema o idioma.
 - Equipos de tipo **computadora, consola de videojuegos u otro**, con plataforma y cantidad de
   mandos visibles en el tablero y en la ficha del equipo.
+- **Escaneo de la red local**: desde *Equipos* el servidor descubre las estaciones instaladas
+  (cliente y agente por UDP), muestra su IP, MAC y versión, y tras confirmar las registra y les
+  envía el ID y el token automáticamente.
+- **Actualización automática de los clientes**: el servidor publica el paquete del cliente junto
+  a su instalación; las estaciones lo descargan, verifican el SHA-256 y se reinician con la
+  versión nueva, sin reinstalar.
 - Sesiones **prepago** y **postpago**, con tarifas por hora, bloques de cobro y tiempo mínimo.
 - Pausar, reanudar, **extender sobre la marcha** (sin detener la sesión), transferir de equipo y
   finalizar sesiones.
@@ -825,6 +831,19 @@ categoría, precio, costo, existencias, stock mínimo, unidad, IVA y estado.
 
 ## Configurar un equipo (PC)
 
+### Alta automática con «Escanear la red»
+
+El servidor busca en la red local las estaciones que tienen el cliente o el agente
+instalado (UDP **5092** y **5093**). Pulse **Equipos → Escanear la red**, revise la lista y
+confirme: el servidor crea los equipos que faltan, actualiza su IP, MAC y versión, y les envía
+por UDP el **ID y el token** definitivos. La estación los guarda en `config.json` (o el agente
+en `appsettings.json`) y reconecta sola, sin escribirlos a mano.
+
+Los equipos deben estar encendidos y el firewall debe permitir esos puertos UDP. El instalador
+de estación crea la regla automáticamente.
+
+### Configuración manual
+
 1. En la consola vaya a **Equipos**, seleccione el PC y pulse **Configuración / token**.
 2. Anote el **ID del equipo** y el **token**. Puede copiar el token al portapapeles.
 3. En el PC de la estación, abra `CyberManager.Client.exe`. Si no está configurado, aparece la
@@ -908,6 +927,25 @@ sc.exe delete CyberManagerAgent
 > Configure el servicio para que inicie sesión con una cuenta que tenga permisos sobre el equipo.
 > La cuenta `LocalSystem` (predeterminada) suele ser suficiente para apagar y reiniciar. Los
 > mensajes usan `msg.exe`, que requiere que el servicio de mensajes esté disponible en la red.
+
+---
+
+## Actualización automática de los clientes
+
+El instalador del servidor guarda junto a `CyberManager.Server.exe` la carpeta `ClientUpdate`
+con `client.zip` y `manifest.json` (versión, tamaño y SHA-256) del cliente de esa misma versión.
+
+- Cuando el servidor se actualiza, el paquete cambia y las estaciones lo detectan.
+- El agente (servicio SYSTEM) descarga el ZIP, verifica el SHA-256, reemplaza los archivos de
+  `..\Client` y deja la marca `update.pending`; el cliente se reinicia con la versión nueva.
+- El cliente también consulta el manifiesto cada 10 minutos y puede aplicarlo si tiene permisos
+  de escritura en su carpeta.
+- En **Equipos** el box **Clientes** muestra cuántos equipos están al día y permite forzar el
+  aviso con **Actualizar clientes**.
+
+El paquete se genera automáticamente con `scripts\build-installer.ps1` a partir de
+`dist\<arch>\Client` y queda en `dist\<arch>\Server\ClientUpdate`, que el instalador del servidor
+copia a `C:\CyberManager\Servidor\Server\ClientUpdate`.
 
 ---
 
@@ -1224,6 +1262,13 @@ administrador. También puede crearla a mano en el PC servidor (PowerShell como 
 netsh advfirewall firewall add rule name="CyberManager Server 5080" dir=in action=allow protocol=TCP localport=5080 profile=any
 ```
 
+Las estaciones necesitan además el descubrimiento por UDP (el instalador de estación crea la
+regla; en un equipo ya instalado puede crearla a mano):
+
+```powershell
+netsh advfirewall firewall add rule name="CyberManager Estación (descubrimiento)" dir=in action=allow protocol=UDP localport=5092-5093 profile=any
+```
+
 Compruebe la conectividad desde una estación:
 
 ```powershell
@@ -1253,7 +1298,8 @@ Invoke-RestMethod http://192.168.1.10:5080/api/health
   administración y caja requieren el token `Bearer`. Algunas operaciones (configuración, usuarios,
   compras) requieren el rol `Admin`.
 - **Autenticación de estaciones**: cabeceras `X-Station-Id` y `X-Station-Token` enviadas por el
-  cliente y el agente.
+  cliente y el agente. Como compatibilidad, los equipos antiguos pueden autenticarse con
+  `X-Station-Ip`/`X-Station-Mac` (o los parámetros `ipAddress`/`macAddress` del hub).
 - **Hubs SignalR**:
   - `/hubs/admin` — eventos del tablero y de las sesiones para la consola (JWT); también recibe
     `SendRemoteInput` para reenviar mouse y teclado a una estación.
@@ -1263,6 +1309,10 @@ Invoke-RestMethod http://192.168.1.10:5080/api/health
     (token de equipo por query).
 
 Identificadores clave: `/api/health`, `/api/auth/login`, `/api/dashboard`, `/api/stations`,
+`/api/stations/scan` (escaneo UDP de la red, solo rol `Admin`),
+`/api/stations/scan/apply` (alta/actualización de los equipos encontrados, solo rol `Admin`),
+`/api/client-update/manifest` y `/api/client-update/download` (paquete del cliente, anónimos),
+`/api/client-update/status` y `/api/client-update/notify` (solo rol `Admin`),
 `/api/stations/{id}/wake` (Wake on LAN, solo rol `Admin`), `/api/sessions/active`, `/api/sales`,
 `/api/cash`, `/api/products`, `/api/inventory`,
 `/api/purchases`, `/api/suppliers/balances`, `/api/suppliers/{id}/payments`,

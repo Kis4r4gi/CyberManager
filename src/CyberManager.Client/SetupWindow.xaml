@@ -33,6 +33,10 @@
             <TextBlock Text="Número de equipo (StationId)" Style="{StaticResource Label}" Margin="0,14,0,4" />
             <TextBox x:Name="StationIdBox" ToolTip="Número que aparece en Administración › Equipos" />
 
+            <TextBlock Text="Token del equipo" Style="{StaticResource Label}" Margin="0,14,0,4" />
+            <TextBox x:Name="TokenBox" FontFamily="Consolas"
+                     ToolTip="Token que muestra la consola en Equipos › Configuración / token" />
+
             <TextBlock Text="Dirección IP" Style="{StaticResource Label}" Margin="0,14,0,4" />
             <TextBox x:Name="IpAddressBox" ToolTip="Dirección IP del equipo (ej. 192.168.1.50)" />
 

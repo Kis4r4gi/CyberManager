@@ -9,6 +9,9 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 });
 builder.Services.AddWindowsService(options => options.ServiceName = "CyberManagerAgent");
 builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("Agent"));
+builder.Services.AddSingleton<AgentConfigStore>();
+builder.Services.AddSingleton<ClientUpdateApplier>();
+builder.Services.AddHostedService<DiscoveryResponder>();
 builder.Services.AddHostedService<AgentWorker>();
 
 var host = builder.Build();

@@ -250,8 +250,10 @@ public static class Kit
         var grid = new Grid { Margin = new Thickness(0, 0, 0, 16) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var texts = new StackPanel();
+        var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         texts.Children.Add(Heading(title));
         texts.Children.Add(new TextBlock
         {
@@ -265,10 +267,38 @@ public static class Kit
 
         if (actions.Length > 0)
         {
-            var buttons = HStack(8, actions);
-            buttons.VerticalAlignment = VerticalAlignment.Center;
+            // WrapPanel: si la ventana es angosta, los botones pasan a una segunda
+            // fila y se acomodan sin cortar el título.
+            var buttons = new WrapPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            foreach (var action in actions)
+            {
+                action.Margin = new Thickness(0, 0, 8, 0);
+                buttons.Children.Add(action);
+            }
+
             Grid.SetColumn(buttons, 1);
             grid.Children.Add(buttons);
+
+            void Layout(double width)
+            {
+                var narrow = width > 0 && width < 760;
+                Grid.SetRow(buttons, narrow ? 1 : 0);
+                Grid.SetColumn(buttons, narrow ? 0 : 1);
+                Grid.SetColumnSpan(buttons, narrow ? 2 : 1);
+                buttons.HorizontalAlignment = narrow
+                    ? HorizontalAlignment.Left
+                    : HorizontalAlignment.Right;
+                buttons.Margin = narrow ? new Thickness(0, 10, 0, 0) : new Thickness(8, 0, 0, 0);
+            }
+
+            grid.SizeChanged += (_, e) => Layout(e.NewSize.Width);
+            Layout(0);
         }
 
         return grid;

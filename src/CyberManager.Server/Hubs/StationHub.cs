@@ -65,10 +65,34 @@ public class StationHub : Hub
         var http = Context.GetHttpContext();
         var idText = http?.Request.Query["stationId"].ToString();
         var token = http?.Request.Query["token"].ToString();
-        if (!int.TryParse(idText, out var id) || string.IsNullOrWhiteSpace(token)) return null;
+        var ip = http?.Request.Query["ipAddress"].ToString();
+        var mac = http?.Request.Query["macAddress"].ToString();
+        if (!int.TryParse(idText, out var id)) return null;
 
         var station = await _db.Stations.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
-        if (station is null || string.IsNullOrWhiteSpace(station.DeviceToken)) return null;
-        return station.DeviceToken == token ? id : null;
+        if (station is null) return null;
+
+        if (!string.IsNullOrWhiteSpace(token))
+            return !string.IsNullOrWhiteSpace(station.DeviceToken) && station.DeviceToken == token
+                ? id
+                : null;
+
+        // Compatibilidad con equipos configurados solo por IP y MAC.
+        var normalizedMac = NormalizeMac(mac);
+        if (normalizedMac.Length > 0 &&
+            string.Equals(NormalizeMac(station.MacAddress), normalizedMac, StringComparison.Ordinal))
+            return id;
+
+        if (!string.IsNullOrWhiteSpace(ip) &&
+            string.Equals(station.IpAddress, ip, StringComparison.OrdinalIgnoreCase))
+            return id;
+
+        return null;
     }
+
+    private static string NormalizeMac(string? mac)
+        => (mac ?? string.Empty).Replace(":", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace(" ", string.Empty)
+            .ToUpperInvariant();
 }

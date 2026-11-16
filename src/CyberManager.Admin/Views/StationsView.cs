@@ -14,12 +14,9 @@ public sealed class StationsView : UserControl, IRefreshable
 {
     private readonly DataGrid _grid;
     private readonly TextBox _searchBox = new();
+    private readonly ComboBox _statusFilter = new();
     private readonly TextBlock _summaryText = Kit.Muted("Cargando equipos...");
-    private readonly TextBlock _totalValue;
-    private readonly TextBlock _onlineValue;
-    private readonly TextBlock _availableValue;
-    private readonly TextBlock _inUseValue;
-    private readonly TextBlock _maintenanceValue;
+    private readonly TextBlock _clientStatusText = Kit.Muted("Consultando el paquete de cliente...");
 
     private List<StationDto> _stations = new();
     private List<ZoneDto> _zones = new();
@@ -59,17 +56,47 @@ public sealed class StationsView : UserControl, IRefreshable
 
         root.Children.Add(Kit.PageHeader("Equipos y zonas",
             "Administre los PC del local, su tarifa por hora y las credenciales que usa el cliente.",
+            Kit.Button("Escanear la red", "PrimaryButton", ScanNetwork),
             Kit.Button("Nuevo equipo", "PrimaryButton", NewStation),
             Kit.Button("Actualizar", "GhostButton", () => _ = Ui.Run(RefreshAsync, "No se pudieron cargar los equipos"))));
 
-        var metrics = new UniformGrid { Columns = 5, Margin = new Thickness(0, 0, 0, 16) };
-        metrics.Children.Add(Metric("Equipos registrados", "Accent2Brush", out _totalValue));
-        metrics.Children.Add(Metric("En línea", "SuccessBrush", out _onlineValue));
-        metrics.Children.Add(Metric("Disponibles", "AccentBrush", out _availableValue));
-        metrics.Children.Add(Metric("En uso", "PurpleBrush", out _inUseValue));
-        metrics.Children.Add(Metric("Mantenimiento", "WarningBrush", out _maintenanceValue));
-        Grid.SetRow(metrics, 1);
-        root.Children.Add(metrics);
+        // ---- Box de actualización de los clientes instalados ----
+        var clientWrap = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        clientWrap.Children.Add(new TextBlock
+        {
+            Text = L.T("Clientes"),
+            Style = Kit.Style("H2"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 14, 8)
+        });
+
+        _clientStatusText.VerticalAlignment = VerticalAlignment.Center;
+        _clientStatusText.Margin = new Thickness(0, 0, 14, 8);
+        clientWrap.Children.Add(_clientStatusText);
+
+        var updateButton = Kit.Button("Actualizar clientes", "BlueButton", UpdateClients);
+        updateButton.Margin = new Thickness(0, 0, 8, 8);
+        clientWrap.Children.Add(updateButton);
+
+        var reviewButton = Kit.Button("Revisar", "GhostButton",
+            () => _ = Ui.Run(RefreshClientUpdateAsync, "No se pudo consultar el paquete de cliente"));
+        reviewButton.Margin = new Thickness(0, 0, 0, 8);
+        clientWrap.Children.Add(reviewButton);
+
+        var clientBox = new Border
+        {
+            Style = Kit.Style("Card"),
+            Padding = new Thickness(14, 10, 14, 10),
+            Margin = new Thickness(0, 0, 0, 14),
+            Child = clientWrap
+        };
+        Grid.SetRow(clientBox, 1);
+        root.Children.Add(clientBox);
 
         var content = new Grid();
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -86,6 +113,24 @@ public sealed class StationsView : UserControl, IRefreshable
         _searchBox.ToolTip = "Buscar equipo por nombre, IP o zona";
         _searchBox.TextChanged += (_, _) => Render();
 
+        // Menú desplegable de estado junto al buscador: sustituye los boxes de métricas.
+        _statusFilter.ItemsSource = new[]
+        {
+            new StatusOption("Todos los estados", null),
+            new StatusOption("En línea", s => s.Status != StationStatus.Offline),
+            new StatusOption("Disponibles", s => s.Status == StationStatus.Available),
+            new StatusOption("En uso", s => s.Status == StationStatus.InUse),
+            new StatusOption("En pausa", s => s.Status == StationStatus.Paused),
+            new StatusOption("Mantenimiento", s => s.Status == StationStatus.Maintenance),
+            new StatusOption("Desconectados", s => s.Status == StationStatus.Offline)
+        };
+        _statusFilter.SelectedIndex = 0;
+        _statusFilter.Width = 160;
+        _statusFilter.Margin = new Thickness(10, 0, 0, 0);
+        _statusFilter.VerticalAlignment = VerticalAlignment.Center;
+        _statusFilter.ToolTip = "Filtra la lista por el estado del equipo";
+        _statusFilter.SelectionChanged += (_, _) => Render();
+
         var search = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -99,6 +144,7 @@ public sealed class StationsView : UserControl, IRefreshable
             Margin = new Thickness(0, 0, 8, 0)
         });
         search.Children.Add(_searchBox);
+        search.Children.Add(_statusFilter);
         searchRow.Children.Add(search);
 
         _summaryText.VerticalAlignment = VerticalAlignment.Center;
@@ -168,14 +214,6 @@ public sealed class StationsView : UserControl, IRefreshable
         Loaded += async (_, _) => await Ui.Run(RefreshAsync, "No se pudieron cargar los equipos");
     }
 
-    private static Border Metric(string label, string accent, out TextBlock valueText)
-    {
-        var card = Kit.StatCard(label, "—", null, accent, out var value);
-        card.Margin = new Thickness(0, 0, 10, 0);
-        valueText = value;
-        return card;
-    }
-
     private StationDto? Selected => (_grid.SelectedItem as StationRow)?.Source;
 
     /// <summary>Menú contextual de cada equipo con las acciones del administrador.</summary>
@@ -243,13 +281,16 @@ public sealed class StationsView : UserControl, IRefreshable
         _rates = await ratesTask;
 
         Render();
+        await RefreshClientUpdateAsync();
     }
 
     private void Render()
     {
         var term = _searchBox.Text.Trim();
+        var status = (_statusFilter.SelectedItem as StatusOption)?.Match;
 
         var filtered = _stations
+            .Where(s => status is null || status(s))
             .Where(s => term.Length == 0
                         || s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
                         || (s.IpAddress?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -264,19 +305,6 @@ public sealed class StationsView : UserControl, IRefreshable
         _grid.ItemsSource = filtered.Select(s => new StationRow(s)).ToList();
 
         var online = _stations.Count(s => s.Status != StationStatus.Offline);
-        var available = _stations.Count(s => s.Status == StationStatus.Available);
-        var inUse = _stations.Count(s => s.Status == StationStatus.InUse);
-        var maintenance = _stations.Count(s => s.Status == StationStatus.Maintenance);
-
-        _totalValue.Text = _stations.Count.ToString();
-        _onlineValue.Text = online.ToString();
-        _availableValue.Text = available.ToString();
-        _inUseValue.Text = inUse.ToString();
-        _maintenanceValue.Text = maintenance.ToString();
-
-        _totalValue.ToolTip = $"{_stations.Count} equipos registrados";
-        _onlineValue.ToolTip = "Equipos que han reportado al servidor recientemente";
-        _maintenanceValue.ToolTip = $"{_stations.Count(s => s.Status == StationStatus.Paused)} equipos en pausa";
 
         _summaryText.Text = $"{filtered.Count} equipos visibles · {online} en línea · " +
                             $"{_stations.Count(s => s.Status == StationStatus.Paused)} en pausa";
@@ -543,6 +571,71 @@ public sealed class StationsView : UserControl, IRefreshable
             await App.Api.DeactivateStationAsync(station.Id);
             await RefreshAsync();
         }, "No se pudo desactivar el equipo");
+    }
+
+    // ---- escaneo de la red y actualización de los clientes ----
+
+    /// <summary>Busca estaciones instaladas en la red y permite darlas de alta.</summary>
+    private void ScanNetwork()
+    {
+        _ = Ui.Run(async () =>
+        {
+            var found = await App.Api.ScanNetworkAsync();
+            if (found.Count == 0)
+            {
+                Ui.Info("No se encontró ningún equipo en la red local. Verifique que las " +
+                        "estaciones estén encendidas y que el firewall permita los puertos " +
+                        "UDP 5092 y 5093.", "Escanear la red");
+                return;
+            }
+
+            var dialog = new NetworkScanDialog(found) { Owner = Window.GetWindow(this) };
+            if (dialog.ShowDialog() != true || dialog.Selected.Count == 0) return;
+
+            var result = await App.Api.ApplyDiscoveryAsync(dialog.Selected);
+            await RefreshAsync();
+
+            var detail = result.Messages.Count > 0
+                ? "\n\n" + string.Join("\n", result.Messages)
+                : string.Empty;
+            Ui.Info($"{result.Created} equipos nuevos, {result.Updated} actualizados y " +
+                    $"{result.Configured} configurados en la red.{detail}", "Escanear la red");
+        }, "No se pudo escanear la red");
+    }
+
+    /// <summary>Avisa a las estaciones y agentes que hay un paquete de cliente nuevo.</summary>
+    private void UpdateClients()
+    {
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.NotifyClientUpdateAsync();
+            await RefreshClientUpdateAsync();
+            Ui.Info("Se avisó a las estaciones y agentes. Los equipos descargarán la versión " +
+                    "nueva y se reiniciarán automáticamente.", "Actualizar clientes");
+        }, "No se pudo avisar a los clientes");
+    }
+
+    private async Task RefreshClientUpdateAsync()
+    {
+        try
+        {
+            var status = await App.Api.ClientUpdateStatusAsync();
+            _clientStatusText.Text = status.HasPackage
+                ? $"Paquete {status.PackageVersion} · {status.UpToDate} al día · " +
+                  $"{status.Outdated} pendientes · {status.Unknown} sin versión"
+                : "Sin paquete de cliente. Publique la versión con el instalador del servidor.";
+            _clientStatusText.ToolTip = status.Message;
+        }
+        catch
+        {
+            _clientStatusText.Text = "No se pudo consultar el estado de los clientes.";
+        }
+    }
+
+    /// <summary>Opción del menú de estados junto al buscador.</summary>
+    private sealed record StatusOption(string Label, Func<StationDto, bool>? Match)
+    {
+        public override string ToString() => L.T(Label);
     }
 }
 

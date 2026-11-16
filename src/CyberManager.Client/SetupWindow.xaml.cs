@@ -26,7 +26,7 @@ public partial class SetupWindow : Window
 
         ServerUrlBox.Text = config.ServerUrl;
         StationIdBox.Text = config.StationId > 0 ? config.StationId.ToString() : string.Empty;
-        // Token field removed: using IP/MAC based connection
+        TokenBox.Text = config.StationToken;
 
         foreach (ComboBoxItem item in LanguageBox.Items)
         {
@@ -51,9 +51,11 @@ public partial class SetupWindow : Window
         Loc.Apply(this);
     }
 
-    private bool TryRead(out int stationId, out string? stationIpAddress, out string? stationMacAddress)
+    private bool TryRead(out int stationId, out string? stationToken,
+        out string? stationIpAddress, out string? stationMacAddress)
     {
         stationId = 0;
+        stationToken = null;
         stationIpAddress = null;
         stationMacAddress = null;
 
@@ -62,6 +64,8 @@ public partial class SetupWindow : Window
             ShowStatus(L.T("El número de equipo debe ser un número mayor que cero."), isError: true);
             return false;
         }
+
+        stationToken = string.IsNullOrWhiteSpace(TokenBox.Text) ? null : TokenBox.Text.Trim();
 
         // Parse IP address if provided
         if (!string.IsNullOrWhiteSpace(IpAddressBox.Text) && !IPAddress.TryParse(IpAddressBox.Text, out var ip))
@@ -89,15 +93,17 @@ public partial class SetupWindow : Window
 
     private async void Test_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryRead(out var stationId, out var stationIpAddress, out var stationMacAddress)) return;
+        if (!TryRead(out var stationId, out var stationToken,
+                out var stationIpAddress, out var stationMacAddress)) return;
 
         TestButton.IsEnabled = false;
         ShowStatus(L.T("Conectando con el servidor..."), isError: false);
 
         try
         {
-            // Usar IP y/or MAC para la conexión en lugar de token
-            var api = new StationApi(ServerUrlBox.Text, stationId, stationIpAddress, stationMacAddress);
+            // El token es la credencial principal; IP/MAC se usan como respaldo.
+            var api = new StationApi(ServerUrlBox.Text, stationId, stationIpAddress,
+                stationMacAddress, stationToken);
             var state = await api.StateAsync();
 
             var session = state.Session is null
@@ -122,12 +128,14 @@ public partial class SetupWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (!TryRead(out var stationId, out var stationIpAddress, out var stationMacAddress)) return;
+        if (!TryRead(out var stationId, out var stationToken,
+                out var stationIpAddress, out var stationMacAddress)) return;
 
         var config = new AppConfig
         {
             ServerUrl = ApiClient.Normalize(ServerUrlBox.Text),
             StationId = stationId,
+            StationToken = stationToken ?? string.Empty,
             StationIpAddress = stationIpAddress,
             StationMacAddress = stationMacAddress,
             Language = (LanguageBox.SelectedItem as ComboBoxItem)?.Tag as string ?? L.Code

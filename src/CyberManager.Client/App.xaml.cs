@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.IO;
 using System.Media;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Windows;
 using System.Windows.Threading;
 using CyberManager.Client.Services;
@@ -22,13 +25,21 @@ public partial class App : Application
     private readonly PromoVideoService _promos = new();
 
     private DispatcherTimer? _pollTimer;
+    private DispatcherTimer? _updateTimer;
     private LockWindow? _lockWindow;
     private SessionBarWindow? _barWindow;
     private OrderWindow? _orderWindow;
     private InputBlocker? _inputBlocker;
     private bool _forcedLock;
     private bool _shuttingDown;
+    private bool _running;
+    private bool _restarting;
+    private DateTime _lastUpdateCheck = DateTime.MinValue;
     private DateTime _lastConnectAttempt = DateTime.MinValue;
+    private DiscoveryResponder? _discovery;
+    private SetupWindow? _setupWindow;
+
+    private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromMinutes(3) };
 
     private static bool Configured =>
         Config.StationId > 0 && (!string.IsNullOrWhiteSpace(Config.StationToken) ||
@@ -47,10 +58,16 @@ public partial class App : Application
         Config = AppConfig.Load("Client");
         L.SetLanguage(Config.Language);
 
+        // El descubrimiento debe estar activo incluso antes de configurar el equipo:
+        // así el servidor puede encontrarlo y enviarle el ID y el token.
+        StartDiscovery();
+
         if (!Configured)
         {
-            var setup = new SetupWindow();
-            if (setup.ShowDialog() != true)
+            _setupWindow = new SetupWindow();
+            var accepted = _setupWindow.ShowDialog() == true;
+            _setupWindow = null;
+            if (!accepted)
             {
                 Shutdown();
                 return;
@@ -80,15 +97,12 @@ public partial class App : Application
     {
         await StopAsync();
 
-        // Usar IP y MAC para la conexión si están configurados, sino usar token legado
-        if (!string.IsNullOrWhiteSpace(Config.StationIpAddress) && !string.IsNullOrWhiteSpace(Config.StationMacAddress))
-        {
-            Api = new StationApi(Config.ServerUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
-        }
-        else
-        {
-            Api = new StationApi(Config.ServerUrl, Config.StationId, Config.StationToken);
-        }
+        // El token es la credencial principal; la IP/MAC se mantienen como respaldo
+        // para equipos instalados antes de que el servidor asignara tokens.
+        Api = string.IsNullOrWhiteSpace(Config.StationToken)
+            ? new StationApi(Config.ServerUrl, Config.StationId,
+                Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty)
+            : new StationApi(Config.ServerUrl, Config.StationId, Config.StationToken);
 
         Realtime = new StationRealtime();
         Realtime.CommandReceived += OnCommandReceived;
@@ -98,17 +112,19 @@ public partial class App : Application
         Realtime.PromoVideosChanged += OnPromoVideosChanged;
         Realtime.ScreenFrameRequested += OnScreenFrameRequested;
         Realtime.RemoteInputReceived += OnRemoteInputReceived;
+        Realtime.ClientUpdateAvailable += OnClientUpdateAvailable;
 
         try
         {
             // Conectar usando el método apropiado según la configuración
-            if (Api is not null && Api.StationIpAddress is not null && Api.StationMacAddress is not null)
+            if (!string.IsNullOrWhiteSpace(Config.StationToken))
             {
-                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
+                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
             }
             else
             {
-                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId,
+                    Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty);
             }
             _lastConnectAttempt = DateTime.UtcNow;
         }
@@ -121,13 +137,136 @@ public partial class App : Application
         _pollTimer.Tick += async (_, _) => await RefreshAsync();
         _pollTimer.Start();
 
+        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
+        _updateTimer.Tick += async (_, _) => await CheckClientUpdateAsync();
+        _updateTimer.Start();
+
         await RefreshAsync();
+        await CheckClientUpdateAsync();
+        _running = true;
+    }
+
+    private void StartDiscovery()
+    {
+        if (_discovery is not null) return;
+        try
+        {
+            _discovery = new DiscoveryResponder();
+            _discovery.Configured += OnDiscoveryConfigured;
+        }
+        catch
+        {
+            // El puerto UDP puede estar ocupado; el equipo seguirá funcionando con
+            // la configuración manual.
+            _discovery = null;
+        }
+    }
+
+    private void OnDiscoveryConfigured(DiscoveryMessage message)
+        => Dispatcher.BeginInvoke(async () =>
+        {
+            Config = AppConfig.Load("Client");
+
+            // Si la ventana de configuración está abierta, se cierra para aplicar
+            // los datos que envió el administrador.
+            if (_setupWindow is { IsVisible: true } setup)
+            {
+                setup.DialogResult = true;
+                setup.Close();
+                return;
+            }
+
+            if (_running) await StartAsync();
+        });
+
+    private void OnClientUpdateAvailable(ClientUpdateManifestDto manifest)
+        => Dispatcher.BeginInvoke(async () => await ApplyClientUpdateAsync(manifest));
+
+    /// <summary>
+    /// Consulta el manifiesto del servidor cada 10 minutos. El agente suele aplicar la
+    /// actualización como SYSTEM; si el cliente puede escribir su carpeta, la aplica él.
+    /// </summary>
+    private async Task CheckClientUpdateAsync()
+    {
+        if (_restarting || Api is null) return;
+        if (DateTime.UtcNow - _lastUpdateCheck < TimeSpan.FromMinutes(2)) return;
+        _lastUpdateCheck = DateTime.UtcNow;
+
+        try
+        {
+            var manifest = await UpdateHttp.GetFromJsonAsync<ClientUpdateManifestDto>(
+                $"{Api.BaseUrl.TrimEnd('/')}/api/client-update/manifest");
+            if (manifest is not null) await ApplyClientUpdateAsync(manifest);
+        }
+        catch
+        {
+            // Sin conexión o sin paquete: se reintenta en la próxima consulta.
+        }
+    }
+
+    private async Task ApplyClientUpdateAsync(ClientUpdateManifestDto manifest)
+    {
+        if (_restarting || string.IsNullOrWhiteSpace(manifest.Version)) return;
+        if (!VersionUtil.IsNewer(manifest.Version, AppInfo.Version)) return;
+
+        var clientDir = ClientUpdateInstaller.ResolveClientDir();
+        if (clientDir is null) return;
+
+        try
+        {
+            var workDir = Path.Combine(Path.GetTempPath(), "CyberManager", "ClientUpdate",
+                manifest.Version);
+            var staging = await ClientUpdateInstaller.DownloadAndExtractAsync(
+                Api?.BaseUrl ?? Config.ServerUrl, manifest, workDir, UpdateHttp, CancellationToken.None);
+
+            // El SHA-256 no coincide: no se aplica nada.
+            if (staging is null) return;
+
+            if (ClientUpdateInstaller.Apply(staging, clientDir, out _))
+                RestartForUpdate();
+        }
+        catch
+        {
+            // Sin permisos de escritura el agente aplicará la actualización.
+        }
+    }
+
+    /// <summary>Reinicia la pantalla para cargar los binarios nuevos y quita la marca.</summary>
+    private void RestartForUpdate()
+    {
+        if (_restarting) return;
+        _restarting = true;
+
+        ClientUpdateInstaller.TryDelete(Path.Combine(AppContext.BaseDirectory,
+            ClientUpdateInstaller.PendingFile));
+
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (!string.IsNullOrWhiteSpace(exe))
+            {
+                Process.Start(new ProcessStartInfo(exe)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = AppContext.BaseDirectory
+                });
+            }
+        }
+        catch
+        {
+            // Si no se puede reiniciar, el usuario lo hará al abrir el equipo.
+        }
+
+        Shutdown();
     }
 
     private async Task StopAsync()
     {
         _pollTimer?.Stop();
         _pollTimer = null;
+
+        _updateTimer?.Stop();
+        _updateTimer = null;
 
         if (Realtime is not null)
         {
@@ -138,6 +277,7 @@ public partial class App : Application
             Realtime.PromoVideosChanged -= OnPromoVideosChanged;
             Realtime.ScreenFrameRequested -= OnScreenFrameRequested;
             Realtime.RemoteInputReceived -= OnRemoteInputReceived;
+            Realtime.ClientUpdateAvailable -= OnClientUpdateAvailable;
             await Realtime.DisposeAsync();
             Realtime = null;
         }
@@ -165,6 +305,14 @@ public partial class App : Application
     private async Task RefreshAsync()
     {
         if (Api is null) return;
+
+        // Si el agente reemplazó los archivos, se reinicia con la versión nueva.
+        if (!_restarting && File.Exists(Path.Combine(AppContext.BaseDirectory,
+                ClientUpdateInstaller.PendingFile)))
+        {
+            RestartForUpdate();
+            return;
+        }
 
         try
         {
@@ -197,13 +345,14 @@ public partial class App : Application
             try
             {
                 // Reintentar conexión usando el método apropiado
-                if (Api is not null && Api.StationIpAddress is not null && Api.StationMacAddress is not null)
+                if (!string.IsNullOrWhiteSpace(Config.StationToken))
                 {
-                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationIpAddress, Config.StationMacAddress);
+                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
                 }
                 else
                 {
-                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
+                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId,
+                        Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty);
                 }
             }
             catch { /* se reintenta luego */ }
@@ -218,7 +367,7 @@ public partial class App : Application
             Config.StationId,
             Environment.MachineName,
             Environment.UserName,
-            "1.0.0",
+            AppInfo.Version,
             Environment.OSVersion.VersionString,
             0,
             0,
@@ -526,6 +675,15 @@ public partial class App : Application
     protected override async void OnExit(ExitEventArgs e)
     {
         _shuttingDown = true;
+        _running = false;
+
+        if (_discovery is not null)
+        {
+            _discovery.Configured -= OnDiscoveryConfigured;
+            _discovery.Dispose();
+            _discovery = null;
+        }
+
         await StopAsync();
         SetInputBlocked(false);
         _wallpapers.Dispose();

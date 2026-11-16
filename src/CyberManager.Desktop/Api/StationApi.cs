@@ -15,30 +15,27 @@ public class StationApi : ApiClient
     public string? StationIpAddress { get; }
     public string? StationMacAddress { get; }
 
-    public StationApi(string baseUrl, int stationId, string stationIpAddress = null!, string stationMacAddress = null!) : base(baseUrl)
+    /// <summary>Autenticación por token del equipo (método principal).</summary>
+    public StationApi(string baseUrl, int stationId, string? token = null) : base(baseUrl)
     {
         StationId = stationId;
-        StationIpAddress = stationIpAddress;
-        StationMacAddress = stationMacAddress;
+        Headers["X-Station-Id"] = stationId.ToString();
+        if (!string.IsNullOrWhiteSpace(token))
+            Headers["X-Station-Token"] = token;
+    }
 
-        // Configurar headers de identificación: preferiblemente IP y MAC, fallback a token
-        if (!string.IsNullOrWhiteSpace(stationIpAddress))
-        {
-            // Usar IP como identificador principal
-            Headers["X-Station-Id"] = stationId.ToString();
-            // No enviar token por defecto cuando se usa IP/MAC
-        }
-        else if (!string.IsNullOrWhiteSpace(stationMacAddress))
-        {
-            Headers["X-Station-Id"] = stationId.ToString();
-            // No enviar token por defecto cuando se usa IP/MAC
-        }
-        else
-        {
-            // Modo legado: enviar token para compatibilidad hacia atrás
-            Headers["X-Station-Id"] = stationId.ToString();
-            // Note: el token se establecería mediante SetTokenHeader() si es necesario
-        }
+    /// <summary>Autenticación por IP y MAC (compatibilidad) con token opcional.</summary>
+    public StationApi(string baseUrl, int stationId, string ipAddress, string macAddress,
+        string? token = null) : base(baseUrl)
+    {
+        StationId = stationId;
+        StationIpAddress = string.IsNullOrWhiteSpace(ipAddress) ? null : ipAddress;
+        StationMacAddress = string.IsNullOrWhiteSpace(macAddress) ? null : macAddress;
+
+        Headers["X-Station-Id"] = stationId.ToString();
+        if (StationIpAddress is not null) Headers["X-Station-Ip"] = StationIpAddress;
+        if (StationMacAddress is not null) Headers["X-Station-Mac"] = StationMacAddress;
+        if (!string.IsNullOrWhiteSpace(token)) Headers["X-Station-Token"] = token;
     }
 
     /// <summary>

@@ -82,6 +82,7 @@ public sealed class StationRealtime : IAsyncDisposable
     public event Action<ScreenFrameRequest>? ScreenFrameRequested;
     public event Action<RemoteInputEvent>? RemoteInputReceived;
     public event Action<WebFilterPlaylistDto>? WebFilterChanged;
+    public event Action<ClientUpdateManifestDto>? ClientUpdateAvailable;
     public event Action<bool>? ConnectionChanged;
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;
@@ -106,6 +107,7 @@ public sealed class StationRealtime : IAsyncDisposable
         _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
         _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));
         _hub.On<WebFilterPlaylistDto>("WebFilterChanged", p => WebFilterChanged?.Invoke(p));
+        _hub.On<ClientUpdateManifestDto>("ClientUpdateAvailable", m => ClientUpdateAvailable?.Invoke(m));
 
         _hub.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         _hub.Reconnected += _ => { ConnectionChanged?.Invoke(true); return Task.CompletedTask; };
@@ -136,6 +138,7 @@ public sealed class StationRealtime : IAsyncDisposable
         _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
         _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));
         _hub.On<WebFilterPlaylistDto>("WebFilterChanged", p => WebFilterChanged?.Invoke(p));
+        _hub.On<ClientUpdateManifestDto>("ClientUpdateAvailable", m => ClientUpdateAvailable?.Invoke(m));
 
         _hub.Reconnecting += _ => { ConnectionChanged?.Invoke(false); return Task.CompletedTask; };
         _hub.Reconnected += _ => { ConnectionChanged?.Invoke(true); return Task.CompletedTask; };

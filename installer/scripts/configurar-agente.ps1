@@ -31,6 +31,20 @@ function Write-Step([string]$Message) {
     Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
+# Permite que el servidor descubra la estación y el agente por UDP (escaneo de red).
+function Enable-DiscoveryFirewall {
+    $name = "CyberManager Estación (descubrimiento)"
+    try {
+        Remove-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName $name -Direction Inbound -Action Allow `
+            -Protocol UDP -LocalPort 5092, 5093 -Profile Any | Out-Null
+        Write-Step "Firewall: puertos UDP 5092 y 5093 habilitados para el descubrimiento."
+    }
+    catch {
+        Write-Warning "No se pudieron crear las reglas de firewall: $_"
+    }
+}
+
 $principal = New-Object Security.Principal.WindowsPrincipal(
     [Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -46,27 +60,44 @@ if (-not (Test-Path $exe)) {
 
 Write-Host ""
 Write-Host "Configuración del agente de CyberManager" -ForegroundColor Cyan
-Write-Host "Obtenga el ID y el token en Administración > Equipos > Configuración / token." -ForegroundColor DarkGray
+Write-Host "El servidor puede encontrar este equipo con «Escanear la red» y asignarle" -ForegroundColor DarkGray
+Write-Host "el ID y el token automáticamente. También puede escribirlos ahora." -ForegroundColor DarkGray
 Write-Host ""
 
-if ($StationId -le 0) {
-    $StationId = [int](Read-Host "ID del equipo")
+$manual = ($StationId -gt 0) -or (-not [string]::IsNullOrWhiteSpace($Token))
+if (-not $manual) {
+    $answer = Read-Host "¿Configurar manualmente el ID y el token? (s/N)"
+    $manual = $answer -match '^(s|si|sí|y|yes)$'
 }
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    $Token = Read-Host "Token del equipo"
+
+if ($manual) {
+    if ($StationId -le 0) {
+        $StationId = [int](Read-Host "ID del equipo")
+    }
+    if ([string]::IsNullOrWhiteSpace($Token)) {
+        $Token = Read-Host "Token del equipo"
+    }
+    if ($StationId -le 0) { throw "El ID del equipo debe ser mayor que cero." }
+    if ([string]::IsNullOrWhiteSpace($Token)) { throw "Debe indicar el token del equipo." }
 }
+else {
+    $StationId = 0
+    $Token = ""
+    Write-Step "El equipo quedará a la espera del escaneo de red del servidor."
+}
+
 if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
     $ServerUrl = Read-Host "URL del servidor (ej. http://192.168.1.10:5080)"
 }
 
-if ($StationId -le 0) { throw "El ID del equipo debe ser mayor que cero." }
-if ([string]::IsNullOrWhiteSpace($Token)) { throw "Debe indicar el token del equipo." }
 if ([string]::IsNullOrWhiteSpace($ServerUrl)) { throw "Debe indicar la URL del servidor." }
 
 $ServerUrl = $ServerUrl.Trim().TrimEnd("/")
 if (-not $ServerUrl.StartsWith("http://") -and -not $ServerUrl.StartsWith("https://")) {
     $ServerUrl = "http://$ServerUrl"
 }
+
+Enable-DiscoveryFirewall
 
 # ---------- Servicio anterior ----------
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue

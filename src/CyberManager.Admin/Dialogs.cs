@@ -22,9 +22,16 @@ public class FormDialog : Window
 
     protected FormDialog(string title, string? subtitle = null, string acceptText = "Aceptar", double width = 480)
     {
+        // La ventana nunca debe exceder el área de trabajo: en pantallas pequeñas
+        // se reduce el ancho y el contenido se desplaza en vertical.
+        var work = SystemParameters.WorkArea;
+        var maxWidth = Math.Max(360, work.Width - 80);
+        var maxHeight = Math.Max(320, work.Height - 60);
+
         Title = title;
-        Width = width;
+        Width = Math.Min(width, maxWidth);
         SizeToContent = SizeToContent.Height;
+        MaxHeight = maxHeight;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
@@ -54,7 +61,7 @@ public class FormDialog : Window
         {
             Content = Body,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            MaxHeight = 430
+            MaxHeight = Math.Max(220, maxHeight - 260)
         });
 
         _error = new TextBlock
