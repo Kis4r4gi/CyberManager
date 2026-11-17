@@ -193,10 +193,10 @@ public class SessionService
             else
             {
                 // Solo los cobros en efectivo o por medios de pago requieren una caja abierta.
-                // El saldo del cliente no genera movimiento de caja.
-                var cash = await _cash.GetOpenAsync();
-                if (cash is null)
-                    throw new AppException("Debe haber una caja abierta para cobrar la sesión.", 409);
+                // El saldo del cliente no genera movimiento de caja. Si la sesión se abrió
+                // en otra caja, el cobro se registra en esa misma caja.
+                var cash = await RequireCashAsync(session,
+                    "Debe haber una caja abierta para cobrar la sesión.");
 
                 await _cash.AddMovementAsync(cash.Id, CashMovementType.TimeSale, req.Method, toCharge,
                     $"Cierre {station.Name} ({elapsed} min)", userId, sessionId: session.Id);
@@ -255,8 +255,8 @@ public class SessionService
         session.PlannedMinutes += req.ExtraMinutes;
         if (req.ChargeUpfront && amount > 0)
         {
-            var cash = await _cash.GetOpenAsync()
-                       ?? throw new AppException("Debe abrir la caja para cobrar la extensión.", 409);
+            var cash = await RequireCashAsync(session,
+                "Debe abrir la caja para cobrar la extensión.");
             session.AmountCharged = Math.Round(session.AmountCharged + amount, 2);
             await _cash.AddMovementAsync(cash.Id, CashMovementType.TimeSale, req.Method, amount,
                 $"Extensión {req.ExtraMinutes} min - {station.Name}", userId, sessionId: session.Id);
@@ -355,6 +355,20 @@ public class SessionService
             .FirstOrDefaultAsync(x => x.Id == id)
             ?? throw AppException.NotFound("Sesión");
         return Mappers.ToDto(s, await ConsumptionAsync(s.Id), DateTime.UtcNow);
+    }
+
+    private async Task<CashSession> RequireCashAsync(Session session, string message)
+    {
+        // Si la sesión se abrió en una caja concreta, el cobro va a esa caja aunque
+        // el cierre se haga desde otra consola. Si esa caja ya cerró, se usa la caja
+        // del terminal que está cerrando.
+        if (session.CashSessionId is int cashSessionId)
+        {
+            var own = await _cash.GetOpenByIdAsync(cashSessionId);
+            if (own is not null) return own;
+        }
+
+        return await _cash.GetOpenAsync() ?? throw new AppException(message, 409);
     }
 
     private async Task NotifyStationAsync(Station station, Session session)

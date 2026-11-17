@@ -28,6 +28,7 @@ public partial class LoginWindow : Window
 
         var config = AppConfig.Load("Admin");
         ServerUrlBox.Text = config.ServerUrl;
+        TerminalBox.Text = ApiClient.NormalizeTerminal(config.TerminalName);
         UsernameBox.Text = string.IsNullOrWhiteSpace(username)
             ? config.LastUsername ?? "admin"
             : username;
@@ -70,13 +71,16 @@ public partial class LoginWindow : Window
         try
         {
             var api = new CyberApi(ServerUrlBox.Text);
+            var terminal = ApiClient.NormalizeTerminal(TerminalBox.Text);
+            api.Headers[ApiClient.TerminalHeader] = terminal;
             var response = await api.LoginAsync(UsernameBox.Text.Trim(), PasswordBox.Password);
 
             var url = ApiClient.Normalize(ServerUrlBox.Text);
-            App.SetSession(api, response, url);
+            App.SetSession(api, response, url, terminal);
 
             var config = AppConfig.Load("Admin");
             config.ServerUrl = url;
+            config.TerminalName = terminal;
             config.LastUsername = response.Username;
             config.Save("Admin");
 

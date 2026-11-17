@@ -38,7 +38,7 @@ public record CashCloseRequest(decimal ClosingAmount, string? Notes);
 public record CashMovementRequest(CashMovementType Type, PaymentMethod Method, decimal Amount, string Description);
 public record CashMovementDto(long Id, CashMovementType Type, PaymentMethod Method, decimal Amount, decimal AmountVes, string Description, DateTime CreatedUtc);
 public record CashSessionDto(
-    int Id, int OpenedByUserId, string? OpenedByName, DateTime OpenedUtc, DateTime? ClosedUtc,
+    int Id, int OpenedByUserId, string? OpenedByName, string Terminal, DateTime OpenedUtc, DateTime? ClosedUtc,
     decimal OpeningAmount, decimal OpeningExchangeRate, decimal? ClosingExchangeRate,
     decimal SalesCash, decimal SalesCashUsd, decimal SalesCard, decimal SalesTransfer,
     decimal Deposits, decimal Withdrawals, decimal Expenses, decimal Refunds, decimal ExpectedAmount,

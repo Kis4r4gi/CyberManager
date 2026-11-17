@@ -346,6 +346,8 @@ public class AppConfig
 {
     public string ServerUrl { get; set; } = "http://127.0.0.1:5080";
     public string? LastUsername { get; set; }
+    /// <summary>Nombre de esta caja o terminal; identifica el turno de caja en el servidor.</summary>
+    public string TerminalName { get; set; } = Environment.MachineName;
     public int StationId { get; set; }
     public string StationToken { get; set; } = string.Empty;
     public string? StationIpAddress { get; set; }

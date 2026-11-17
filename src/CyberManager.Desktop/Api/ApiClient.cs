@@ -14,6 +14,9 @@ public class ApiException : Exception
 
 public class ApiClient
 {
+    /// <summary>Cabecera que identifica la caja/terminal en el servidor.</summary>
+    public const string TerminalHeader = "X-Cash-Terminal";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -48,6 +51,14 @@ public class ApiClient
         }
 
         return url.TrimEnd('/') + "/";
+    }
+
+    /// <summary>Normaliza el nombre de la caja igual que el servidor.</summary>
+    public static string NormalizeTerminal(string? value)
+    {
+        var name = (value ?? string.Empty).Trim().ToUpperInvariant();
+        if (name.Length == 0) name = Environment.MachineName.ToUpperInvariant();
+        return name.Length <= 40 ? name : name[..40];
     }
 
     private HttpRequestMessage Build(HttpMethod method, string path, object? body)

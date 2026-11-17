@@ -15,6 +15,8 @@ public class CashSession
     public decimal ExpectedAmount { get; set; }
     public decimal Difference { get; set; }
     public bool IsOpen { get; set; } = true;
+    /// <summary>Caja o terminal que abrió el turno (por ejemplo, el nombre del PC).</summary>
+    public string Terminal { get; set; } = "PRINCIPAL";
     public string? Notes { get; set; }
     public List<CashMovement> Movements { get; set; } = new();
 }

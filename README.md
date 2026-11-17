@@ -558,7 +558,8 @@ sesión anterior.
 
 ## Flujo operativo diario
 
-1. **Abrir caja** con el fondo inicial.
+1. **Abrir caja** con el fondo inicial (cada PC abre su propia caja; ver
+   *Dos o más cajas en la misma red*).
 2. **Registrar la tasa del día** (si aún no está registrada).
 3. **Iniciar sesiones**: desde el tablero elija un PC libre e indique tiempo, tarifa y cliente.
    - *Prepago*: cobra el tiempo por adelantado; si el cobro es en efectivo o por medios de pago,
@@ -601,6 +602,33 @@ El servidor expone las rutas anónimas `/api/station/prepaid/info`, `register`, 
 `recharge`, `start` y `finish`, autenticadas con el ID/token de la estación. Las cuentas usan
 `Customer.Username`, `PasswordHash`, `PasswordSalt` y `PrepaidMinutes`, y reutilizan el saldo
 monetario del cliente (`Customer.Balance`).
+
+---
+
+## Dos o más cajas en la misma red
+
+Una sola instalación del **servidor** puede atender varias consolas de administración al mismo
+tiempo; todas comparten la misma base de datos y cada PC abre y cierra su propio turno de caja.
+
+- **Servidor**: se instala una sola vez en el equipo principal (por ejemplo, `192.168.1.10`, puerto
+  5080). No instale el servidor en las demás PCs ni comparta el archivo `cybermanager.db` por red.
+- **Consolas**: en cada PC de caja instale la consola de administración y escriba en el login la URL
+  del servidor (`http://192.168.1.10:5080`) y un nombre de **Caja de este equipo** distinto en cada
+  PC (`CAJA-1`, `CAJA-2`, …). El nombre se guarda en `config.json` y viaja al servidor en la
+  cabecera `X-Cash-Terminal`.
+- **Turnos independientes**: cada caja abre su turno, registra sus movimientos y lo cierra sin
+  afectar a las demás. El historial de *Caja* muestra la columna **Caja** para saber a qué terminal
+  pertenece cada turno. Una misma caja no puede tener dos turnos abiertos a la vez.
+- **Solo cajeros**: cree usuarios con rol *Cajero* para las PCs secundarias. Esa consola oculta las
+  vistas administrativas (reportes, configuración, inventario, usuarios, etc.) y muestra solo
+  tablero, caja/POS, sesiones y notas, con las mismas funciones del equipo principal. No hace falta
+  un ejecutable aparte.
+- **Cobros de sesiones**: el cobro se registra en la caja que abrió la sesión, aunque el cierre se
+  haga desde otra consola; si esa caja ya cerró, se usa la caja del terminal que cierra. El
+  autoservicio prepago con saldo del cliente no requiere caja abierta.
+- **Compatibilidad**: si la consola no envía el nombre de caja (versiones anteriores o instalaciones
+  de una sola caja), el servidor usa `PRINCIPAL` y todo sigue funcionando como antes. Al actualizar
+  una base existente, los turnos anteriores quedan en `PRINCIPAL`.
 
 ---
 

@@ -54,6 +54,8 @@ if (!Path.IsPathRooted(dbFile))
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite($"Data Source={dbFile}"));
 
 // ---------- Servicios ----------
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CashTerminalContext>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddScoped<BcvRateService>();
 builder.Services.AddScoped<SettingsService>();

@@ -100,6 +100,12 @@ public static class DbSeeder
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Customers_Username\" ON \"Customers\" (\"Username\");");
 
+        // Caja por terminal: cada consola abre y cierra su propio turno. Las cajas
+        // existentes quedan en PRINCIPAL para conservar el comportamiento anterior.
+        await AddColumnIfMissingAsync(db, "CashSessions", "Terminal", "TEXT NOT NULL DEFAULT 'PRINCIPAL'");
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE \"CashSessions\" SET \"Terminal\" = 'PRINCIPAL' WHERE \"Terminal\" IS NULL OR TRIM(\"Terminal\") = '';");
+
         // Las imágenes e iconos de producto se eliminaron en la versión 1.0.20. Se borra
         // la tabla heredada y las columnas que ya no usa el modelo; en bases nuevas no hay
         // nada que limpiar.

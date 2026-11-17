@@ -80,6 +80,7 @@ public sealed class CashView : UserControl, IRefreshable
         _historyGrid = Kit.Table(
             Kit.Col("Apertura", nameof(CashHistoryRow.Opened), 140),
             Kit.Col("Cierre", nameof(CashHistoryRow.Closed), 140),
+            Kit.Col("Caja", nameof(CashHistoryRow.Terminal), 90),
             Kit.Col("Usuario", nameof(CashHistoryRow.User), 140),
             Kit.Col("Fondo", nameof(CashHistoryRow.Opening), 90, "{0:N2}"),
             Kit.Col("Ventas", nameof(CashHistoryRow.Sales), 90, "{0:N2}"),
@@ -161,8 +162,8 @@ public sealed class CashView : UserControl, IRefreshable
     private void Render(CashSessionDto? cash, List<CashReportRow> history)
     {
         _statusText.Text = cash is null
-            ? "No hay una caja abierta"
-            : $"Caja abierta desde {cash.OpenedUtc.ToLocalTime():HH:mm} · 1 USD = {_rate:N2} Bs";
+            ? $"Caja {App.CashTerminal} · sin turno abierto"
+            : $"Caja {App.CashTerminal} · abierta desde {cash.OpenedUtc.ToLocalTime():HH:mm} · 1 USD = {_rate:N2} Bs";
         _statusText.Foreground = cash is null ? Kit.Brush("WarningBrush") : Kit.Brush("SuccessBrush");
 
         if (cash is null)
@@ -263,7 +264,7 @@ public sealed class CashView : UserControl, IRefreshable
         _sessionPanel.Children.Add(Kit.Section("Turno actual"));
         _sessionPanel.Children.Add(new TextBlock
         {
-            Text = $"Abierto por {cash.OpenedByName ?? "usuario"} · {cash.OpenedUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
+            Text = $"Caja {cash.Terminal} · Abierto por {cash.OpenedByName ?? "usuario"} · {cash.OpenedUtc.ToLocalTime():dd/MM/yyyy HH:mm}",
             Style = Kit.Style("Muted"),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 10)
@@ -500,6 +501,7 @@ public sealed class CashHistoryRow
     {
         Opened = row.OpenedUtc.ToLocalTime().ToString("dd/MM HH:mm");
         Closed = row.ClosedUtc?.ToLocalTime().ToString("dd/MM HH:mm") ?? "Abierta";
+        Terminal = row.Terminal;
         User = row.UserName ?? "—";
         Opening = row.OpeningAmount;
         Sales = row.Sales;
@@ -511,6 +513,7 @@ public sealed class CashHistoryRow
 
     public string Opened { get; }
     public string Closed { get; }
+    public string Terminal { get; }
     public string User { get; }
     public decimal Opening { get; }
     public decimal Sales { get; }

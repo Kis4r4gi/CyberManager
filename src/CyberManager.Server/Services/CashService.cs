@@ -9,17 +9,32 @@ public class CashService
 {
     private readonly Data.AppDbContext _db;
     private readonly ExchangeRateService _rates;
-    public CashService(Data.AppDbContext db, ExchangeRateService rates)
+    private readonly CashTerminalContext _terminal;
+
+    public CashService(Data.AppDbContext db, ExchangeRateService rates, CashTerminalContext terminal)
     {
         _db = db;
         _rates = rates;
+        _terminal = terminal;
     }
 
-    public async Task<CashSession?> GetOpenAsync()
+    /// <summary>Caja/terminal que hace la petición.</summary>
+    public string CurrentTerminal => _terminal.Name;
+
+    public Task<CashSession?> GetOpenAsync() => GetOpenAsync(_terminal.Name);
+
+    public async Task<CashSession?> GetOpenAsync(string terminal)
         => await _db.CashSessions
             .Include(x => x.Movements)
-            .Where(x => x.IsOpen)
+            .Where(x => x.IsOpen && x.Terminal == terminal)
             .OrderByDescending(x => x.OpenedUtc)
+            .FirstOrDefaultAsync();
+
+    /// <summary>Turno abierto por su identificador, sin importar la caja que lo abrió.</summary>
+    public async Task<CashSession?> GetOpenByIdAsync(int cashSessionId)
+        => await _db.CashSessions
+            .Include(x => x.Movements)
+            .Where(x => x.IsOpen && x.Id == cashSessionId)
             .FirstOrDefaultAsync();
 
     public async Task<CashSessionDto> GetCurrentAsync()
@@ -30,8 +45,9 @@ public class CashService
 
     public async Task<CashSessionDto> OpenAsync(CashOpenRequest req, int userId)
     {
-        if (await _db.CashSessions.AnyAsync(x => x.IsOpen))
-            throw new AppException("Ya existe una caja abierta. Cierre el turno actual primero.", 409);
+        var terminal = _terminal.Name;
+        if (await _db.CashSessions.AnyAsync(x => x.IsOpen && x.Terminal == terminal))
+            throw new AppException($"Ya existe una caja abierta en {terminal}. Cierre ese turno primero.", 409);
 
         var rate = req.ExchangeRate ?? await _rates.GetRateAsync();
         if (rate <= 0) throw new AppException("Debe registrar la tasa del día antes de abrir la caja.");
@@ -43,6 +59,7 @@ public class CashService
             OpeningAmount = req.OpeningAmount,
             OpeningExchangeRate = rate,
             IsOpen = true,
+            Terminal = terminal,
             Notes = req.Notes
         };
         _db.CashSessions.Add(cs);
@@ -127,7 +144,7 @@ public class CashService
             .Select(x => new CashReportRow(x.Id, x.OpenedUtc, x.ClosedUtc,
                 _db.Users.Where(u => u.Id == x.OpenedByUserId).Select(u => u.FullName).FirstOrDefault(),
                 x.OpeningAmount, x.ExpectedAmount - x.OpeningAmount, 0, x.ExpectedAmount,
-                x.ClosingAmount, x.Difference, x.OpeningExchangeRate, x.ClosingExchangeRate))
+                x.ClosingAmount, x.Difference, x.OpeningExchangeRate, x.ClosingExchangeRate, x.Terminal))
             .ToListAsync();
 
     public async Task<CashSessionDto> ToDtoAsync(CashSession cs)
@@ -156,7 +173,7 @@ public class CashService
         var openerName = await _db.Users.AsNoTracking().Where(u => u.Id == cs.OpenedByUserId)
             .Select(u => u.FullName).FirstOrDefaultAsync();
 
-        return new CashSessionDto(cs.Id, cs.OpenedByUserId, openerName, cs.OpenedUtc, cs.ClosedUtc,
+        return new CashSessionDto(cs.Id, cs.OpenedByUserId, openerName, cs.Terminal, cs.OpenedUtc, cs.ClosedUtc,
             cs.OpeningAmount, cs.OpeningExchangeRate, cs.ClosingExchangeRate,
             salesCash, salesCashUsd, salesCard, salesTransfer, deposits, withdrawals, expenses, refunds, expected,
             cs.ClosingAmount, cs.Difference, cs.IsOpen, cs.Notes,

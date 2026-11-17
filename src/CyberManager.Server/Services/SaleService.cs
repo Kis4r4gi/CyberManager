@@ -246,7 +246,12 @@ public class SaleService
         else if (sale.PaymentMethod is PaymentMethod.Cash or PaymentMethod.CashUsd
                  or PaymentMethod.Card or PaymentMethod.Transfer or PaymentMethod.PagoMovil)
         {
-            var cash = await _cash.GetOpenAsync();
+            // La devolución se registra en la caja donde se hizo la venta, si sigue abierta;
+            // si no, en la caja del terminal que anula.
+            var cash = sale.CashSessionId is int cashSessionId
+                ? await _cash.GetOpenByIdAsync(cashSessionId)
+                : null;
+            cash ??= await _cash.GetOpenAsync();
             if (cash is not null)
                 await _cash.AddMovementAsync(cash.Id, CashMovementType.Refund, sale.PaymentMethod, -sale.Total,
                     $"Anulación venta {sale.Number}", userId, sale.Id, rate: sale.ExchangeRate);

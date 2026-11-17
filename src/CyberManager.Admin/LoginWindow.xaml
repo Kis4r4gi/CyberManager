@@ -73,6 +73,9 @@
                 <TextBlock Text="Servidor" Style="{StaticResource Label}" />
                 <TextBox x:Name="ServerUrlBox" ToolTip="Ejemplo: http://192.168.1.10:5080" />
 
+                <TextBlock Text="Caja de este equipo" Style="{StaticResource Label}" Margin="0,16,0,4" />
+                <TextBox x:Name="TerminalBox" ToolTip="Nombre de esta caja. Cada PC conectada al mismo servidor debe tener un nombre distinto (por ejemplo, CAJA-1 y CAJA-2)." />
+
                 <TextBlock Text="Usuario" Style="{StaticResource Label}" Margin="0,16,0,4" />
                 <TextBox x:Name="UsernameBox" />
 

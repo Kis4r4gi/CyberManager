@@ -19,7 +19,7 @@ public record StationReportRow(int StationId, string Name, int Sessions, int Min
 public record InventoryReportRow(int ProductId, string Sku, string Name, decimal Stock, decimal MinStock, decimal Cost, decimal Price);
 public record CashReportRow(int CashSessionId, DateTime OpenedUtc, DateTime? ClosedUtc, string? UserName,
     decimal OpeningAmount, decimal Sales, decimal Expenses, decimal Expected, decimal? Closing, decimal Difference,
-    decimal OpeningExchangeRate, decimal? ClosingExchangeRate);
+    decimal OpeningExchangeRate, decimal? ClosingExchangeRate, string Terminal);
 
 public record ReportRangeRequest(DateTime FromUtc, DateTime ToUtc);
 public record ReportSummaryDto(decimal ProductSales, decimal TimeSales, decimal TotalSales, decimal TotalSalesVes,

@@ -1052,6 +1052,30 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: probar la UI del cliente contra una estación real y regenerar instaladores y
   release cuando el usuario lo pida; no se publica nada en GitHub todavía.
 
+### Dos cajas en la misma red (2026-11-17, sin publicar)
+
+- **Caja por terminal**: `CashSession.Terminal` identifica el turno. `CashTerminalContext` lee la
+  cabecera `X-Cash-Terminal` y la normaliza (mayúsculas, máximo 40 caracteres, `PRINCIPAL` si
+  falta). `CashService` filtra apertura, turno actual, movimientos, cierre e historial por terminal,
+  y rechaza un segundo turno en la misma caja. `DbSeeder` agrega la columna `Terminal` y rellena
+  `PRINCIPAL` en los turnos existentes.
+- **Consola**: el login del Admin pide **Caja de este equipo**, la guarda en
+  `AppConfig.TerminalName` y la envía en todas las peticiones. `CashView` muestra el nombre de la
+  caja en el estado y la columna **Caja** en el historial.
+- **Cobros y anulaciones**: `SessionService` registra los cobros en la caja donde se abrió la sesión
+  (`Session.CashSessionId`); si esa caja ya cerró, usa la del terminal que cierra. `SaleService`
+  anula en la caja de la venta si sigue abierta. El prepago con saldo del cliente sigue sin exigir
+  caja.
+- **Pruebas**: `dotnet build CyberManager.sln -c Release` con **0 errores** y **0 advertencias**.
+  Servidor temporal en **5099** con base nueva (`%TEMP%\cm-cash-test\test.db`): dos aperturas
+  simultáneas (CAJA-1 y CAJA-2), rechazo **409** de un segundo turno en la misma caja, turnos y
+  depósitos aislados, cierres independientes, historial con la columna de caja, compatibilidad sin
+  cabecera (`PRINCIPAL`) y cierre de ambas cajas. También se abrió una base anterior a la migración
+  (respaldo del 17/11): los turnos viejos quedaron en `PRINCIPAL` y se abrió/cerró un turno nuevo en
+  otra caja.
+- **Pendiente**: probar dos consolas reales en la red y regenerar instaladores/release cuando el
+  usuario lo pida.
+
 ---
 
 ## Rutas y comandos clave
@@ -1117,6 +1141,9 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 - `TotalExpenses` = gastos de caja en efectivo + abonos a proveedores no efectivos (los abonos
   en efectivo ya aparecen como movimiento `Expense`).
 - Los abonos en efectivo exigen caja abierta; los no efectivos no.
+- **Cajas por terminal**: la cabecera `X-Cash-Terminal` (nombre de la PC) identifica el turno y se
+  guarda en `CashSession.Terminal`; sin cabecera se usa `PRINCIPAL`. Varias consolas comparten un
+  solo servidor y cada una abre/cierra su propio turno; nunca se comparte el archivo SQLite por red.
 - La impresión automática solo ocurre con `AutoPrintTicket` y `PrinterName` configurados; el
   botón manual abre `PrintDialog` si no hay impresora.
 - Los precios son con IVA incluido; `Sale.Total` incluye IGTF y `Sale.TotalVes` usa la tasa de la
@@ -1207,8 +1234,10 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 4. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
    `%ProgramData%\CyberManager\server-elevated.marker` y los comandos remotos de volumen, monitor y
    bloqueo de entrada contra una estación real.
-5. Mantener actualizado `README.md` si se agregan funciones nuevas.
-6. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
+5. Probar dos consolas reales en la red local (servidor + CAJA-1/CAJA-2 con usuarios *Cajero*):
+   apertura y cierre simultáneos, cobros en la caja de cada sesión y visibilidad de las vistas.
+6. Mantener actualizado `README.md` si se agregan funciones nuevas.
+7. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
    consola, el servidor, las promos y la localización. La versión menor sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
 

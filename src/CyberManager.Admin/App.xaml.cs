@@ -12,6 +12,8 @@ public partial class App : Application
     public static AdminRealtime Realtime { get; private set; } = null!;
     public static LoginResponse Session { get; private set; } = null!;
     public static string ServerUrl { get; private set; } = "http://127.0.0.1:5080";
+    /// <summary>Nombre de la caja/terminal de esta consola.</summary>
+    public static string CashTerminal { get; private set; } = "PRINCIPAL";
 
     public static event Action<string>? NavigationRequested;
 
@@ -35,11 +37,12 @@ public partial class App : Application
         Current.Shutdown();
     }
 
-    public static void SetSession(CyberApi api, LoginResponse session, string serverUrl)
+    public static void SetSession(CyberApi api, LoginResponse session, string serverUrl, string cashTerminal)
     {
         Api = api;
         Session = session;
         ServerUrl = serverUrl;
+        CashTerminal = cashTerminal;
     }
 
     public static async Task InitializeRealtimeAsync()
