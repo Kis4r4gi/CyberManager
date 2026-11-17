@@ -6,7 +6,8 @@
 .DESCRIPTION
     Publica CyberManager.Client (WPF), copia los binarios a la carpeta de instalación,
     escribe la configuración del equipo (%LOCALAPPDATA%\CyberManager\Client\config.json)
-    y crea un acceso directo en la carpeta de inicio del usuario o de todos los usuarios.
+    y registra la tarea programada CyberManagerClient para que el cliente se abra con
+    permisos elevados al iniciar sesión (sin UAC en cada arranque).
 
 .PARAMETER StationId
     ID numérico del equipo (Administración > Equipos > Configuración / token).
@@ -26,7 +27,6 @@ param(
     [Parameter(Mandatory = $true)][string]$Token,
     [Parameter(Mandatory = $true)][string]$ServerUrl,
     [string]$InstallDir = "C:\CyberManager\Client",
-    [switch]$AllUsers,
     [switch]$FrameworkDependent,
     [switch]$NoPublish
 )
@@ -106,24 +106,13 @@ $config = [ordered]@{
 $config | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
 Write-Step "Configuración escrita en $configPath"
 
-# ---------- Acceso directo de inicio ----------
-if ($AllUsers) {
-    $startup = [Environment]::GetFolderPath("CommonStartup")
-} else {
-    $startup = [Environment]::GetFolderPath("Startup")
+# ---------- Inicio automático con la tarea elevada ----------
+$taskScript = Join-Path $repoRoot "installer\scripts\configurar-cliente.ps1"
+if (-not (Test-Path $taskScript)) {
+    throw "No se encontró $taskScript. Actualice el repositorio e inténtelo de nuevo."
 }
-New-Item -ItemType Directory -Force -Path $startup | Out-Null
 
-$shortcutPath = Join-Path $startup "CyberManager Client.lnk"
-$shell = New-Object -ComObject WScript.Shell
-$shortcut = $shell.CreateShortcut($shortcutPath)
-$shortcut.TargetPath = $exePath
-$shortcut.WorkingDirectory = $InstallDir
-$shortcut.Description = "CyberManager - estación de cliente"
-$shortcut.WindowStyle = 1
-$shortcut.Save()
-
-Write-Step "Acceso directo creado en $shortcutPath"
+& $taskScript -ClientExe $exePath
 
 Write-Host ""
 Write-Host "Cliente instalado correctamente." -ForegroundColor Green
@@ -132,4 +121,4 @@ Write-Host "Servidor: $ServerUrl"
 Write-Host "Ejecutable: $exePath"
 Write-Host ""
 Write-Host "Cierre la sesión y vuelva a entrar para comprobar el inicio automático." -ForegroundColor Yellow
-Write-Host "Puede abrir el cliente ahora con: Start-Process `"$exePath`"" -ForegroundColor Yellow
+Write-Host "También puede abrirlo ahora desde el menú Inicio o con: schtasks /Run /TN CyberManagerClient" -ForegroundColor Yellow

@@ -427,7 +427,15 @@ public partial class App : Application
 
         _lockWindow.UpdateState(state);
         if (!_lockWindow.IsVisible) _lockWindow.Show();
-        _lockWindow.Activate();
+
+        // RefreshAsync se ejecuta cada 5 segundos. Activar la pantalla de bloqueo en
+        // cada refresco le robaba el foco a los cuadros de texto del login y cerraba
+        // el menú flotante, así que solo se activa cuando no hay un diálogo encima.
+        if (!_lockWindow.IsActive && _prepaidWindow is null && !_adminMode &&
+            !_lockWindow.SuppressActivation && !_lockWindow.IsLoginMenuOpen)
+        {
+            _lockWindow.Activate();
+        }
 
         _wallpapers.SetLocked(true);
         _ = _wallpapers.ApplyAsync(state?.Wallpaper);
@@ -642,20 +650,32 @@ public partial class App : Application
         _adminMode = true;
         _lockWindow.EnterAdminMode();
 
+        var settings = new ClientSettingsWindow(login.Api);
         try
         {
-            var settings = new ClientSettingsWindow(login.Api);
             settings.ShowDialog();
         }
         finally
         {
             _adminMode = false;
-            _lockWindow.ExitAdminMode();
 
-            // El idioma se guarda solo en este equipo: se aplica a las ventanas abiertas.
-            L.SetLanguage(Config.Language);
-            Loc.Apply(_lockWindow);
-            if (_barWindow is not null) Loc.Apply(_barWindow);
+            // Si el administrador pidió desinstalar, la aplicación se cierra sin
+            // volver a mostrar la pantalla de bloqueo.
+            if (!settings.UninstallRequested)
+            {
+                _lockWindow.ExitAdminMode();
+
+                // El idioma se guarda solo en este equipo: se aplica a las ventanas abiertas.
+                L.SetLanguage(Config.Language);
+                Loc.Apply(_lockWindow);
+                if (_barWindow is not null) Loc.Apply(_barWindow);
+            }
+        }
+
+        if (settings.UninstallRequested)
+        {
+            Shutdown();
+            return;
         }
 
         await RefreshAsync();

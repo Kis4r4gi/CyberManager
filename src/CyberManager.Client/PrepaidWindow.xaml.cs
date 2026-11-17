@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using CyberManager.Desktop.Services;
@@ -221,6 +222,60 @@ public partial class PrepaidWindow : Window
         }
     }
 
+    // ============================================================
+    //  Mostrar / ocultar contraseñas
+    // ============================================================
+    private void ShowPassword_Changed(object sender, RoutedEventArgs e)
+        => ToggleReveal(PasswordBox, PasswordRevealBox, ShowPasswordCheck.IsChecked == true);
+
+    private void ShowRegisterPasswords_Changed(object sender, RoutedEventArgs e)
+    {
+        var show = ShowRegisterPasswordsCheck.IsChecked == true;
+        ToggleReveal(RegisterPasswordBox, RegisterPasswordRevealBox, show);
+        ToggleReveal(RegisterConfirmBox, RegisterConfirmRevealBox, show);
+    }
+
+    /// <summary>
+    /// Muestra el texto de un <see cref="PasswordBox"/> en un <see cref="TextBox"/>
+    /// superpuesto, o vuelve a ocultarlo conservando lo escrito.
+    /// </summary>
+    private static void ToggleReveal(PasswordBox source, TextBox target, bool show)
+    {
+        if (show)
+        {
+            target.Text = source.Password;
+            target.Visibility = Visibility.Visible;
+            source.Visibility = Visibility.Collapsed;
+            target.Focus();
+            target.CaretIndex = target.Text.Length;
+        }
+        else
+        {
+            source.Password = target.Text;
+            source.Visibility = Visibility.Visible;
+            target.Visibility = Visibility.Collapsed;
+            if (target.IsKeyboardFocusWithin) source.Focus();
+        }
+    }
+
+    private void PasswordReveal_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (PasswordRevealBox.Visibility == Visibility.Visible)
+            PasswordBox.Password = PasswordRevealBox.Text;
+    }
+
+    private void RegisterPasswordReveal_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (RegisterPasswordRevealBox.Visibility == Visibility.Visible)
+            RegisterPasswordBox.Password = RegisterPasswordRevealBox.Text;
+    }
+
+    private void RegisterConfirmReveal_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (RegisterConfirmRevealBox.Visibility == Visibility.Visible)
+            RegisterConfirmBox.Password = RegisterConfirmRevealBox.Text;
+    }
+
     private async void Login_Click(object sender, RoutedEventArgs e) => await LoginAsync();
 
     private async Task LoginAsync()
@@ -349,6 +404,7 @@ public partial class PrepaidWindow : Window
         _activeSessionId = null;
         _activeSessionRemaining = 0;
         PasswordBox.Password = string.Empty;
+        PasswordRevealBox.Text = string.Empty;
         ShowLoginPanel();
         SetStatus(L.T("Ingrese con otra cuenta."));
     }

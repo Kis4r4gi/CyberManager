@@ -4,6 +4,7 @@
         Title="CyberManager - Equipo bloqueado"
         WindowStyle="None" WindowState="Maximized" ResizeMode="NoResize"
         Topmost="True" ShowInTaskbar="False" Background="#070B14"
+        PreviewKeyDown="Window_PreviewKeyDown"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
 
     <Grid>
@@ -87,7 +88,8 @@
 
                 <Popup x:Name="LoginPopup" PlacementTarget="{Binding ElementName=LoginButton}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
-                    <Border Style="{StaticResource Card}" Width="310" Margin="0,8,0,0">
+                    <Border Style="{StaticResource Card}" Width="310" Margin="0,8,0,0"
+                            PreviewKeyDown="Popup_PreviewKeyDown">
                         <StackPanel>
                             <TextBlock Text="Iniciar sesión" Style="{StaticResource H2}" Margin="0,0,0,4" />
                             <TextBlock Text="Elija el tipo de cuenta." Style="{StaticResource Muted}"

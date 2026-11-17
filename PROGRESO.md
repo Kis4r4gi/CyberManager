@@ -1128,6 +1128,64 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 ---
 
+### Correcciones del cliente: foco, contraseña, ESC, fondos, desinstalación, elevación y reloj (2026-11-17, sin publicar)
+
+- **Foco del login**: `App.ShowLock` ya no llama a `Activate()` en cada refresco de 5 segundos.
+  Solo activa la pantalla de bloqueo si no está activa y no hay diálogo abierto, menú flotante
+  abierto, modo administrador ni `SuppressActivation`. El cursor permanece en los cuadros del
+  login mientras se escribe.
+- **Mostrar contraseña**: `PrepaidWindow` incluye `PasswordRevealBox` (login) y
+  `RegisterPasswordRevealBox`/`RegisterConfirmRevealBox` (registro) con las casillas
+  **Mostrar contraseña** y **Mostrar contraseñas**. Un `TextBox` sincronizado con el `PasswordBox`
+  conserva el texto al alternar y mantiene el foco; `SwitchAccount_Click` limpia ambos.
+- **ESC en el menú flotante**: `LockWindow` maneja `PreviewKeyDown` en la ventana y en el `Popup`;
+  con `IsLoginMenuOpen` cierra el menú sin cerrar la pantalla de bloqueo.
+- **Rotación de fondos tipo salvapantallas**: `WallpaperService` usa `GetLastInputInfo` y un
+  temporizador de 1 s. La rotación empieza tras `IdleDelay = 2 min` sin teclado ni ratón, avanza
+  con el intervalo configurado y se detiene con cualquier actividad o al desbloquear. Se mantiene
+  el fondo actual y se reanuda al volver la inactividad.
+- **Cerrar y desinstalar desde el cliente**: `ClientSettingsWindow` agrega la sección
+  **Mantenimiento** con el botón `UninstallButton` (estilo `DangerButton`). Pide confirmación,
+  lanza `%ProgramData%\CyberManager\CyberManager.Uninstaller.exe` con `Verb="runas"` y expone
+  `UninstallRequested`; `App.OnAdminLoginRequested` cierra el cliente sin volver a mostrar el
+  bloqueo. La base de datos y la configuración se conservan.
+- **Cliente elevado**: `src/CyberManager.Client/app.manifest` usa
+  `requestedExecutionLevel level="requireAdministrator"`. El instalador ya no crea el acceso
+  directo de `{commonstartup}`; registra la tarea programada `CyberManagerClient` (XML con
+  `GroupId S-1-5-32-545`, `RunLevel HighestAvailable`, `LogonTrigger` con `PT15S`) mediante el
+  nuevo `installer/scripts/configurar-cliente.ps1` (`-Start`, `-Remove`, `-TaskName`,
+  `-ClientExe`). La tarea se inicia con `schtasks /Run /TN "CyberManagerClient"` al finalizar la
+  instalación y se elimina en `[UninstallRun]`. `scripts/install-client-startup.ps1` reutiliza el
+  mismo script y se eliminó su parámetro `-AllUsers`.
+- **Reloj de 12 horas sincronizado**: `LockWindow` muestra `h:mm:ss tt` y calcula `_serverOffset`
+  con `state.ServerTimeUtc`, de modo que todas las estaciones muestran la hora del servidor.
+- **`configurar-agente.ps1`**: se quitó `#Requires -RunAsAdministrator`, que impedía analizar el
+  script y solo mostraba un error de sintaxis. Ahora se auto-eleva con `Start-Process -Verb RunAs`
+  conservando `$PSBoundParameters` y `-NoExit`.
+- **Instaladores**: `CyberManager.Unificado.iss` y `CyberManager.Estacion.iss` registran la tarea
+  de inicio, eliminan el acceso directo anterior de `{commonstartup}` en `[InstallDelete]`, abren
+  el cliente con `ShouldOpenClientTask`/`ShouldOpenClientDirect` y quitan la tarea al desinstalar.
+  `scripts/build-installer.ps1` copia `configurar-cliente.ps1` a `dist\<arch>\Scripts`.
+- **Menú desplegable por equipo (consola)**: `StationsView` eliminó la fila de botones que dependía
+  de la selección y agregó la columna **Acciones** en cada fila. El menú incluye subir, bajar,
+  editar, cambiar nombre, editar conexión, configuración/token, ver pantalla, bloquear, mensaje,
+  mantenimiento, activar/desactivar y eliminar. El clic derecho abre el mismo menú y cada acción
+  selecciona primero su fila.
+- **Pruebas**: `dotnet build CyberManager.sln` con **0 errores y 0 advertencias**. Los seis
+  scripts de `installer/scripts` parsean en PowerShell 5.1. La tarea de prueba
+  (`CyberManagerClientTest`) se registró con `GroupId Usuarios`, `RunLevel Highest` y
+  `Delay PT15S`, y `-Remove` la eliminó. Las variantes sin compresión de Estación y Unificado
+  compilaron con ISCC. La instalación silenciosa de estación creó `Client`, `Agent` y `scripts`,
+  registró `CyberManagerClient` y **no** creó el acceso directo en Inicio; el manifiesto del
+  ejecutable instalado es `requireAdministrator`. El desinstalador silencioso eliminó la tarea y
+  los binarios y conservó `Servidor\Server\cybermanager.db`.
+- **Nota**: la tarea con `HighestAvailable` solo abre el cliente elevado si el usuario de Windows
+  es administrador local; con una cuenta estándar Windows pedirá credenciales.
+- **Pendiente**: recompilar los instaladores para incluir estos cambios y publicar cuando el
+  usuario lo pida.
+
+---
+
 ## Rutas y comandos clave
 
 Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberManager`).

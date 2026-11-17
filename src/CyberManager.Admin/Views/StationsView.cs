@@ -37,7 +37,8 @@ public sealed class StationsView : UserControl, IRefreshable
             Kit.Col("Sesión", nameof(StationRow.Session), 85),
             Kit.AutoCol("Última conexión", nameof(StationRow.LastSeen), 140),
             Kit.AutoCol("Usuario Windows", nameof(StationRow.CurrentUser), 140),
-            Kit.Col("Activo", nameof(StationRow.Active), 75));
+            Kit.Col("Activo", nameof(StationRow.Active), 75),
+            ActionsColumn());
 
         // La lista de equipos se muestra sin el marco grande: sin borde, sin fondo
         // sólido y sin franjas alternas. Cada columna se ajusta a su contenido.
@@ -100,7 +101,6 @@ public sealed class StationsView : UserControl, IRefreshable
 
         var content = new Grid();
         content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         // ---- Fila 1: buscador a la izquierda, resumen a la derecha ----
@@ -155,47 +155,16 @@ public sealed class StationsView : UserControl, IRefreshable
 
         content.Children.Add(searchRow);
 
-        // ---- Fila 2: acciones agrupadas; «Eliminar» siempre al final ----
-        var actions = new WrapPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-
-        void AddAction(Button button, bool newGroup = false)
-        {
-            button.Margin = new Thickness(newGroup ? 10 : 0, 0, 8, 8);
-            actions.Children.Add(button);
-        }
-
-        AddAction(Kit.Button("Subir", "GhostButton", () => MoveStation(-1)));
-        AddAction(Kit.Button("Bajar", "GhostButton", () => MoveStation(1)));
-
-        AddAction(Kit.Button("Editar", "GhostButton", EditStation), newGroup: true);
-        AddAction(Kit.Button("Cambiar nombre", "GhostButton", RenameStation));
-        AddAction(Kit.Button("Editar conexión", "GhostButton", EditConnection));
-
-        AddAction(Kit.Button("Configuración / token", "BlueButton", ShowConfig), newGroup: true);
-        AddAction(Kit.Button("Ver pantalla", "BlueButton", ShowScreen));
-        AddAction(Kit.Button("Bloquear", "GhostButton", LockStation));
-        AddAction(Kit.Button("Mensaje", "GhostButton", SendMessage));
-        AddAction(Kit.Button("Mantenimiento", "WarningButton", ToggleMaintenance));
-        AddAction(Kit.Button("Activar / desactivar", "GhostButton", ToggleActive));
-
-        AddAction(Kit.Button("Eliminar equipo", "DangerButton", DeleteStation), newGroup: true);
-
-        Grid.SetRow(actions, 1);
-        content.Children.Add(actions);
-
-        Grid.SetRow(_grid, 2);
+        // Las acciones se abren desde el menú desplegable de cada equipo; ya no hay
+        // una fila de botones que dependa de la selección de la lista.
+        Grid.SetRow(_grid, 1);
         content.Children.Add(_grid);
 
         Grid.SetRow(content, 2);
         root.Children.Add(content);
 
         var footer = new Grid { Margin = new Thickness(0, 10, 0, 0) };
-        var hint = Kit.Muted("Use «Subir» y «Bajar» para el orden manual. Cada equipo necesita su ID y token; use la IP LAN del servidor, no localhost.");
+        var hint = Kit.Muted("Abra el menú «Acciones» de cada equipo para subir, bajar, editar, cambiar el nombre o la conexión, bloquear, enviar mensajes o eliminarlo. Cada equipo necesita su ID y token; use la IP LAN del servidor, no localhost.");
         hint.HorizontalAlignment = HorizontalAlignment.Right;
         footer.Children.Add(hint);
         Grid.SetRow(footer, 3);
@@ -216,7 +185,36 @@ public sealed class StationsView : UserControl, IRefreshable
 
     private StationDto? Selected => (_grid.SelectedItem as StationRow)?.Source;
 
-    /// <summary>Menú contextual de cada equipo con las acciones del administrador.</summary>
+    /// <summary>Columna con el menú desplegable de acciones de cada equipo.</summary>
+    private DataGridTemplateColumn ActionsColumn()
+    {
+        var button = new FrameworkElementFactory(typeof(Button));
+        button.SetValue(ContentControl.ContentProperty, L.T("Acciones ▾"));
+        button.SetValue(FrameworkElement.StyleProperty, Kit.Style("GhostButton"));
+        button.SetValue(Control.PaddingProperty, new Thickness(10, 3, 10, 3));
+        button.SetValue(Control.FontSizeProperty, 11.0);
+        button.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+        button.SetValue(FrameworkElement.MarginProperty, new Thickness(6, 4, 6, 4));
+        button.SetValue(FrameworkElement.ToolTipProperty,
+            L.T("Subir, bajar, editar, cambiar nombre o conexión, bloquear, enviar mensajes o eliminar este equipo."));
+        button.AddHandler(Button.ClickEvent, new RoutedEventHandler(OpenRowMenu));
+
+        return Kit.TemplateCol("Acciones", button, 110);
+    }
+
+    /// <summary>Abre el menú completo del equipo sobre el botón de su fila.</summary>
+    private void OpenRowMenu(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: StationRow row } button) return;
+
+        _grid.SelectedItem = row;
+        var menu = BuildStationMenu();
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
+    /// <summary>Menú con todas las acciones del equipo; se usa en la fila y con clic derecho.</summary>
     private ContextMenu BuildStationMenu()
     {
         var menu = new ContextMenu
@@ -228,9 +226,23 @@ public sealed class StationsView : UserControl, IRefreshable
             Padding = new Thickness(4)
         };
 
+        menu.Items.Add(StationMenuItem("Subir", () => MoveStation(-1)));
+        menu.Items.Add(StationMenuItem("Bajar", () => MoveStation(1)));
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+
+        menu.Items.Add(StationMenuItem("Editar", EditStation));
         menu.Items.Add(StationMenuItem("Cambiar nombre", RenameStation));
         menu.Items.Add(StationMenuItem("Editar conexión", EditConnection));
         menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+
+        menu.Items.Add(StationMenuItem("Configuración / token", ShowConfig));
+        menu.Items.Add(StationMenuItem("Ver pantalla", ShowScreen));
+        menu.Items.Add(StationMenuItem("Bloquear", LockStation));
+        menu.Items.Add(StationMenuItem("Mensaje", SendMessage));
+        menu.Items.Add(StationMenuItem("Mantenimiento", ToggleMaintenance));
+        menu.Items.Add(StationMenuItem("Activar / desactivar", ToggleActive));
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+
         menu.Items.Add(StationMenuItem("Eliminar equipo", DeleteStation, danger: true));
 
         return menu;

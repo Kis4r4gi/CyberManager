@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -12,11 +13,16 @@ namespace CyberManager.Client;
 /// Descarga, cachea y rota los fondos que el servidor asigna a la pantalla de bloqueo.
 /// Las imágenes se guardan en %LOCALAPPDATA%\CyberManager\Client\wallpapers usando el
 /// hash SHA-256 como nombre, de modo que se reutilizan entre reinicios.
+/// La rotación funciona como un salvapantallas: empieza tras dos minutos sin actividad.
 /// </summary>
 public sealed class WallpaperService : IDisposable
 {
+    /// <summary>Espera sin actividad antes de empezar a rotar los fondos.</summary>
+    public static readonly TimeSpan IdleDelay = TimeSpan.FromMinutes(2);
+
     private readonly string _cacheDir;
     private readonly DispatcherTimer _rotationTimer = new();
+    private readonly DispatcherTimer _idleTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Dictionary<int, string> _files = new();
     private readonly Dictionary<int, ImageSource> _images = new();
 
@@ -35,6 +41,7 @@ public sealed class WallpaperService : IDisposable
         _cacheDir = Path.Combine(AppPaths.DataDir("Client"), "wallpapers");
         Directory.CreateDirectory(_cacheDir);
         _rotationTimer.Tick += (_, _) => Next();
+        _idleTimer.Tick += (_, _) => CheckIdle();
     }
 
     /// <summary>Aplica la lista recibida del servidor y descarga las imágenes que falten.</summary>
@@ -99,6 +106,7 @@ public sealed class WallpaperService : IDisposable
         else
         {
             StopRotation();
+            _idleTimer.Stop();
         }
     }
 
@@ -194,14 +202,59 @@ public sealed class WallpaperService : IDisposable
         if (!_locked || _items.Count < 2)
         {
             StopRotation();
+            _idleTimer.Stop();
             return;
         }
 
         _rotationTimer.Interval = TimeSpan.FromSeconds(Math.Max(1, _seconds));
-        if (!_rotationTimer.IsEnabled) _rotationTimer.Start();
+        if (!_idleTimer.IsEnabled) _idleTimer.Start();
+        CheckIdle();
+    }
+
+    /// <summary>
+    /// La rotación es un salvapantallas: solo avanza cuando el equipo lleva
+    /// <see cref="IdleDelay"/> sin recibir teclado ni ratón. Cualquier actividad
+    /// la detiene y deja el fondo actual.
+    /// </summary>
+    private void CheckIdle()
+    {
+        if (!_locked || _items.Count < 2)
+        {
+            StopRotation();
+            _idleTimer.Stop();
+            return;
+        }
+
+        if (GetIdleTime() >= IdleDelay)
+        {
+            if (!_rotationTimer.IsEnabled) _rotationTimer.Start();
+        }
+        else
+        {
+            StopRotation();
+        }
     }
 
     private void StopRotation() => _rotationTimer.Stop();
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LastInputInfo
+    {
+        public uint Size;
+        public uint Time;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetLastInputInfo(ref LastInputInfo info);
+
+    private static TimeSpan GetIdleTime()
+    {
+        var info = new LastInputInfo { Size = (uint)Marshal.SizeOf<LastInputInfo>() };
+        if (!GetLastInputInfo(ref info)) return TimeSpan.Zero;
+
+        var idle = unchecked((uint)Environment.TickCount - info.Time);
+        return TimeSpan.FromMilliseconds(idle);
+    }
 
     private static ImageSource Load(string path)
     {
@@ -224,6 +277,7 @@ public sealed class WallpaperService : IDisposable
     public void Dispose()
     {
         StopRotation();
+        _idleTimer.Stop();
         _images.Clear();
         _files.Clear();
         _items = Array.Empty<WallpaperItemDto>();

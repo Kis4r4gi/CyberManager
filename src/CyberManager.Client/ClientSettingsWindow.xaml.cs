@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -21,6 +23,9 @@ public partial class ClientSettingsWindow : Window
 
     /// <summary>Indica que los cambios se guardaron correctamente.</summary>
     public bool Saved { get; private set; }
+
+    /// <summary>El administrador pidió cerrar el cliente y desinstalarlo del equipo.</summary>
+    public bool UninstallRequested { get; private set; }
 
     private sealed class Option
     {
@@ -192,6 +197,51 @@ public partial class ClientSettingsWindow : Window
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+        Close();
+    }
+
+    /// <summary>
+    /// Cierra el cliente y lanza el desinstalador de CyberManager con permisos de
+    /// administrador. La base de datos del negocio no se elimina.
+    /// </summary>
+    private void Uninstall_Click(object sender, RoutedEventArgs e)
+    {
+        var uninstaller = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "CyberManager", "CyberManager.Uninstaller.exe");
+
+        if (!File.Exists(uninstaller))
+        {
+            SetStatus(L.T("No se encontró el desinstalador de CyberManager en este equipo."), true);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            L.T("Se cerrará el cliente y se quitará CyberManager de este equipo.") + "\n\n" +
+            L.T("La base de datos del negocio y la configuración se conservan. ¿Desea continuar?"),
+            L.T("Desinstalar CyberManager"), MessageBoxButton.YesNo, MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(uninstaller)
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                WorkingDirectory = Path.GetDirectoryName(uninstaller) ?? string.Empty
+            });
+        }
+        catch (Exception ex)
+        {
+            // El usuario canceló el UAC o no se pudo iniciar el desinstalador.
+            SetStatus(ex.Message, true);
+            return;
+        }
+
+        UninstallRequested = true;
+        DialogResult = true;
         Close();
     }
 }

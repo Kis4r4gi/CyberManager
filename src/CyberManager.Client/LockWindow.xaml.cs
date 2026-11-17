@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -15,10 +16,13 @@ public partial class LockWindow : Window
     private KeyboardBlocker? _blocker;
     private ImageSource? _wallpaper;
     private string? _promoPath;
+    private TimeSpan _serverOffset;
 
     public bool AllowClose { get; set; }
     /// <summary>Evita que la pantalla recupere el foco mientras hay un diálogo abierto encima.</summary>
     public bool SuppressActivation { get; set; }
+    /// <summary>El menú flotante de inicio de sesión está abierto.</summary>
+    public bool IsLoginMenuOpen => LoginPopup.IsOpen;
     /// <summary>El usuario eligió iniciar sesión con una cuenta prepago.</summary>
     public event Action? PrepaidLoginRequested;
     /// <summary>El usuario eligió iniciar sesión como administrador.</summary>
@@ -64,6 +68,13 @@ public partial class LockWindow : Window
             LoginPanel.Visibility = Visibility.Visible;
             return;
         }
+
+        // El reloj de la pantalla sigue la hora del servidor (no la del equipo).
+        var serverUtc = state.ServerTimeUtc.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(state.ServerTimeUtc, DateTimeKind.Utc)
+            : state.ServerTimeUtc.ToUniversalTime();
+        _serverOffset = serverUtc - DateTime.UtcNow;
+        UpdateClock();
 
         BusinessNameText.Text = state.BusinessName;
         StationText.Text = state.Name;
@@ -191,6 +202,20 @@ public partial class LockWindow : Window
     private void Login_Click(object sender, RoutedEventArgs e)
         => LoginPopup.IsOpen = !LoginPopup.IsOpen;
 
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || !LoginPopup.IsOpen) return;
+        LoginPopup.IsOpen = false;
+        e.Handled = true;
+    }
+
+    private void Popup_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        LoginPopup.IsOpen = false;
+        e.Handled = true;
+    }
+
     private void PrepaidLogin_Click(object sender, RoutedEventArgs e)
     {
         LoginPopup.IsOpen = false;
@@ -205,9 +230,10 @@ public partial class LockWindow : Window
 
     private void UpdateClock()
     {
-        var now = DateTime.Now;
-        ClockText.Text = now.ToString("HH:mm:ss");
+        // Reloj de 12 horas con AM/PM, corregido con el desfase del servidor.
+        var now = DateTime.Now + _serverOffset;
         var culture = L.IsEnglish ? CultureInfo.GetCultureInfo("en-US") : CultureInfo.GetCultureInfo("es-VE");
+        ClockText.Text = now.ToString("h:mm:ss tt", culture);
         DateText.Text = Capitalize(now.ToString("dddd, d 'de' MMMM 'de' yyyy", culture));
     }
 

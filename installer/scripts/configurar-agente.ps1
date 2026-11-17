@@ -1,4 +1,3 @@
-#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Configura y registra el agente de CyberManager como servicio de Windows.
@@ -48,7 +47,23 @@ function Enable-DiscoveryFirewall {
 $principal = New-Object Security.Principal.WindowsPrincipal(
     [Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw "Ejecute este script como administrador."
+    # Se relanza con UAC conservando los parámetros. Sin #Requires, el script se puede
+    # analizar y ejecutar siempre; la directiva anterior impedía incluso parsearlo y
+    # PowerShell solo mostraba un error de sintaxis en lugar de pedir la elevación.
+    Write-Host "Se necesitan permisos de administrador. Solicitando elevación..." -ForegroundColor Yellow
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    foreach ($entry in $PSBoundParameters.GetEnumerator()) {
+        if ($entry.Value -is [switch]) {
+            if ($entry.Value.IsPresent) { $arguments += "-$($entry.Key)" }
+        }
+        elseif ($null -ne $entry.Value -and "$($entry.Value)" -ne "") {
+            $arguments += "-$($entry.Key)"
+            $arguments += "`"$($entry.Value)`""
+        }
+    }
+    $arguments += "-NoExit"
+    Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -Verb RunAs
+    exit
 }
 
 $root = Split-Path -Parent $PSScriptRoot

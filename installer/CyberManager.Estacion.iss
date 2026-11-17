@@ -66,6 +66,8 @@ spanish.InstallCancelled=La instalación se canceló para no interrumpir la sesi
 english.InstallCancelled=The installation was cancelled to avoid interrupting the current session.
 spanish.UninstallAll=Desinstalar todo CyberManager
 english.UninstallAll=Uninstall all CyberManager
+spanish.RegisteringClient=Registrando el inicio elevado del cliente...
+english.RegisteringClient=Registering the elevated client startup...
 spanish.RemoteGroup=Control remoto (opcional):
 english.RemoteGroup=Remote control (optional):
 spanish.InstallVncServer=Instalar TightVNC (servidor VNC) para control remoto
@@ -127,6 +129,9 @@ Type: files; Name: "{app}\Client\Microsoft.DiaSymReader.Native.amd64.dll"; Check
 Type: files; Name: "{app}\Client\mscordaccore_amd64_*.dll"; Check: IsX86InstallMode
 Type: files; Name: "{app}\Agent\Microsoft.DiaSymReader.Native.amd64.dll"; Check: IsX86InstallMode
 Type: files; Name: "{app}\Agent\mscordaccore_amd64_*.dll"; Check: IsX86InstallMode
+; El cliente ya no se inicia desde la carpeta Inicio: ahora lo hace una tarea
+; programada con permisos elevados. Se quita el acceso directo de versiones anteriores.
+Type: files; Name: "{commonstartup}\CyberManager Cliente.lnk"
 
 [Icons]
 Name: "{group}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager.Client.exe"; WorkingDir: "{app}\Client"
@@ -136,7 +141,6 @@ Name: "{group}\Carpeta de instalación"; Filename: "{app}"
 Name: "{group}\{cm:UninstallAll}"; Filename: "{commonappdata}\CyberManager\CyberManager.Uninstaller.exe"
 Name: "{group}\Desinstalar CyberManager Estación"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager.Client.exe"; WorkingDir: "{app}\Client"; Tasks: desktopicon
-Name: "{commonstartup}\CyberManager Cliente"; Filename: "{app}\Client\CyberManager.Client.exe"; WorkingDir: "{app}\Client"; Tasks: startupclient
 
 [Run]
 ; Instala TightVNC en modo silencioso si se marcó la tarea de control remoto. La
@@ -144,12 +148,17 @@ Name: "{commonstartup}\CyberManager Cliente"; Filename: "{app}\Client\CyberManag
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Server -Component estacion -Port {code:GetVncPort} -PasswordFile ""{tmp}\cybermanager-vnc.pwd"" -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-64bit.msi"""; StatusMsg: "{cm:InstallingVnc}"; Flags: runhidden waituntilterminated; Check: ShouldInstallVncServer and IsX64InstallMode
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\instalar-vnc.ps1"" -Action Install -Mode Server -Component estacion -Port {code:GetVncPort} -PasswordFile ""{tmp}\cybermanager-vnc.pwd"" -MsiPath ""{app}\vnc\tightvnc-2.8.90-gpl-setup-32bit.msi"""; StatusMsg: "{cm:InstallingVnc}"; Flags: runhidden waituntilterminated; Check: ShouldInstallVncServer and IsX86InstallMode
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoExit -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-agente.ps1"""; Description: "{cm:ConfigureAgent}"; StatusMsg: "{cm:OpeningAgent}"; Flags: postinstall nowait skipifsilent
+; Inicio elevado: registra la tarea programada que abre el cliente con permisos de
+; administrador sin mostrar el UAC en cada inicio de sesión.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-cliente.ps1"""; StatusMsg: "{cm:RegisteringClient}"; Flags: runhidden waituntilterminated; Tasks: startupclient
 ; Descubrimiento de red: el servidor localiza la estación y el agente por UDP
 ; (puertos 5092 y 5093) para asignarles ID y token sin configurarlos a mano.
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$n='CyberManager Estación (descubrimiento)'; Remove-NetFirewallRule -DisplayName $n -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName $n -Direction Inbound -Action Allow -Protocol UDP -LocalPort 5092,5093 -Profile Any | Out-Null"""; StatusMsg: "Configurando el firewall para el descubrimiento..."; Flags: runhidden waituntilterminated
-Filename: "{app}\Client\CyberManager.Client.exe"; Description: "{cm:OpenClient}"; WorkingDir: "{app}\Client"; Flags: nowait postinstall skipifsilent; Check: ShouldOpenClient
+Filename: "{sys}\schtasks.exe"; Parameters: "/Run /TN ""CyberManagerClient"""; Description: "{cm:OpenClient}"; Flags: runhidden nowait postinstall skipifsilent; Check: ShouldOpenClientTask
+Filename: "{app}\Client\CyberManager.Client.exe"; Description: "{cm:OpenClient}"; WorkingDir: "{app}\Client"; Flags: nowait postinstall skipifsilent; Check: ShouldOpenClientDirect
 
 [UninstallRun]
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\configurar-cliente.ps1"" -Remove"; Flags: runhidden waituntilterminated; RunOnceId: "QuitarTareaCliente"
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\desinstalar-servicios.ps1"" -Agente"; Flags: runhidden waituntilterminated; RunOnceId: "DetenerAgenteCyberManager"
 
 [Code]
@@ -316,6 +325,18 @@ begin
   Result := not (ClientWasRunning or AgentWasRunning);
 end;
 
+// Si se registró la tarea de inicio elevado se abre el cliente con ella, para no
+// pedir UAC; si no, se lanza el ejecutable directamente.
+function ShouldOpenClientTask(): Boolean;
+begin
+  Result := ShouldOpenClient() and WizardIsTaskSelected('startupclient');
+end;
+
+function ShouldOpenClientDirect(): Boolean;
+begin
+  Result := ShouldOpenClient() and not WizardIsTaskSelected('startupclient');
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
@@ -330,8 +351,14 @@ begin
     StartAgentService;
 
   if ClientWasRunning then
-    Exec(ExpandConstant('{app}\Client\CyberManager.Client.exe'), '',
-      ExpandConstant('{app}\Client'), SW_SHOWNORMAL, ewNoWait, ResultCode);
+  begin
+    if WizardIsTaskSelected('startupclient') then
+      Exec(ExpandConstant('{sys}\schtasks.exe'), '/Run /TN "CyberManagerClient"',
+        '', SW_HIDE, ewNoWait, ResultCode)
+    else
+      Exec(ExpandConstant('{app}\Client\CyberManager.Client.exe'), '',
+        ExpandConstant('{app}\Client'), SW_SHOWNORMAL, ewNoWait, ResultCode);
+  end;
 end;
 
 procedure InitializeWizard();

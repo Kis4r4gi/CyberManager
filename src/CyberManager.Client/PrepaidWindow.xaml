@@ -65,9 +65,18 @@
                                      ToolTip="Escriba el usuario de su cuenta prepago." />
 
                             <TextBlock Text="Contraseña" Style="{StaticResource Label}" />
-                            <PasswordBox x:Name="PasswordBox" Margin="0,0,0,6" MaxLength="64"
-                                         KeyDown="Password_KeyDown"
+                            <Grid Margin="0,0,0,4">
+                                <PasswordBox x:Name="PasswordBox" MaxLength="64"
+                                             KeyDown="Password_KeyDown"
+                                             ToolTip="Escriba su contraseña." />
+                                <TextBox x:Name="PasswordRevealBox" MaxLength="64" Visibility="Collapsed"
+                                         KeyDown="Password_KeyDown" TextChanged="PasswordReveal_TextChanged"
                                          ToolTip="Escriba su contraseña." />
+                            </Grid>
+                            <CheckBox x:Name="ShowPasswordCheck" Content="Mostrar contraseña"
+                                      Margin="0,0,0,10" Checked="ShowPassword_Changed"
+                                      Unchecked="ShowPassword_Changed"
+                                      ToolTip="Muestra u oculta la contraseña que escribe." />
 
                             <TextBlock x:Name="LoginErrorText" Foreground="{StaticResource DangerBrush}"
                                        TextWrapping="Wrap" Visibility="Collapsed" Margin="0,4,0,8" />
@@ -96,10 +105,23 @@
                                        Style="{StaticResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap" />
 
                             <TextBlock Text="Contraseña" Style="{StaticResource Label}" />
-                            <PasswordBox x:Name="RegisterPasswordBox" Margin="0,0,0,12" MaxLength="64" />
+                            <Grid Margin="0,0,0,4">
+                                <PasswordBox x:Name="RegisterPasswordBox" MaxLength="64" />
+                                <TextBox x:Name="RegisterPasswordRevealBox" MaxLength="64" Visibility="Collapsed"
+                                         TextChanged="RegisterPasswordReveal_TextChanged" />
+                            </Grid>
 
                             <TextBlock Text="Repita la contraseña" Style="{StaticResource Label}" />
-                            <PasswordBox x:Name="RegisterConfirmBox" Margin="0,0,0,12" MaxLength="64" />
+                            <Grid Margin="0,0,0,4">
+                                <PasswordBox x:Name="RegisterConfirmBox" MaxLength="64" />
+                                <TextBox x:Name="RegisterConfirmRevealBox" MaxLength="64" Visibility="Collapsed"
+                                         TextChanged="RegisterConfirmReveal_TextChanged" />
+                            </Grid>
+
+                            <CheckBox x:Name="ShowRegisterPasswordsCheck" Content="Mostrar contraseñas"
+                                      Margin="0,0,0,12" Checked="ShowRegisterPasswords_Changed"
+                                      Unchecked="ShowRegisterPasswords_Changed"
+                                      ToolTip="Muestra u oculta las contraseñas que escribe." />
 
                             <TextBlock Text="Teléfono (opcional)" Style="{StaticResource Label}" />
                             <TextBox x:Name="RegisterPhoneBox" Margin="0,0,0,6" MaxLength="30" />

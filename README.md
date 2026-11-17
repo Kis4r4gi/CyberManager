@@ -102,6 +102,15 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Acceso de administrador desde el cliente**: el botón de inicio de sesión de la pantalla de
   bloqueo permite entrar con una cuenta con rol *Admin* y editar la configuración del cliente
   enlazada al servidor (negocio, barra de sesión, fondos, avisos y sesiones).
+- **Login cómodo en la pantalla de bloqueo**: el cursor permanece en el campo de usuario mientras
+  se escribe, el menú flotante se cierra con **ESC** y los formularios de acceso y registro
+  incluyen la casilla **Mostrar contraseña**.
+- **Reloj de 12 horas sincronizado**: la pantalla de bloqueo muestra la hora con formato
+  `h:mm:ss tt` y la corrige con la hora del servidor, de modo que todas las estaciones coinciden.
+- **Acciones por equipo en «Equipos»**: cada fila incluye un menú desplegable **Acciones** con
+  subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
+  bloquear, enviar mensaje, mantenimiento, activar/desactivar y eliminar. La barra de botones
+  inferiores se retiró; el clic derecho abre el mismo menú.
 - Consumo de productos cargado a la sesión (se cobra al cerrar) o cobrado directo en caja.
 - Reservas de equipos por fecha y hora, con confirmación y cancelación.
 - Mensajes al cliente y órdenes de bloqueo, apagado, reinicio y cierre de sesión.
@@ -124,7 +133,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   administrador; se aplica en cada equipo mediante el archivo `hosts` y un proxy local opcional.
 - Aviso y bloqueo automático al agotarse el tiempo contratado (configurable).
 - Galería de fondos sincronizada: los equipos bloqueados muestran un fondo fijo o una
-  presentación rotativa controlada desde la consola.
+  presentación rotativa controlada desde la consola; la rotación avanza solo tras 2 minutos sin
+  actividad, como un salvapantallas.
 - **Videos promocionales** en los terminales bloqueados, con reproducción silenciada, orden
   configurable y sincronización inmediata desde el servidor.
 - **Notas y Registro en vivo**: el panel derecho muestra arriba las **notas** compartidas (con
@@ -376,6 +386,8 @@ y está disponible en:
 
 - el menú Inicio, como **Desinstalar todo CyberManager**;
 - **Configuración → Instalación** de la consola;
+- **Configuración → Mantenimiento → Cerrar y desinstalar** del cliente de estación, que pide
+  confirmación, cierra el cliente y ejecuta el desinstalador con permisos de administrador;
 - **Aplicaciones instaladas** de Windows (los desinstaladores de Inno Setup de cada componente).
 
 Elimina el servidor y/o la estación, sus servicios y accesos directos, pero **conserva la base de
@@ -495,8 +507,9 @@ Después de instalar:
 `C:\CyberManager\Estacion`.
 
 1. Ejecute el instalador en cada PC o consola.
-2. Deje marcada la tarea **Iniciar el cliente con Windows** si el equipo debe quedar operativo al
-   encender.
+2. Deje marcada la tarea **Iniciar el cliente con Windows** para registrar la tarea programada
+   `CyberManagerClient`, que abre el cliente con permisos elevados al iniciar sesión (sin UAC).
+   Ya no se crea un acceso directo en la carpeta Inicio.
 3. Al terminar, el instalador abre la configuración del agente. Indique el **ID**, el **token** y
    la **URL LAN del servidor**, y siga las instrucciones para registrar el servicio
    `CyberManagerAgent`.
@@ -623,6 +636,8 @@ abre un menú con dos opciones:
   datos del negocio, la barra de sesión, los fondos, los avisos y el control de sesiones. Los
   cambios se guardan en `/api/settings` y se aplican a todas las estaciones; el idioma se guarda
   solo en el equipo. Al cerrar, la pantalla de bloqueo vuelve y se refresca el estado.
+  La sección **Mantenimiento** incluye **Cerrar y desinstalar**: pide confirmación, cierra el
+  cliente y ejecuta el desinstalador con permisos de administrador, conservando la base de datos.
 
 El servidor expone las rutas anónimas `/api/station/prepaid/info`, `register`, `login`,
 `recharge`, `start` y `finish`, autenticadas con el ID/token de la estación. Las cuentas usan
@@ -931,7 +946,8 @@ de estación crea la regla automáticamente.
 
 ### Configuración manual
 
-1. En la consola vaya a **Equipos**, seleccione el PC y pulse **Configuración / token**.
+1. En la consola vaya a **Equipos**, abra el menú **Acciones** de la fila del PC y elija
+   **Configuración / token**.
 2. Anote el **ID del equipo** y el **token**. Puede copiar el token al portapapeles.
 3. En el PC de la estación, abra `CyberManager.Client.exe`. Si no está configurado, aparece la
    ventana de configuración. Indique:
@@ -1046,20 +1062,36 @@ cd C:\ruta\a\CyberManager\scripts
 ```
 
 El script publica el cliente, lo copia a `C:\CyberManager\Client`, escribe el `config.json` del
-equipo y crea el acceso directo **CyberManager Client** en la carpeta de inicio del usuario.
+equipo y registra la tarea programada `CyberManagerClient`. Esa tarea abre el cliente al iniciar
+sesión con el **nivel de privilegio más alto disponible**, de modo que el cliente se ejecuta como
+administrador sin mostrar el UAC en cada arranque. Ya no se crea un acceso directo en la carpeta
+Inicio; al actualizar desde una versión anterior, el instalador lo elimina.
 
 Opciones:
 
-| Parámetro              | Descripción                                                         |
-|------------------------|---------------------------------------------------------------------|
-| `-AllUsers`            | Crea el acceso directo en el inicio de **todos** los usuarios.       |
-| `-InstallDir`          | Carpeta de instalación (por defecto `C:\CyberManager\Client`).       |
-| `-NoPublish`           | No publica; solo escribe la configuración y crea el acceso directo.  |
-| `-FrameworkDependent`  | Publica sin incluir el runtime.                                     |
+| Parámetro              | Descripción                                                              |
+|------------------------|--------------------------------------------------------------------------|
+| `-InstallDir`          | Carpeta de instalación (por defecto `C:\CyberManager\Client`).            |
+| `-NoPublish`           | No publica; solo copia la configuración y registra la tarea de inicio.    |
+| `-FrameworkDependent`  | Publica sin incluir el runtime.                                          |
+
+Para abrir el cliente sin cerrar sesión use el menú Inicio o:
+
+```powershell
+schtasks /Run /TN "CyberManagerClient"
+```
+
+Para quitar solo el inicio automático (sin desinstalar el cliente):
+
+```powershell
+.\installer\scripts\configurar-cliente.ps1 -Remove
+```
 
 **Recomendaciones de kiosco**
 
-- Use una cuenta de Windows estándar (sin privilegios de administrador) para el cliente.
+- El cliente pide permisos de administrador (`requireAdministrator`) y la tarea de inicio usa
+  `HighestAvailable`. Por eso el usuario de Windows de la estación debe ser **administrador local**
+  del equipo; con una cuenta estándar Windows pedirá credenciales al abrir el cliente.
 - Configure el inicio de sesión automático de Windows para esa cuenta si el equipo debe quedar
   operativo sin intervención.
 - Active el *Modo kiosco* en *Configuración → Negocio y facturación* para reforzar el bloqueo.
@@ -1112,6 +1144,10 @@ token de equipo y las cachea en
 `%LOCALAPPDATA%\CyberManager\Client\wallpapers` usando el hash SHA-256 como nombre; así los
 reinicios posteriores no vuelven a descargarlas. Si una imagen no se puede descargar, el cliente
 continúa con las demás.
+
+En modo **Presentación rotativa** la rotación funciona como un salvapantallas: solo avanza cuando
+el equipo lleva **2 minutos sin actividad** (teclado o ratón). Cualquier movimiento detiene la
+rotación y mantiene el fondo actual; al volver a quedar inactivo, se reanuda.
 
 > El fondo se muestra con una capa oscura para mantener legibles el reloj, el nombre del equipo y
 > los mensajes. Al iniciar una sesión, la pantalla de bloqueo se oculta y la rotación se detiene.
@@ -1286,9 +1322,12 @@ guarda una copia local del estado:
 | `scripts/build-installer.ps1`   | Publica x64/x86 y genera los instaladores unificados con Inno Setup. |
 | `scripts/generate-icon.ps1`     | Genera el icono compartido `assets/CyberManager.ico`.               |
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
-| `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático.                    |
+| `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático elevado.             |
 | `scripts/import-stock.ps1`      | Importa o actualiza productos desde un CSV/HTML de stock.           |
 | `scripts/sync-github.ps1`       | Sincroniza automáticamente el proyecto con GitHub.                  |
+| `installer/scripts/configurar-cliente.ps1` | Registra o quita la tarea `CyberManagerClient` (inicio elevado). |
+| `installer/scripts/configurar-agente.ps1`  | Configura el agente y su servicio; se auto-eleva si hace falta.  |
+| `installer/scripts/configurar-servidor.ps1`| Registra el servidor y abre el puerto 5080 en el firewall.       |
 
 `generate-icon.ps1` dibuja el icono en siete tamaños (16 a 256 px) y produce un `.ico` con
 entradas BMP de 32 bits compatible con los ejecutables de .NET y con Inno Setup. Los cuatro
