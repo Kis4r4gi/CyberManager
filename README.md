@@ -429,12 +429,38 @@ datos del negocio** y la configuración local de las estaciones.
 
 ## Instaladores de Windows
 
-Hay **dos instaladores separados y autocontenidos** (servidor y estación). Cada uno incluye los
-binarios de **x64 y x86** y detecta automáticamente la arquitectura del equipo: en Windows x64
-instala la versión de 64 bits y en Windows x86 la de 32 bits. Ninguno requiere .NET instalado en el
-equipo de destino. Ejecútelos **como administrador**. Los instaladores incluyen **español e
-inglés**: el idioma se elige al inicio y puede cambiarse después en la aplicación. Ambos
-instaladores y todos los ejecutables usan el icono de CyberManager.
+Hay **tres instaladores autocontenidos**: el **unificado** (al abrirlo se elige servidor o estación)
+y los dos separados (servidor y estación). Todos incluyen los binarios de **x64 y x86** y detectan
+automáticamente la arquitectura del equipo: en Windows x64 instalan la versión de 64 bits y en
+Windows x86 la de 32 bits. Ninguno requiere .NET instalado en el equipo de destino. Ejecútelos
+**como administrador**. Los instaladores incluyen **español e inglés**: el idioma se elige al
+inicio y puede cambiarse después en la aplicación. Todos los instaladores y ejecutables usan el
+icono de CyberManager.
+
+### Instalador unificado (recomendado)
+
+`CyberManager-Unificado-<versión>.exe` sirve para cualquier equipo. En la página **¿Qué desea
+instalar?** se escoge una de tres opciones:
+
+| Opción | Qué instala | Carpeta |
+|---|---|---|
+| **Servidor (equipo principal con la base de datos)** | API, base de datos y consola de administración | `C:\CyberManager\Servidor` |
+| **Estación / cliente (PC de caja o de juego)** | Cliente, agente de Windows y scripts de configuración | `C:\CyberManager\Estacion` |
+| **Servidor y estación en este mismo equipo** | Ambos componentes | `C:\CyberManager\Servidor` y `C:\CyberManager\Estacion` |
+
+Las tareas, los accesos directos y el arranque automático se ajustan a lo elegido: las tareas del
+servidor (tarea programada, puerto 5080, visor VNC) solo aparecen con el servidor y las de la
+estación (inicio del cliente, agente, servidor VNC) solo con la estación. La carpeta final es la
+misma que usan los instaladores separados, así que los scripts, la base de datos y la configuración
+local siguen funcionando sin cambios.
+
+Si el equipo tiene instalada una versión anterior de los instaladores separados, el unificado la
+desinstala en silencio antes de copiar los archivos, para no dejar dos entradas en **Aplicaciones
+instaladas**. La base de datos (`cybermanager.db`) y la configuración local del cliente se
+conservan.
+
+> Para agregar el otro componente a un equipo ya instalado, vuelva a ejecutar el unificado y elija
+> **Servidor y estación en este mismo equipo**.
 
 ### Servidor
 
@@ -488,10 +514,10 @@ desinstalador de cada componente en **Aplicaciones instaladas** de Windows. Cada
 - **Estación**: elimina el servicio del agente. La configuración local del cliente se conserva en
   `%LOCALAPPDATA%\CyberManager\Client`.
 
-> Ambos instaladores pueden convivir en el mismo equipo porque usan carpetas distintas
-> (`Servidor` y `Estacion`). El instalador unificado elige la arquitectura del equipo; si vuelve a
-> instalar sobre la misma carpeta, reemplaza los binarios de la arquitectura anterior y conserva la
-> base de datos del servidor y la configuración local de la estación.
+> Los componentes pueden convivir en el mismo equipo porque usan carpetas distintas (`Servidor` y
+> `Estacion`). Los instaladores eligen la arquitectura del equipo; si se vuelve a instalar sobre la
+> misma carpeta, reemplazan los binarios de la arquitectura anterior y conservan la base de datos del
+> servidor y la configuración local de la estación.
 
 ---
 

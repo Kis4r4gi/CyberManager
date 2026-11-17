@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-16
+> Última actualización: 2026-11-17
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -13,10 +13,11 @@ estación), unificados por arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
-La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores unificados**
-(Servidor y Estación), cada uno con los payloads de x64 y x86 y selección automática de la
-arquitectura al instalar. El **servidor 1.2.0 está instalado y corriendo** como tarea programada en
-este equipo (`C:\CyberManager\Servidor`, puerto 5080).
+La solución compila con **0 errores** y **0 advertencias**. Se generan **tres instaladores**:
+el **unificado** (permite escoger servidor o estación al abrir) y los dos separados (Servidor y
+Estación). Cada uno incluye los payloads de x64 y x86 y selección automática de la arquitectura al
+instalar. El **servidor 1.3.0 está instalado y corriendo** (tarea programada, puerto 5080) en este
+equipo con la ruta `C:\CyberManager\Servidor`, migrado con el instalador unificado.
 
 ---
 
@@ -140,7 +141,13 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 ### Instaladores y despliegue
 
-- Inno Setup 6 con **dos instaladores unificados** que mantienen la separación por componente:
+- Inno Setup 6 con **tres instaladores**: dos separados por componente y uno unificado.
+  - `installer/CyberManager.Unificado.iss` → al abrir, el usuario elige **servidor**, **estación** o
+    **ambos** (`[Types]` + `[Components]`), con tareas, iconos, `[Run]` y `[UninstallRun]`
+    filtrados por componente. Instala en `C:\CyberManager\Servidor` y/o
+    `C:\CyberManager\Estacion`, las mismas rutas de los instaladores separados. Usa AppId propio y,
+    en `PrepareToInstall`, desinstala en silencio los AppId anteriores
+    (`{A3B5D8E1-…}` servidor y `{C9D2E4F6-…}` estación) conservando base de datos y configuración.
   - `installer/CyberManager.Servidor.iss` → servidor + consola de administración.
   - `installer/CyberManager.Estacion.iss` → cliente + agente de Windows.
   - Cada instalador incluye los payloads de `dist\x64` y `dist\x86`; `[Files]` usa
@@ -151,9 +158,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   - `[InstallDelete]` retira los binarios nativos de la arquitectura opuesta al reinstalar, sin
     tocar la base de datos del servidor ni la configuración local de la estación.
 - `scripts/build-installer.ps1` publica ambos payloads (`dist\x64` y `dist\x86`), el desinstalador
-  independiente y compila los dos instaladores unificados; `-Architecture` acepta `all` (por
-  defecto), `x64` o `x86`, y las dos últimas solo se usan con `-SkipInstaller` para publicaciones
-  de diagnóstico.
+  independiente y compila los **tres** instaladores (servidor, estación y unificado); `-Architecture`
+  acepta `all` (por defecto), `x64` o `x86`, y las dos últimas solo se usan con `-SkipInstaller`
+  para publicaciones de diagnóstico.
 - **Versión automática**: `version.props` (`CyberManagerVersion`) es la fuente única.
   `Directory.Build.props` la aplica a `Version`, `FileVersion` e `InformationalVersion`, y
   `AppInfo.Version` la expone en tiempo de ejecución (sin el sufijo `+hash` del SDK). Cada
@@ -186,9 +193,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (`configurar-agente.ps1`): ID, token y URL LAN.
 - Desinstalación selectiva: `desinstalar-servicios.ps1 -Servidor` o `-Agente`. El servidor
   conserva la base de datos; la estación conserva la configuración local del cliente.
-- Instaladores generados:
-  - `artifacts/CyberManager-Servidor-1.0.4.exe` (~158,8 MB, payloads x64 + x86).
-  - `artifacts/CyberManager-Estacion-1.0.4.exe` (~140,7 MB, payloads x64 + x86).
+- Instaladores generados (1.3.0):
+  - `artifacts/CyberManager-Unificado-1.3.0.exe` (~505,4 MB: servidor + estación en un solo bloque).
+  - `artifacts/CyberManager-Servidor-1.3.0.exe` (~374,4 MB, payloads x64 + x86).
+  - `artifacts/CyberManager-Estacion-1.3.0.exe` (~143,8 MB, payloads x64 + x86).
 - Ambos instaladores llevan `SetupIconFile=..\assets\CyberManager.ico` y los ejecutables
   publicados en ambas arquitecturas incluyen el icono en sus recursos.
 - **Reducción de tamaño**: las publicaciones omiten PDB y XML de documentación, usan
@@ -1038,6 +1046,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (`/api/settings`) y el idioma local. `SessionBarWindow` muestra **Recargar tiempo** y
   **Finalizar sesión** solo en sesiones prepago. `App.xaml.cs` orquesta el modo administrador,
   la recarga/cierre y el refresco del estado.
+- **Ventana de login del cliente**: `PrepaidWindow` ya no usa 680×820 fijos. Abre con ancho 560,
+  `SizeToContent="Height"` (login 560×489, registro 560×684), `MaxWidth`/`MaxHeight` calculados
+  desde `SystemParameters.WorkArea` y recentrado al cambiar de panel, por lo que nunca queda
+  recortada en pantallas de 1366×768 o menores.
 - **Pruebas**: `dotnet build CyberManager.sln -c Release` con **0 errores** y **0 advertencias**.
   Servidor temporal en **5099** con base nueva (`%TEMP%\cm-prepaid-test\test.db`): login admin;
   registro `jugador…`; recarga de saldo de 5 USD; compra de «30 minutos» (0,50 USD); inicio de
@@ -1076,6 +1088,44 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: probar dos consolas reales en la red y regenerar instaladores/release cuando el
   usuario lo pida.
 
+### Instalador unificado (1.3.0, 2026-11-17)
+
+- **Un solo ejecutable para ambos roles**: `installer/CyberManager.Unificado.iss` usa el AppId
+  `{E7F1C3A9-5B24-4D68-9F13-8C6A2D4B7E95}`, `DefaultDirName=C:\CyberManager`, `[Types]`
+  `servidor`/`estacion`/`completo` y `[Components]` con los mismos nombres. Las tareas, los iconos,
+  `[Files]`, `[Run]`, `[UninstallRun]`, `[InstallDelete]` y `[UninstallDelete]` se filtran con
+  `Components:`/`Tasks:` para que cada rol reciba solo lo suyo; la página de VNC solo aparece con
+  la estación.
+- **Rutas equivalentes**: el servidor se copia en `{app}\Servidor` y la estación en
+  `{app}\Estacion`, con los mismos payloads, scripts, lanzador y accesos directos que los
+  instaladores separados, así que la base de datos y la configuración local siguen funcionando.
+- **Migración automática**: `RemoveOldInstall` busca los AppId anteriores (`{A3B5D8E1-…}` servidor y
+  `{C9D2E4F6-…}` estación) en el registro y ejecuta su desinstalador con
+  `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` desde `PrepareToInstall`, antes de copiar archivos. No
+  borra `cybermanager.db` ni `%LOCALAPPDATA%\CyberManager\Client`.
+- **Empaquetado**: registrado en `$installers` de `scripts/build-installer.ps1` como
+  `CyberManager-Unificado-<versión>.exe` y compilado junto con los otros dos.
+- **Pruebas de compilación**: `scripts/build-installer.ps1 -SkipPublish` compiló los tres
+  instaladores con Inno Setup sin errores ni advertencias. `CyberManager-Unificado-1.3.0.exe` pesa
+  505,4 MB (servidor 374,4 MB + estación 143,8 MB en un solo bloque sólido).
+- **Prueba real en este equipo (2026-11-17, sesión elevada, servidor 1.2.0 → 1.3.0)**:
+  - Respaldo previo en `artifacts\backup-pre-unificado-20261117-113642` (`cybermanager.db`,
+    `appsettings.json` y XML de la tarea programada).
+  - `/TYPE=servidor`: desinstaló en silencio el 1.2.0 anterior, migró a 1.3.0, recreó la tarea
+    `CyberManagerServer` (Running), abrió el puerto 5080 y la regla de firewall, dejó solo los
+    iconos del servidor y una única entrada `CyberManager 1.3.0` en **Aplicaciones instaladas**.
+    Datos intactos: 53.796.864 bytes de base, login `admin/admin123`, 4 estaciones y 424 productos.
+  - `/TYPE=estacion /MERGETASKS="!startupclient,!desktopicon_station"`: agregó
+    `Estacion\Client`, `Estacion\Agent` y `Estacion\scripts`, sumó los iconos de ambos roles y no
+    tocó los archivos ni el proceso del servidor. Sin arranque automático del cliente.
+  - Desinstalación silenciosa (`C:\CyberManager\unins000.exe /VERYSILENT`): eliminó tareas,
+    firewall, registro, menú Inicio y binarios, y **conservó** `Servidor\Server\cybermanager.db`
+    (mismo tamaño).
+  - Reinstalación final `/TYPE=servidor`: tarea Running, `/api/health` OK, versión 1.3.0, datos
+    intactos y una sola entrada de registro. Queda `Estacion\vnc\instalacion.log` como resto de una
+    prueba anterior (el desinstalador no borra `vnc`).
+- **Pendiente**: publicar cuando el usuario lo pida.
+
 ---
 
 ## Rutas y comandos clave
@@ -1087,7 +1137,7 @@ Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberM
 $dotnet = "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
 & $dotnet build CyberManager.sln -v q --nologo
 
-# Generar los dos instaladores unificados (publica x64 y x86; sube la versión menor)
+# Generar los tres instaladores (unificado, servidor y estación; sube la versión menor)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
 
 # Fijar una versión concreta o conservar la actual
@@ -1186,6 +1236,13 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   `ArchitecturesInstallIn64BitMode=x64compatible`; `Is64BitInstallMode` decide si se copia
   `dist\x64` o `dist\x86`. `[InstallDelete]` limpia los binarios nativos de la arquitectura
   opuesta al reinstalar. No existe un modificador documentado para forzar x86 en un Windows x64.
+- **Instalador unificado**: AppId propio `{E7F1C3A9-5B24-4D68-9F13-8C6A2D4B7E95}` y
+  `DefaultDirName=C:\CyberManager`; los payloads van a `{app}\Servidor` y `{app}\Estacion` para
+  conservar las rutas, los scripts y las tareas existentes. `[Types]`
+  (`servidor`/`estacion`/`completo`) preselecciona `[Components]`, y las entradas de `[Tasks]`,
+  `[Files]`, `[Icons]`, `[Run]`, `[UninstallRun]`, `[InstallDelete]` y `[UninstallDelete]` llevan
+  `Components:` para no mezclar roles. Antes de copiar archivos desinstala en silencio los AppId de
+  los instaladores separados, conservando la base de datos y la configuración local.
 - **Versión**: `version.props` es la única fuente; no edite `Version` en los `.csproj`. El script
   de empaquetado sube la versión menor y reinicia el patch al publicar. Los instaladores usan el
   mismo valor en
@@ -1223,21 +1280,26 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
 
 ## Pendientes / siguientes pasos
 
-1. Probar **Escanear la red** y el box **Clientes** desde la consola local 1.2.0 con una estación
+1. Probar **Escanear la red** y el box **Clientes** desde la consola local 1.3.0 con una estación
    real encendida.
-2. (Opcional) Con una sesión **elevada**, probar los dos instaladores 1.2.0 en modo silencioso y
-   verificar: selección automática de x64 en este equipo, archivos instalados, tarea programada,
+2. (Opcional) Con una sesión **elevada**, probar los instaladores separados 1.3.0 en modo silencioso
+   y verificar: selección automática de x64 en este equipo, archivos instalados, tarea programada,
    firewall UDP 5092/5093, servicio del agente, reinstalación cruzada x64/x86, confirmación al
    cerrar procesos, reinicio posterior y desinstalación.
-3. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
+3. (Pendiente) Probar el **instalador unificado** en un equipo limpio (sin instalación previa):
+   elegir *Servidor*, luego *Estación* y confirmar que cada rol recibe solo sus tareas e iconos y
+   que la configuración local del cliente se conserva. En este equipo ya se validaron la migración
+   desde los instaladores separados, ambos roles, la desinstalación y la reinstalación del servidor
+   (2026-11-17).
+4. (Opcional) Probar la ruta x86 en un Windows de 32 bits o en una máquina virtual; el mecanismo
    equivalente se validó con un instalador Inno de prueba en x64.
-4. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
+5. (Opcional) Con una sesión elevada, probar la elevación de primer inicio (UAC), el marcador
    `%ProgramData%\CyberManager\server-elevated.marker` y los comandos remotos de volumen, monitor y
    bloqueo de entrada contra una estación real.
-5. Probar dos consolas reales en la red local (servidor + CAJA-1/CAJA-2 con usuarios *Cajero*):
+6. Probar dos consolas reales en la red local (servidor + CAJA-1/CAJA-2 con usuarios *Cajero*):
    apertura y cierre simultáneos, cobros en la caja de cada sesión y visibilidad de las vistas.
-6. Mantener actualizado `README.md` si se agregan funciones nuevas.
-7. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
+7. Mantener actualizado `README.md` si se agregan funciones nuevas.
+8. Recompilar los instaladores cuando cambie el código para incluir la última versión de la
    consola, el servidor, las promos y la localización. La versión menor sube automáticamente; use
    `-NoBump` solo si necesita conservar la versión.
 
@@ -1252,7 +1314,7 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   <https://github.com/Kis4r4gi/CyberManager/releases/latest>.
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
-  `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
+  `gh release create v<versión> --target main artifacts/CyberManager-Unificado-<versión>.exe artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
 - Release actual: **v1.2.0**
   (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.2.0>) con
   `CyberManager-Servidor-1.2.0.exe` (396.164.653 bytes),

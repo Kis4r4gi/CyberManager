@@ -240,7 +240,8 @@ if (-not $SkipInstaller -and $architectures.Count -lt 2) {
 
 $installers = @(
     @{ Iss = Join-Path $installerDir "CyberManager.Servidor.iss"; Name = "Servidor"; Display = "Servidor" },
-    @{ Iss = Join-Path $installerDir "CyberManager.Estacion.iss"; Name = "Estacion"; Display = "Estación" }
+    @{ Iss = Join-Path $installerDir "CyberManager.Estacion.iss"; Name = "Estacion"; Display = "Estación" },
+    @{ Iss = Join-Path $installerDir "CyberManager.Unificado.iss"; Name = "Unificado"; Display = "Unificado (servidor o estación)" }
 )
 
 $projects = [ordered]@{

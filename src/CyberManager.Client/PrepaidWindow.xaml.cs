@@ -37,6 +37,8 @@ public partial class PrepaidWindow : Window
     public PrepaidWindow()
     {
         InitializeComponent();
+        FitToWorkArea();
+        SizeChanged += (_, _) => CenterInWorkArea();
 
         Loaded += async (_, _) =>
         {
@@ -44,6 +46,31 @@ public partial class PrepaidWindow : Window
             ShowLoginPanel();
             await LoadInfoAsync();
         };
+    }
+
+    /// <summary>
+    /// Ajusta la ventana al área de trabajo del monitor principal para que el formulario
+    /// no quede recortado en pantallas pequeñas (por ejemplo 1366x768).
+    /// </summary>
+    private void FitToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        var maxWidth = Math.Max(MinWidth, area.Width - 32);
+        var maxHeight = Math.Max(MinHeight, area.Height - 32);
+
+        MaxWidth = maxWidth;
+        MaxHeight = maxHeight;
+        Width = Math.Min(Width, maxWidth);
+    }
+
+    /// <summary>Mantiene la ventana centrada y completa dentro del área de trabajo al cambiar de panel.</summary>
+    private void CenterInWorkArea()
+    {
+        if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+        var area = SystemParameters.WorkArea;
+        Left = area.Left + Math.Max(0, (area.Width - ActualWidth) / 2);
+        Top = area.Top + Math.Max(0, (area.Height - ActualHeight) / 2);
     }
 
     private async Task LoadInfoAsync()
