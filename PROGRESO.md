@@ -1186,6 +1186,26 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 ---
 
+### Registros persistentes del servidor y despliegue de prueba en PC 01 (2026-11-17, sin publicar)
+
+- **Registros persistentes**: `CyberManager.Server/Logging/FileLoggerProvider.cs` escribe cada
+  entrada en `<servidor>\Logs\server-AAAA-MM-DD.log` en modo *append*, con fecha/hora, nivel y
+  categoría. Los registros **no se borran al reiniciar**; los archivos con más de **30 días** se
+  eliminan al arrancar y al cambiar de día. Si un archivo supera 32 MB continúa en `.1`, `.2`, etc.
+  La retención se configura con `Server:LogRetentionDays` (30 por defecto).
+- **Program.cs**: registra el proveedor, anota la carpeta del registro al arrancar y guarda en el
+  archivo las excepciones no controladas y las tareas no observadas. `appsettings.json` silencia
+  `System.Net.Http.HttpClient` para no llenar el archivo con cada consulta de tasas.
+- **Pruebas**: se creó `server-2026-10-01.log` y se reinició el servidor: se eliminó; un archivo
+  del 2026-11-10 se conservó. El archivo del 2026-11-17 mantiene las líneas de los reinicios
+  anteriores y agrega las nuevas. `/api/health` responde `ok` y la tarea sigue `Running`.
+- **Despliegue de prueba**: paquete `ClientUpdate` **1.3.1** (SHA-256 `34f20194…`) publicado en el
+  servidor. PC 01 (`192.168.1.14`, `stationId 11`) descargó y aplicó la actualización y reporta
+  **1.3.1** sin bucle de actualización. El servidor instalado también quedó en **1.3.1**.
+- **Pendiente**: recompilar los instaladores 1.3.1 cuando el usuario lo pida; sin push ni release.
+
+---
+
 ## Rutas y comandos clave
 
 Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberManager`).

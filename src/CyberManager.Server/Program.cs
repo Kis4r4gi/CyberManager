@@ -4,6 +4,7 @@ using CyberManager.Server;
 using CyberManager.Server.Data;
 using CyberManager.Server.Endpoints;
 using CyberManager.Server.Hubs;
+using CyberManager.Server.Logging;
 using CyberManager.Server.Security;
 using CyberManager.Server.Services;
 using CyberManager.Shared;
@@ -45,6 +46,14 @@ var launchArgs = elevationArgs
     .ToArray();
 
 var builder = WebApplication.CreateBuilder(launchArgs);
+
+// ---------- Registro persistente (30 días por defecto) ----------
+// El servidor suele correr como tarea SYSTEM, sin ventana de consola. Los registros
+// se guardan en <servidor>\Logs en modo "append": sobreviven a los reinicios y los
+// archivos con más de 30 días se eliminan automáticamente.
+var logsFolder = Path.Combine(AppContext.BaseDirectory, "Logs");
+var logRetentionDays = builder.Configuration.GetValue<int?>("Server:LogRetentionDays") ?? 30;
+builder.Logging.AddProvider(new FileLoggerProvider(logsFolder, logRetentionDays));
 
 // ---------- Base de datos (ruta absoluta junto al ejecutable) ----------
 var configured = builder.Configuration.GetConnectionString("Default") ?? "Data Source=cybermanager.db";
@@ -155,6 +164,21 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
     o.MultipartBodyLengthLimit = 512L * 1024 * 1024);
 
 var app = builder.Build();
+
+app.Logger.LogInformation("Registros del servidor en {Folder} (retención: {Days} días)",
+    logsFolder, logRetentionDays);
+
+// Cualquier fallo no controlado queda escrito en el archivo del día.
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    app.Logger.LogCritical(e.ExceptionObject as Exception,
+        "Excepción no controlada; el servidor se está deteniendo");
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    app.Logger.LogError(e.Exception, "Excepción no observada en una tarea en segundo plano");
+    e.SetObserved();
+};
+app.Lifetime.ApplicationStopping.Register(() =>
+    app.Logger.LogInformation("CyberManager Server detenido"));
 
 // ---------- Inicialización ----------
 using (var scope = app.Services.CreateScope())

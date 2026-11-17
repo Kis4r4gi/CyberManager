@@ -1338,6 +1338,13 @@ cambia el diseño, vuelva a ejecutarlo y recompile.
 `-SkipBuild`. Los registros del servidor se guardan en `artifacts/server.log` y
 `artifacts/server.err.log`.
 
+El servidor instalado (tarea `CyberManagerServer`) escribe sus registros en
+`<instalación>\Server\Logs\server-AAAA-MM-DD.log`. Los archivos se abren en modo *append*, así que
+**sobreviven a los reinicios**, y se eliminan automáticamente los que tienen más de **30 días**
+(`Server:LogRetentionDays` en `appsettings.json`). Si un archivo supera 32 MB continúa en
+`server-AAAA-MM-DD.1.log`, `.2`, etc. La ruta también queda anotada en la primera línea del
+registro al arrancar.
+
 `build-installer.ps1` acepta `-Version`, `-Architecture` (`all` por defecto, `x64` o `x86` para
 publicaciones de diagnóstico), `-Configuration`, `-SkipPublish`, `-SkipInstaller`,
 `-InstallInnoSetup` y `-Clean`. Publica en `dist\x64` y `dist\x86` y genera dos instaladores
