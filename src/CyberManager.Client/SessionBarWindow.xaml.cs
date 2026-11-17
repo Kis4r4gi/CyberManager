@@ -19,6 +19,10 @@ public partial class SessionBarWindow : Window
     private string? _warningText;
 
     public event Action? OrderRequested;
+    /// <summary>El cliente prepago quiere comprar más minutos.</summary>
+    public event Action? RechargeRequested;
+    /// <summary>El cliente prepago quiere cerrar su sesión en este equipo.</summary>
+    public event Action? FinishRequested;
 
     public SessionBarWindow()
     {
@@ -57,6 +61,8 @@ public partial class SessionBarWindow : Window
             TimeText.Text = "—";
             AmountText.Text = "$ 0,00";
             AmountBsText.Text = "Bs 0,00";
+            RechargeButton.Visibility = Visibility.Collapsed;
+            FinishButton.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -71,6 +77,8 @@ public partial class SessionBarWindow : Window
 
         _prepaid = session.Type == SessionType.Prepaid;
         _overtime = session.Overtime;
+        RechargeButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
+        FinishButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
         _baseSeconds = _prepaid ? Math.Max(session.RemainingMinutes, 0) * 60 : session.ElapsedMinutes * 60;
 
         TimeLabel.Text = _prepaid ? L.T("TIEMPO RESTANTE") : L.T("TIEMPO TRANSCURRIDO");
@@ -187,6 +195,10 @@ public partial class SessionBarWindow : Window
     }
 
     private void Order_Click(object sender, RoutedEventArgs e) => OrderRequested?.Invoke();
+
+    private void Recharge_Click(object sender, RoutedEventArgs e) => RechargeRequested?.Invoke();
+
+    private void Finish_Click(object sender, RoutedEventArgs e) => FinishRequested?.Invoke();
 
     private void Account_Click(object sender, RoutedEventArgs e)
     {

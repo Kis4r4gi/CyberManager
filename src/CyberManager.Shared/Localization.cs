@@ -706,6 +706,130 @@ public static class L
             ["Abre el registro completo en el Bloc de notas."] = "Opens the full log in Notepad.",
             ["El registro está vacío. Todavía no hay eventos para mostrar."] =
                 "The log is empty. There are no events to show yet.",
+
+            // ---------- Cuenta prepago y acceso del cliente ----------
+            ["Inicie sesión con su cuenta prepago o como administrador."] =
+                "Sign in with your prepaid account or as administrator.",
+            ["Elija el tipo de cuenta."] = "Choose the account type.",
+            ["Usuario prepagado"] = "Prepaid user",
+            ["Cree una cuenta o use sus minutos prepago."] =
+                "Create an account or use your prepaid minutes.",
+            ["Cree su cuenta, compre tiempo y juegue sin pasar por caja."] =
+                "Create your account, buy time and play without going to the cashier.",
+            ["Abre la configuración del cliente con una cuenta de administrador."] =
+                "Opens the client settings with an administrator account.",
+            ["Acceso a la configuración del equipo enlazada al servidor."] =
+                "Access the station settings linked to the server.",
+            ["Solicite al cajero o inicie sesión para empezar."] =
+                "Ask the cashier or sign in to start.",
+            ["No hay conexión con el servidor. Avise al administrador."] =
+                "No connection to the server. Notify the administrator.",
+            ["Cuenta prepago"] = "Prepaid account",
+            ["Cargando la información de su cuenta..."] = "Loading your account information...",
+            ["Entrar"] = "Sign in",
+            ["Crear cuenta"] = "Create account",
+            ["Escriba el usuario de su cuenta prepago."] = "Enter your prepaid account user.",
+            ["Escriba su contraseña."] = "Enter your password.",
+            ["Inicia sesión con su cuenta prepago."] = "Signs in with your prepaid account.",
+            ["¿No tiene cuenta?"] = "Don't have an account?",
+            ["Cree una aquí"] = "Create one here",
+            ["Nombre completo"] = "Full name",
+            ["Entre 3 y 32 caracteres: letras, números, punto, guion o guion bajo."] =
+                "Between 3 and 32 characters: letters, numbers, dot, dash or underscore.",
+            ["Repita la contraseña"] = "Repeat the password",
+            ["Teléfono (opcional)"] = "Phone (optional)",
+            ["Crea su cuenta prepago."] = "Creates your prepaid account.",
+            ["¿Ya tiene cuenta?"] = "Already have an account?",
+            ["Inicie sesión"] = "Sign in",
+            ["Hola"] = "Hello",
+            ["Este es el resumen de su cuenta prepago."] =
+                "This is the summary of your prepaid account.",
+            ["MINUTOS DISPONIBLES"] = "AVAILABLE MINUTES",
+            ["SALDO DISPONIBLE"] = "AVAILABLE BALANCE",
+            ["Paquetes de tiempo"] = "Time packages",
+            ["Los paquetes se pagan con el saldo de su cuenta. Si ya está jugando en este equipo, los minutos se suman a su sesión."] =
+                "Packages are paid with your account balance. If you are already playing on this station, the minutes are added to your session.",
+            ["No hay paquetes de tiempo disponibles."] = "No time packages are available.",
+            ["Comprar"] = "Buy",
+            ["Compra este paquete con el saldo de su cuenta."] =
+                "Buys this package with your account balance.",
+            ["Iniciar sesión en este equipo"] = "Start a session on this station",
+            ["Indique cuántos minutos desea usar. Puede finalizar antes y los minutos no usados vuelven a su cuenta."] =
+                "Enter how many minutes you want to use. You can finish early and unused minutes return to your account.",
+            ["minutos"] = "minutes",
+            ["Entrar al equipo"] = "Enter the station",
+            ["Inicia su sesión prepago en este equipo."] =
+                "Starts your prepaid session on this station.",
+            ["Usar otra cuenta"] = "Use another account",
+            ["Cierra la sesión de esta cuenta en la pantalla."] =
+                "Signs out of this account on the screen.",
+            ["Listo."] = "Ready.",
+            ["Ingrese con su cuenta o cree una nueva."] =
+                "Sign in with your account or create a new one.",
+            ["Compre un paquete de tiempo para poder entrar al equipo."] =
+                "Buy a time package to enter the station.",
+            ["Indique el usuario y la contraseña."] = "Enter the user and password.",
+            ["Sesión iniciada."] = "Signed in.",
+            ["Escriba su nombre completo."] = "Enter your full name.",
+            ["El usuario debe tener al menos 3 caracteres."] =
+                "The user must have at least 3 characters.",
+            ["La contraseña debe tener al menos 4 caracteres."] =
+                "The password must have at least 4 characters.",
+            ["Las contraseñas no coinciden."] = "The passwords do not match.",
+            ["Cuenta creada. Compre un paquete de tiempo para empezar."] =
+                "Account created. Buy a time package to start.",
+            ["Confirmar compra"] = "Confirm purchase",
+            ["Indique cuántos minutos desea usar."] = "Enter how many minutes you want to use.",
+            ["Ingrese con otra cuenta."] = "Sign in with another account.",
+            ["Acceso de administrador"] = "Administrator access",
+            ["Configure este equipo desde el servidor."] =
+                "Configure this station from the server.",
+            ["Se requiere una cuenta con rol de administrador."] =
+                "An account with the administrator role is required.",
+            ["Finalizar sesión"] = "Finish session",
+            ["Recargar tiempo"] = "Add time",
+            ["Compra más minutos prepago para esta sesión."] =
+                "Buy more prepaid minutes for this session.",
+            ["Finaliza la sesión prepago y devuelve los minutos no usados."] =
+                "Finishes the prepaid session and returns unused minutes.",
+            ["Configuración del cliente"] = "Client settings",
+            ["Los cambios se guardan en el servidor y se aplican a todas las estaciones."] =
+                "Changes are saved on the server and applied to all stations.",
+            ["Datos del negocio"] = "Business details",
+            ["Nombre o razón social"] = "Business name",
+            ["RIF"] = "Tax ID",
+            ["Teléfono"] = "Phone",
+            ["Dirección fiscal"] = "Billing address",
+            ["Apariencia y barra de sesión"] = "Appearance and session bar",
+            ["Símbolo de moneda local"] = "Local currency symbol",
+            ["Escala de la barra (%)"] = "Session bar scale (%)",
+            ["Texto descriptivo de la barra de sesión"] = "Session bar description",
+            ["Pie de los tickets"] = "Ticket footer",
+            ["Fondos de la pantalla de bloqueo"] = "Lock screen wallpapers",
+            ["Modo de los fondos"] = "Wallpaper mode",
+            ["Segundos entre fondos"] = "Seconds between wallpapers",
+            ["Control de las sesiones"] = "Session control",
+            ["Minutos de aviso antes de terminar"] = "Warning minutes before the end",
+            ["Minutos de gracia al terminar"] = "Grace minutes at the end",
+            ["Permitir sesiones postpago (cobrar al finalizar)"] =
+                "Allow postpaid sessions (charge at the end)",
+            ["Bloquear el equipo cuando se agote el tiempo"] =
+                "Lock the station when time runs out",
+            ["Idioma de esta pantalla"] = "Language for this screen",
+            ["Idioma"] = "Language",
+            ["El idioma se guarda solo en este equipo y se aplica al guardar."] =
+                "The language is saved only on this station and applied when you save.",
+            ["Sin fondos"] = "No wallpapers",
+            ["Fondo fijo"] = "Fixed wallpaper",
+            ["Presentación rotativa"] = "Slideshow",
+            ["Cargando la configuración del servidor..."] =
+                "Loading the server settings...",
+            ["Revisa los datos y pulsa «Guardar cambios»."] =
+                "Review the data and press \"Save changes\".",
+            ["Guardando los cambios..."] = "Saving changes...",
+            ["Cerrar sin guardar"] = "Close without saving",
+            ["Guarda la configuración en el servidor."] =
+                "Saves the settings on the server.",
         };
 
         return map;

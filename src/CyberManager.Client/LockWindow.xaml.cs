@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -18,7 +17,12 @@ public partial class LockWindow : Window
     private string? _promoPath;
 
     public bool AllowClose { get; set; }
-    public event Action? SetupRequested;
+    /// <summary>Evita que la pantalla recupere el foco mientras hay un diálogo abierto encima.</summary>
+    public bool SuppressActivation { get; set; }
+    /// <summary>El usuario eligió iniciar sesión con una cuenta prepago.</summary>
+    public event Action? PrepaidLoginRequested;
+    /// <summary>El usuario eligió iniciar sesión como administrador.</summary>
+    public event Action? AdminLoginRequested;
     /// <summary>El video promocional terminó; la aplicación debe avanzar al siguiente.</summary>
     public event Action? PromoVideoEnded;
     /// <summary>El video no se pudo reproducir (códec ausente o archivo dañado).</summary>
@@ -42,7 +46,7 @@ public partial class LockWindow : Window
         };
         Deactivated += (_, _) =>
         {
-            if (AllowClose) return;
+            if (AllowClose || SuppressActivation) return;
             Topmost = false;
             Topmost = true;
             Activate();
@@ -57,6 +61,7 @@ public partial class LockWindow : Window
             ZoneText.Text = L.T("Sin conexión");
             RateText.Text = "1 USD = — Bs";
             MessageText.Text = L.T("No hay conexión con el servidor. Avise al administrador.");
+            LoginPanel.Visibility = Visibility.Visible;
             return;
         }
 
@@ -73,11 +78,13 @@ public partial class LockWindow : Window
             MessageText.Text = L.IsEnglish
                 ? $"The session for {customer} is paused. Ask the cashier to resume it."
                 : $"La sesión de {customer} está en pausa. Solicite al cajero para reanudarla.";
+            LoginPanel.Visibility = Visibility.Collapsed;
         }
         else
         {
             TitleText.Text = L.T("EQUIPO BLOQUEADO");
-            MessageText.Text = L.T("Solicite al cajero para iniciar su sesión.");
+            MessageText.Text = L.T("Solicite al cajero o inicie sesión para empezar.");
+            LoginPanel.Visibility = Visibility.Visible;
         }
     }
 
@@ -85,6 +92,7 @@ public partial class LockWindow : Window
     {
         TitleText.Text = "SISTEMA";
         MessageText.Text = message;
+        LoginPanel.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>Muestra el fondo enviado por el servidor con una transición suave.</summary>
@@ -148,6 +156,26 @@ public partial class LockWindow : Window
         }
     }
 
+    /// <summary>Libera el teclado y oculta la pantalla de bloqueo mientras el administrador
+    /// revisa la configuración del cliente.</summary>
+    public void EnterAdminMode()
+    {
+        LoginPopup.IsOpen = false;
+        _blocker?.Dispose();
+        _blocker = null;
+        AllowClose = true;
+        Hide();
+    }
+
+    /// <summary>Vuelve a bloquear el equipo cuando el administrador cierra la configuración.</summary>
+    public void ExitAdminMode()
+    {
+        AllowClose = false;
+        Show();
+        Activate();
+        _blocker ??= new KeyboardBlocker();
+    }
+
     private void PromoVideo_MediaEnded(object sender, RoutedEventArgs e)
     {
         try { PromoVideo.Position = TimeSpan.Zero; } catch { /* sin fuente */ }
@@ -160,6 +188,21 @@ public partial class LockWindow : Window
         PromoVideoFailed?.Invoke();
     }
 
+    private void Login_Click(object sender, RoutedEventArgs e)
+        => LoginPopup.IsOpen = !LoginPopup.IsOpen;
+
+    private void PrepaidLogin_Click(object sender, RoutedEventArgs e)
+    {
+        LoginPopup.IsOpen = false;
+        PrepaidLoginRequested?.Invoke();
+    }
+
+    private void AdminLogin_Click(object sender, RoutedEventArgs e)
+    {
+        LoginPopup.IsOpen = false;
+        AdminLoginRequested?.Invoke();
+    }
+
     private void UpdateClock()
     {
         var now = DateTime.Now;
@@ -170,16 +213,4 @@ public partial class LockWindow : Window
 
     private static string Capitalize(string text)
         => string.IsNullOrEmpty(text) ? text : char.ToUpper(text[0]) + text[1..];
-
-    protected override void OnPreviewKeyDown(KeyEventArgs e)
-    {
-        if (e.Key == Key.F12 && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
-        {
-            e.Handled = true;
-            SetupRequested?.Invoke();
-            return;
-        }
-
-        base.OnPreviewKeyDown(e);
-    }
 }

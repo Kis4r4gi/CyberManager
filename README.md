@@ -96,6 +96,12 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   finalizar sesiones.
 - Paquetes de tiempo con minutos de bono, seleccionables al iniciar la sesión; el precio del
   paquete se cobra por adelantado y los minutos incluyen el bono.
+- **Autoservicio prepago en la pantalla de bloqueo**: el cliente puede crear una cuenta, comprar
+  paquetes de tiempo con su saldo y abrir o cerrar la sesión del equipo sin pasar por caja. Los
+  minutos no usados vuelven al monedero al finalizar.
+- **Acceso de administrador desde el cliente**: el botón de inicio de sesión de la pantalla de
+  bloqueo permite entrar con una cuenta con rol *Admin* y editar la configuración del cliente
+  enlazada al servidor (negocio, barra de sesión, fondos, avisos y sesiones).
 - Consumo de productos cargado a la sesión (se cobra al cerrar) o cobrado directo en caja.
 - Reservas de equipos por fecha y hora, con confirmación y cancelación.
 - Mensajes al cliente y órdenes de bloqueo, apagado, reinicio y cierre de sesión.
@@ -555,7 +561,8 @@ sesión anterior.
 1. **Abrir caja** con el fondo inicial.
 2. **Registrar la tasa del día** (si aún no está registrada).
 3. **Iniciar sesiones**: desde el tablero elija un PC libre e indique tiempo, tarifa y cliente.
-   - *Prepago*: cobra el tiempo por adelantado y requiere caja abierta.
+   - *Prepago*: cobra el tiempo por adelantado; si el cobro es en efectivo o por medios de pago,
+     requiere caja abierta. El autoservicio del cliente usa el saldo de su cuenta y no pasa por caja.
    - *Postpago*: acumula tiempo y consumos; se cobra al finalizar.
 4. **Consumos**: el cliente puede pedir productos desde la barra de sesión; quedan pendientes y
    se cobran al cerrar. También se pueden vender directo en *Caja / POS*.
@@ -568,6 +575,32 @@ sesión anterior.
 9. **Emitir el cierre diario** en *Reportes → Cierre diario*: resume ventas, caja, formas de pago,
    gastos, pagos a proveedores y productos más vendidos, y se puede imprimir en ticket de 80 mm,
    A4 o Carta según el formato configurado.
+
+---
+
+## Autoservicio prepago y acceso de administrador
+
+La pantalla de bloqueo ya no muestra configuración ni atajos ocultos. El botón **Iniciar sesión**
+abre un menú con dos opciones:
+
+- **Usuario prepagado** — autoservicio del cliente:
+  1. **Crear cuenta** con nombre, usuario, contraseña y teléfono opcional.
+  2. **Comprar un paquete de tiempo** con el saldo de la cuenta. Los paquetes y sus bonos se
+     administran en *Configuración → Paquetes de tiempo*; el saldo se recarga en caja.
+  3. **Entrar al equipo** indicando cuántos minutos usar. Si ya hay una sesión prepago activa en
+     la estación, las compras adicionales se suman a la sesión en curso.
+  4. **Finalizar sesión** desde la barra flotante: los minutos no usados vuelven al monedero y los
+     consumos pendientes se cobran al saldo de la cuenta.
+- **Administrador** — valida las credenciales contra el servidor y exige el rol *Admin*. Al entrar,
+  la pantalla de bloqueo se oculta y se abre **Configuración del cliente**, donde se editan los
+  datos del negocio, la barra de sesión, los fondos, los avisos y el control de sesiones. Los
+  cambios se guardan en `/api/settings` y se aplican a todas las estaciones; el idioma se guarda
+  solo en el equipo. Al cerrar, la pantalla de bloqueo vuelve y se refresca el estado.
+
+El servidor expone las rutas anónimas `/api/station/prepaid/info`, `register`, `login`,
+`recharge`, `start` y `finish`, autenticadas con el ID/token de la estación. Las cuentas usan
+`Customer.Username`, `PasswordHash`, `PasswordSalt` y `PrepaidMinutes`, y reutilizan el saldo
+monetario del cliente (`Customer.Balance`).
 
 ---
 
@@ -1381,7 +1414,24 @@ flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
 
 **No se puede iniciar una sesión prepago o cerrar con consumos**
 
-- Debe haber una caja abierta. Abra la caja primero.
+- Las sesiones prepago iniciadas desde el autoservicio no requieren caja abierta: el tiempo se
+  paga con el saldo de la cuenta y los consumos pendientes se descuentan de ese mismo saldo.
+- Las sesiones iniciadas desde la consola con cobro en efectivo, tarjeta, transferencia o Pago
+  Móvil sí requieren una caja abierta. Abra la caja primero.
+- Si el cierre falla por saldo insuficiente, recargue la cuenta en caja antes de finalizar.
+
+**El autoservicio prepago no aparece en el cliente**
+
+- El cliente debe estar conectado al servidor: compruebe que `/api/station/prepaid/info` responde
+  y que la estación tiene ID y token válidos.
+- Si no hay conexión, la pantalla de bloqueo muestra el aviso y el botón de inicio de sesión no
+  puede cargar las cuentas ni los paquetes.
+
+**La compra de un paquete dice «Saldo insuficiente»**
+
+- El saldo de la cuenta prepago se recarga en caja; los paquetes se pagan con ese saldo, no con
+  los minutos del monedero.
+- Verifique que el cliente tenga saldo suficiente para el paquete elegido.
 
 **El agente no ejecuta órdenes**
 

@@ -14,6 +14,12 @@ public class Customer
     public bool IsMember { get; set; }
     public bool Active { get; set; } = true;
     public string? Notes { get; set; }
+    /// <summary>Usuario de la cuenta prepago de la estación (en minúsculas).</summary>
+    public string? Username { get; set; }
+    public string? PasswordHash { get; set; }
+    public string? PasswordSalt { get; set; }
+    /// <summary>Minutos prepago disponibles en la cuenta del cliente.</summary>
+    public int PrepaidMinutes { get; set; }
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public List<CustomerTransaction> Transactions { get; set; } = new();
 }

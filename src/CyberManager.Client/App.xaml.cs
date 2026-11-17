@@ -38,6 +38,8 @@ public partial class App : Application
     private DateTime _lastConnectAttempt = DateTime.MinValue;
     private DiscoveryResponder? _discovery;
     private SetupWindow? _setupWindow;
+    private PrepaidWindow? _prepaidWindow;
+    private bool _adminMode;
 
     private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromMinutes(3) };
 
@@ -378,6 +380,14 @@ public partial class App : Application
 
     private void ApplyState(StationClientStateDto state)
     {
+        // Mientras el administrador revisa la configuración, la pantalla de bloqueo
+        // permanece oculta y no se vuelve a bloquear el equipo.
+        if (_adminMode)
+        {
+            _lockWindow?.UpdateState(state);
+            return;
+        }
+
         var sessionActive = state.Session is not null && state.Session.Status != SessionStatus.Paused;
         SetLocked(_forcedLock || !sessionActive, state);
     }
@@ -409,7 +419,8 @@ public partial class App : Application
         if (_lockWindow is null)
         {
             _lockWindow = new LockWindow();
-            _lockWindow.SetupRequested += OnSetupRequested;
+            _lockWindow.PrepaidLoginRequested += OnPrepaidLoginRequested;
+            _lockWindow.AdminLoginRequested += OnAdminLoginRequested;
             _lockWindow.PromoVideoEnded += () => _promos.Next();
             _lockWindow.PromoVideoFailed += () => _promos.Next();
         }
@@ -438,6 +449,8 @@ public partial class App : Application
         {
             _barWindow = new SessionBarWindow();
             _barWindow.OrderRequested += OpenOrder;
+            _barWindow.RechargeRequested += OnPrepaidRechargeRequested;
+            _barWindow.FinishRequested += OnPrepaidFinishRequested;
         }
 
         _barWindow.UpdateState(state ?? State ?? new StationClientStateDto(
@@ -605,21 +618,117 @@ public partial class App : Application
         });
     }
 
-    private void OnSetupRequested()
+    /// <summary>Autoservicio prepago desde la pantalla de bloqueo.</summary>
+    private void OnPrepaidLoginRequested() => OpenPrepaidWindow();
+
+    /// <summary>Inicio de sesión de administrador para editar la configuración del cliente.</summary>
+    private async void OnAdminLoginRequested()
     {
-        _pollTimer?.Stop();
+        if (_lockWindow is null) return;
 
-        var setup = new SetupWindow { Owner = _lockWindow };
-        var saved = setup.ShowDialog() == true;
-
-        if (saved)
+        _lockWindow.SuppressActivation = true;
+        AdminLoginWindow login;
+        try
         {
-            Config = AppConfig.Load("Client");
-            _ = StartAsync();
+            login = new AdminLoginWindow();
+            if (_lockWindow.IsVisible) login.Owner = _lockWindow;
+            if (login.ShowDialog() != true || login.Api is null) return;
         }
-        else
+        finally
         {
-            _pollTimer?.Start();
+            _lockWindow.SuppressActivation = false;
+        }
+
+        _adminMode = true;
+        _lockWindow.EnterAdminMode();
+
+        try
+        {
+            var settings = new ClientSettingsWindow(login.Api);
+            settings.ShowDialog();
+        }
+        finally
+        {
+            _adminMode = false;
+            _lockWindow.ExitAdminMode();
+
+            // El idioma se guarda solo en este equipo: se aplica a las ventanas abiertas.
+            L.SetLanguage(Config.Language);
+            Loc.Apply(_lockWindow);
+            if (_barWindow is not null) Loc.Apply(_barWindow);
+        }
+
+        await RefreshAsync();
+    }
+
+    private void OpenPrepaidWindow()
+    {
+        if (_prepaidWindow is { IsLoaded: true })
+        {
+            _prepaidWindow.Activate();
+            return;
+        }
+
+        if (_lockWindow is not null) _lockWindow.SuppressActivation = true;
+
+        var window = new PrepaidWindow();
+        if (_lockWindow is { IsVisible: true }) window.Owner = _lockWindow;
+        _prepaidWindow = window;
+        window.SessionStarted += () => _ = RefreshAsync();
+        window.Closed += (_, _) =>
+        {
+            _prepaidWindow = null;
+            if (_lockWindow is not null)
+            {
+                _lockWindow.SuppressActivation = false;
+                if (_lockWindow.IsVisible) _lockWindow.Activate();
+            }
+            _ = RefreshAsync();
+        };
+
+        window.ShowDialog();
+    }
+
+    private void OnPrepaidRechargeRequested() => OpenPrepaidWindow();
+
+    private async void OnPrepaidFinishRequested()
+    {
+        if (Api is null) return;
+
+        var question = L.IsEnglish
+            ? "Finish the prepaid session on this station? Unused minutes return to the account."
+            : "¿Finalizar la sesión prepago en este equipo? Los minutos no usados vuelven a la cuenta.";
+        var owner = _barWindow is { IsVisible: true } ? (Window?)_barWindow : _lockWindow;
+        var confirmed = owner is not null
+            ? MessageBox.Show(owner, question, L.T("Finalizar sesión"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes
+            : MessageBox.Show(question, L.T("Finalizar sesión"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+        if (!confirmed) return;
+
+        try
+        {
+            var result = await Api.PrepaidFinishAsync();
+            await RefreshAsync();
+
+            var message = L.IsEnglish
+                ? $"Session finished. {result.RefundedMinutes} unused minutes returned to the account."
+                : $"Sesión finalizada. {result.RefundedMinutes} minutos no usados volvieron a la cuenta.";
+            if (owner is not null)
+                MessageBox.Show(owner, message, L.T("Finalizar sesión"),
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            else
+                MessageBox.Show(message, L.T("Finalizar sesión"),
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            if (owner is not null)
+                MessageBox.Show(owner, ex.Message, L.T("Finalizar sesión"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            else
+                MessageBox.Show(ex.Message, L.T("Finalizar sesión"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

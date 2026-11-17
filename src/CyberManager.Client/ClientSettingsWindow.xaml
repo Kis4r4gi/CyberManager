@@ -1,0 +1,179 @@
+<Window x:Class="CyberManager.Client.ClientSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configuración del cliente" Width="900" Height="720"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        ShowInTaskbar="False" Topmost="True"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
+
+    <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="16">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.65" Color="Black" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- ================= Encabezado ================= -->
+            <Grid Grid.Row="0" Margin="26,20,20,14" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="44" Height="44" CornerRadius="12" Background="{StaticResource PurpleBrush}">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Configuración del cliente" FontSize="20" FontWeight="Bold" />
+                        <TextBlock x:Name="SubtitleText" Text="Los cambios se guardan en el servidor y se aplican a todas las estaciones."
+                                   Style="{StaticResource Muted}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
+                        VerticalAlignment="Top" Click="Cancel_Click" ToolTip="Cerrar sin guardar" />
+            </Grid>
+
+            <!-- ================= Contenido ================= -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Padding="26,0,26,0">
+                <StackPanel>
+                    <!-- Negocio -->
+                    <TextBlock Text="Datos del negocio" Style="{StaticResource H2}" Margin="0,4,0,10" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Nombre o razón social" Style="{StaticResource Label}" />
+                            <TextBox x:Name="BusinessNameBox" MaxLength="120" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="RIF" Style="{StaticResource Label}" />
+                            <TextBox x:Name="BusinessTaxIdBox" MaxLength="40" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Teléfono" Style="{StaticResource Label}" />
+                            <TextBox x:Name="BusinessPhoneBox" MaxLength="40" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Dirección fiscal" Style="{StaticResource Label}" />
+                            <TextBox x:Name="BusinessAddressBox" MaxLength="200" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Apariencia -->
+                    <TextBlock Text="Apariencia y barra de sesión" Style="{StaticResource H2}" Margin="0,8,0,10" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Símbolo de moneda local" Style="{StaticResource Label}" />
+                            <TextBox x:Name="LocalCurrencySymbolBox" MaxLength="8" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Escala de la barra (%)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="SessionBarScaleBox" MaxLength="3" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,12">
+                            <TextBlock Text="Texto descriptivo de la barra de sesión" Style="{StaticResource Label}" />
+                            <TextBox x:Name="SessionBarDescriptionBox" MaxLength="160" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,12">
+                            <TextBlock Text="Pie de los tickets" Style="{StaticResource Label}" />
+                            <TextBox x:Name="TicketFooterBox" MaxLength="300" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Fondos -->
+                    <TextBlock Text="Fondos de la pantalla de bloqueo" Style="{StaticResource H2}" Margin="0,8,0,10" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Modo de los fondos" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="WallpaperModeBox" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Segundos entre fondos" Style="{StaticResource Label}" />
+                            <TextBox x:Name="WallpaperRotationBox" MaxLength="4" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Sesiones -->
+                    <TextBlock Text="Control de las sesiones" Style="{StaticResource H2}" Margin="0,8,0,10" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Minutos de aviso antes de terminar" Style="{StaticResource Label}" />
+                            <TextBox x:Name="WarningMinutesBox" MaxLength="3" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Minutos de gracia al terminar" Style="{StaticResource Label}" />
+                            <TextBox x:Name="GraceMinutesBox" MaxLength="3" />
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox x:Name="AllowPostpaidCheck" Content="Permitir sesiones postpago (cobrar al finalizar)"
+                              Margin="0,0,0,10" />
+                    <CheckBox x:Name="AutoLockOvertimeCheck" Content="Bloquear el equipo cuando se agote el tiempo"
+                              Margin="0,0,0,12" />
+
+                    <!-- Idioma -->
+                    <TextBlock Text="Idioma de esta pantalla" Style="{StaticResource H2}" Margin="0,8,0,10" />
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Idioma" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="LanguageBox" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Margin="10,16,0,0" Style="{StaticResource Muted}"
+                                   TextWrapping="Wrap"
+                                   Text="El idioma se guarda solo en este equipo y se aplica al guardar." />
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ================= Pie ================= -->
+            <Border Grid.Row="2" Background="#0B1220" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,1,0,0" Padding="26,12">
+                <Grid>
+                    <TextBlock x:Name="StatusText" Text="Cargue la configuración para comenzar."
+                               Style="{StaticResource Muted}" VerticalAlignment="Center"
+                               TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancelar" Style="{StaticResource GhostButton}" Padding="18,10"
+                                Click="Cancel_Click" />
+                        <Button x:Name="SaveButton" Content="Guardar cambios" Style="{StaticResource SuccessButton}"
+                                Padding="22,10" Margin="10,0,0,0" Click="Save_Click"
+                                ToolTip="Guarda la configuración en el servidor." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

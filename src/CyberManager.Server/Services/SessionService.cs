@@ -173,10 +173,6 @@ public class SessionService
 
         if (toCharge > 0)
         {
-            var cash = await _cash.GetOpenAsync();
-            if (cash is null)
-                throw new AppException("Debe haber una caja abierta para cobrar la sesión.", 409);
-
             if (req.Method == PaymentMethod.CustomerBalance)
             {
                 var customer = session.Customer
@@ -196,6 +192,12 @@ public class SessionService
             }
             else
             {
+                // Solo los cobros en efectivo o por medios de pago requieren una caja abierta.
+                // El saldo del cliente no genera movimiento de caja.
+                var cash = await _cash.GetOpenAsync();
+                if (cash is null)
+                    throw new AppException("Debe haber una caja abierta para cobrar la sesión.", 409);
+
                 await _cash.AddMovementAsync(cash.Id, CashMovementType.TimeSale, req.Method, toCharge,
                     $"Cierre {station.Name} ({elapsed} min)", userId, sessionId: session.Id);
             }

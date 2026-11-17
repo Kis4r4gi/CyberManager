@@ -49,6 +49,14 @@
                 <Button x:Name="AccountButton" Content="Mi cuenta" Style="{StaticResource GhostButton}"
                         Padding="12,9" Margin="8,0,0,0" Click="Account_Click"
                         ToolTip="Muestra el consumo de la sesión." />
+                <Button x:Name="RechargeButton" Content="Recargar tiempo" Style="{StaticResource GhostButton}"
+                        Padding="12,9" Margin="8,0,0,0" Click="Recharge_Click"
+                        Visibility="Collapsed"
+                        ToolTip="Compra más minutos prepago para esta sesión." />
+                <Button x:Name="FinishButton" Content="Finalizar sesión" Style="{StaticResource DangerButton}"
+                        Padding="12,9" Margin="8,0,0,0" Click="Finish_Click"
+                        Visibility="Collapsed"
+                        ToolTip="Finaliza la sesión prepago y devuelve los minutos no usados." />
             </StackPanel>
         </Border>
 

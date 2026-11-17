@@ -54,6 +54,7 @@ public class AppDbContext : DbContext
         b.Entity<DeviceRegistration>().HasIndex(x => x.Token).IsUnique();
         b.Entity<Sale>().HasIndex(x => x.Number).IsUnique();
         b.Entity<Customer>().HasIndex(x => x.Name);
+        b.Entity<Customer>().HasIndex(x => x.Username).IsUnique();
 
         b.Entity<Session>()
             .HasOne(s => s.Station)

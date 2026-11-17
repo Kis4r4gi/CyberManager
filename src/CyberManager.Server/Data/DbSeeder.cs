@@ -92,6 +92,14 @@ public static class DbSeeder
         await AddColumnIfMissingAsync(db, "Stations", "Platform", "TEXT NULL");
         await AddColumnIfMissingAsync(db, "Stations", "Controllers", "INTEGER NULL");
 
+        // Cuenta prepago de los clientes (usuario, contraseña y minutos disponibles).
+        await AddColumnIfMissingAsync(db, "Customers", "Username", "TEXT NULL");
+        await AddColumnIfMissingAsync(db, "Customers", "PasswordHash", "TEXT NULL");
+        await AddColumnIfMissingAsync(db, "Customers", "PasswordSalt", "TEXT NULL");
+        await AddColumnIfMissingAsync(db, "Customers", "PrepaidMinutes", "INTEGER NOT NULL DEFAULT 0");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Customers_Username\" ON \"Customers\" (\"Username\");");
+
         // Las imágenes e iconos de producto se eliminaron en la versión 1.0.20. Se borra
         // la tabla heredada y las columnas que ya no usa el modelo; en bases nuevas no hay
         // nada que limpiar.

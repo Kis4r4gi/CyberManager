@@ -5,7 +5,6 @@ namespace CyberManager.Client;
 /// <summary>
 /// Bloquea los atajos de Windows mientras la pantalla de bloqueo está visible
 /// (Alt+Tab, tecla Windows, Ctrl+Esc, Alt+F4, etc.).
-/// Ctrl+Shift+F12 se deja pasar para el acceso técnico a la configuración.
 /// </summary>
 public sealed class KeyboardBlocker : IDisposable
 {
@@ -15,10 +14,8 @@ public sealed class KeyboardBlocker : IDisposable
     private const int VK_TAB = 0x09;
     private const int VK_ESCAPE = 0x1B;
     private const int VK_F4 = 0x73;
-    private const int VK_F12 = 0x7B;
     private const int VK_LWIN = 0x5B;
     private const int VK_RWIN = 0x5C;
-    private const int VK_SHIFT = 0x10;
     private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12;
 
@@ -68,10 +65,6 @@ public sealed class KeyboardBlocker : IDisposable
             var key = (int)info.VkCode;
             var alt = Down(VK_MENU);
             var ctrl = Down(VK_CONTROL);
-            var shift = Down(VK_SHIFT);
-
-            // Acceso técnico permitido.
-            if (key == VK_F12 && ctrl && shift && !alt) return CallNextHookEx(_hook, nCode, wParam, lParam);
 
             var block = key is VK_LWIN or VK_RWIN
                         || (key == VK_TAB && alt)

@@ -1014,6 +1014,44 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   reiniciado; `/api/health` responde `ok`, la tarea `CyberManagerServer` está **Running**, la
   consola quedó en **1.2.0** y `Server\ClientUpdate` contiene el paquete 1.2.0.
 
+### Autoservicio prepago y acceso de administrador en el cliente (2026-11-17, sin publicar)
+
+- **Backend prepago**: `Customer` incorpora `Username`, `PasswordHash`, `PasswordSalt` y
+  `PrepaidMinutes` (migración e índice único en `DbSeeder`). `PrepaidService` y
+  `PrepaidEndpoints` exponen `/api/station/prepaid/info|register|login|recharge|start|finish`,
+  autenticados con el ID/token de la estación.
+  - `register` crea la cuenta con `PasswordHasher` y saldo 0.
+  - `recharge` cobra el paquete al `Customer.Balance`; si hay una sesión prepago activa en la
+    estación, suma los minutos a `Session.PlannedMinutes` y el importe a `Session.AmountCharged`;
+    si no, los suma al monedero `Customer.PrepaidMinutes`.
+  - `start` crea la sesión `Prepaid`, descuenta los minutos del monedero y envía `Unlock` por
+    SignalR.
+  - `finish` llama a `SessionService.StopAsync` con `CustomerBalance` y `ChargeTime: false`,
+    devuelve los minutos no usados al monedero y cobra los consumos pendientes al saldo.
+    `SessionService.StopAsync` ya no exige una caja abierta cuando el cobro es con
+    `PaymentMethod.CustomerBalance`; solo los medios en efectivo/tarjeta/transferencia/Pago Móvil
+    la requieren.
+- **Cliente**: `LockWindow` muestra el botón **Iniciar sesión** con el menú *Usuario prepagado* /
+  *Administrador*; se eliminó el atajo Ctrl+Shift+F12 y el bloqueo de teclado ya no lo permite.
+  `PrepaidWindow` gestiona registro, login, compra, inicio y cambio de cuenta; `AdminLoginWindow`
+  exige rol `Admin`; `ClientSettingsWindow` lee y guarda la configuración del servidor
+  (`/api/settings`) y el idioma local. `SessionBarWindow` muestra **Recargar tiempo** y
+  **Finalizar sesión** solo en sesiones prepago. `App.xaml.cs` orquesta el modo administrador,
+  la recarga/cierre y el refresco del estado.
+- **Pruebas**: `dotnet build CyberManager.sln -c Release` con **0 errores** y **0 advertencias**.
+  Servidor temporal en **5099** con base nueva (`%TEMP%\cm-prepaid-test\test.db`): login admin;
+  registro `jugador…`; recarga de saldo de 5 USD; compra de «30 minutos» (0,50 USD); inicio de
+  10 min; estado `Prepaid/Active` con plan 10 y restante 10; recarga durante la sesión (+30 min,
+  `extendedSession: true`, plan 40); cierre con devolución de 40 min y monedero 60; estado final
+  `Available` sin sesión. Errores verificados: contraseña incorrecta, recarga sin saldo, inicio
+  sin minutos, registro duplicado y cierre sin sesión.
+- **Cierre con consumos pendientes**: con una sesión prepago activa y un pedido de 0,50 USD sin
+  caja abierta, `finish` devolvió los 10 min y descontó el consumo del saldo (5,00 − 0,50 del
+  paquete − 0,50 del producto = **4,00 USD**), dejando la estación `Available`. Se repitió el E2E
+  completo con la base nueva y siguió pasando.
+- **Pendiente**: probar la UI del cliente contra una estación real y regenerar instaladores y
+  release cuando el usuario lo pida; no se publica nada en GitHub todavía.
+
 ---
 
 ## Rutas y comandos clave

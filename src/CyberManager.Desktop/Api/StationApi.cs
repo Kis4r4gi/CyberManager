@@ -55,4 +55,17 @@ public class StationApi : ApiClient
 
     /// <summary>Lista activa de NetFiltroWeb que el agente o la pantalla deben aplicar.</summary>
     public Task<WebFilterPlaylistDto> WebFilterAsync() => GetAsync<WebFilterPlaylistDto>("/api/station/webfilter");
+
+    // ---- Autoservicio prepago ----
+    public Task<PrepaidInfoDto> PrepaidInfoAsync() => GetAsync<PrepaidInfoDto>("/api/station/prepaid/info");
+    public Task<PrepaidAccountDto> PrepaidRegisterAsync(PrepaidRegisterRequest request)
+        => PostAsync<PrepaidAccountDto>("/api/station/prepaid/register", request);
+    public Task<PrepaidLoginResponse> PrepaidLoginAsync(PrepaidLoginRequest request)
+        => PostAsync<PrepaidLoginResponse>("/api/station/prepaid/login", request);
+    public Task<PrepaidRechargeResultDto> PrepaidRechargeAsync(PrepaidRechargeRequest request)
+        => PostAsync<PrepaidRechargeResultDto>("/api/station/prepaid/recharge", request);
+    public Task<PrepaidStartResultDto> PrepaidStartAsync(PrepaidStartRequest request)
+        => PostAsync<PrepaidStartResultDto>("/api/station/prepaid/start", request);
+    public Task<PrepaidFinishResultDto> PrepaidFinishAsync()
+        => PostAsync<PrepaidFinishResultDto>("/api/station/prepaid/finish", new { });
 }

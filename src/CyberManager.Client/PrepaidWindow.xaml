@@ -1,0 +1,240 @@
+<Window x:Class="CyberManager.Client.PrepaidWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cuenta prepago" Width="680" Height="820"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
+        ShowInTaskbar="False" Topmost="True"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
+
+    <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="16">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="28" ShadowDepth="4" Opacity="0.6" Color="Black" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- ================= Encabezado ================= -->
+            <Grid Grid.Row="0" Margin="26,20,20,12">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="42" Height="42" CornerRadius="12" Background="{StaticResource AccentBrush}">
+                        <TextBlock Text="C" FontSize="23" FontWeight="Bold" Foreground="#04131B"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Cuenta prepago" FontSize="20" FontWeight="Bold" />
+                        <TextBlock x:Name="BusinessNameText" Text="CyberManager"
+                                   Style="{StaticResource Muted}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button x:Name="CloseButton" Content="✕" Style="{StaticResource IconButton}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Click="Close_Click"
+                        ToolTip="Cerrar" />
+            </Grid>
+
+            <!-- ================= Contenido ================= -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Padding="26,0,26,0">
+                <StackPanel>
+                    <!-- Cargando -->
+                    <StackPanel x:Name="LoadingPanel" VerticalAlignment="Center" Margin="0,60,0,60">
+                        <TextBlock Text="Cargando la información de su cuenta..." Style="{StaticResource Muted}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Autenticación -->
+                    <StackPanel x:Name="AuthPanel" Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                            <Button x:Name="LoginTabButton" Content="Entrar" Style="{StaticResource PrimaryButton}"
+                                    Padding="22,9" Click="LoginTab_Click" />
+                            <Button x:Name="RegisterTabButton" Content="Crear cuenta" Style="{StaticResource GhostButton}"
+                                    Padding="22,9" Margin="8,0,0,0" Click="RegisterTab_Click" />
+                        </StackPanel>
+
+                        <!-- Iniciar sesión -->
+                        <StackPanel x:Name="LoginPanel">
+                            <TextBlock Text="Usuario" Style="{StaticResource Label}" />
+                            <TextBox x:Name="UsernameBox" Margin="0,0,0,12" MaxLength="32"
+                                     ToolTip="Escriba el usuario de su cuenta prepago." />
+
+                            <TextBlock Text="Contraseña" Style="{StaticResource Label}" />
+                            <PasswordBox x:Name="PasswordBox" Margin="0,0,0,6" MaxLength="64"
+                                         KeyDown="Password_KeyDown"
+                                         ToolTip="Escriba su contraseña." />
+
+                            <TextBlock x:Name="LoginErrorText" Foreground="{StaticResource DangerBrush}"
+                                       TextWrapping="Wrap" Visibility="Collapsed" Margin="0,4,0,8" />
+
+                            <Button x:Name="LoginButton" Content="Entrar" Style="{StaticResource PrimaryButton}"
+                                    HorizontalAlignment="Left" Padding="28,11" Click="Login_Click"
+                                    ToolTip="Inicia sesión con su cuenta prepago." />
+
+                            <TextBlock Margin="0,14,0,0" Style="{StaticResource Muted}">
+                                <Run Text="¿No tiene cuenta?" />
+                                <Hyperlink Click="ShowRegister_Click" Foreground="{StaticResource AccentBrush}">
+                                    <Run Text="Cree una aquí" />
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Crear cuenta -->
+                        <StackPanel x:Name="RegisterPanel" Visibility="Collapsed">
+                            <TextBlock Text="Nombre completo" Style="{StaticResource Label}" />
+                            <TextBox x:Name="RegisterNameBox" Margin="0,0,0,12" MaxLength="80" />
+
+                            <TextBlock Text="Usuario" Style="{StaticResource Label}" />
+                            <TextBox x:Name="RegisterUsernameBox" Margin="0,0,0,4" MaxLength="32"
+                                     ToolTip="Entre 3 y 32 caracteres: letras, números, punto, guion o guion bajo." />
+                            <TextBlock Text="Entre 3 y 32 caracteres: letras, números, punto, guion o guion bajo."
+                                       Style="{StaticResource Muted}" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                            <TextBlock Text="Contraseña" Style="{StaticResource Label}" />
+                            <PasswordBox x:Name="RegisterPasswordBox" Margin="0,0,0,12" MaxLength="64" />
+
+                            <TextBlock Text="Repita la contraseña" Style="{StaticResource Label}" />
+                            <PasswordBox x:Name="RegisterConfirmBox" Margin="0,0,0,12" MaxLength="64" />
+
+                            <TextBlock Text="Teléfono (opcional)" Style="{StaticResource Label}" />
+                            <TextBox x:Name="RegisterPhoneBox" Margin="0,0,0,6" MaxLength="30" />
+
+                            <TextBlock x:Name="RegisterErrorText" Foreground="{StaticResource DangerBrush}"
+                                       TextWrapping="Wrap" Visibility="Collapsed" Margin="0,4,0,8" />
+
+                            <Button x:Name="RegisterButton" Content="Crear cuenta" Style="{StaticResource SuccessButton}"
+                                    HorizontalAlignment="Left" Padding="28,11" Click="Register_Click"
+                                    ToolTip="Crea su cuenta prepago." />
+
+                            <TextBlock Margin="0,14,0,0" Style="{StaticResource Muted}">
+                                <Run Text="¿Ya tiene cuenta?" />
+                                <Hyperlink Click="ShowLogin_Click" Foreground="{StaticResource AccentBrush}">
+                                    <Run Text="Inicie sesión" />
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Cuenta -->
+                    <StackPanel x:Name="AccountPanel" Visibility="Collapsed">
+                        <TextBlock x:Name="GreetingText" Text="Hola" FontSize="20" FontWeight="Bold" />
+                        <TextBlock Text="Este es el resumen de su cuenta prepago." Style="{StaticResource Muted}"
+                                   Margin="0,2,0,16" />
+
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="{StaticResource SurfaceAltBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="12" Padding="16,12" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="MINUTOS DISPONIBLES" Style="{StaticResource Muted}" FontSize="10" />
+                                    <TextBlock x:Name="AccountMinutesText" Text="0 min" FontSize="26"
+                                               FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="{StaticResource SurfaceAltBrush}"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    CornerRadius="12" Padding="16,12" Margin="8,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="SALDO DISPONIBLE" Style="{StaticResource Muted}" FontSize="10" />
+                                    <TextBlock x:Name="AccountBalanceText" Text="$ 0,00" FontSize="22" FontWeight="Bold" />
+                                    <TextBlock x:Name="AccountBalanceBsText" Text="Bs 0,00" Style="{StaticResource Muted}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border x:Name="SessionNoteBorder" Background="#1A22D3EE" BorderBrush="{StaticResource AccentBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,16"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="SessionNoteText" TextWrapping="Wrap"
+                                       Foreground="{StaticResource AccentBrush}" />
+                        </Border>
+
+                        <TextBlock Text="Paquetes de tiempo" Style="{StaticResource H2}" Margin="0,0,0,2" />
+                        <TextBlock Text="Los paquetes se pagan con el saldo de su cuenta. Si ya está jugando en este equipo, los minutos se suman a su sesión."
+                                   Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                        <TextBlock x:Name="PackagesEmptyText" Text="No hay paquetes de tiempo disponibles."
+                                   Style="{StaticResource Muted}" Visibility="Collapsed" Margin="0,0,0,12" />
+
+                        <ItemsControl x:Name="PackageList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource SurfaceAltBrush}"
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="10" Padding="14,10" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding MinutesText}" Style="{StaticResource Muted}" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding PriceText}" FontWeight="Bold"
+                                                               HorizontalAlignment="Right" />
+                                                    <TextBlock Text="{Binding PriceBsText}" Style="{StaticResource Muted}"
+                                                               HorizontalAlignment="Right" />
+                                                </StackPanel>
+                                                <Button Content="Comprar" Style="{StaticResource PrimaryButton}"
+                                                        Padding="14,8" Tag="{Binding Id}" Click="BuyPackage_Click"
+                                                        IsEnabled="{Binding CanBuy}"
+                                                        ToolTip="Compra este paquete con el saldo de su cuenta." />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel x:Name="StartPanel" Margin="0,12,0,0">
+                            <TextBlock Text="Iniciar sesión en este equipo" Style="{StaticResource H2}"
+                                       Margin="0,0,0,2" />
+                            <TextBlock Text="Indique cuántos minutos desea usar. Puede finalizar antes y los minutos no usados vuelven a su cuenta."
+                                       Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox x:Name="MinutesBox" Width="110" MaxLength="5" VerticalContentAlignment="Center" />
+                                <TextBlock Text="minutos" Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                           Margin="8,0,16,0" />
+                                <Button x:Name="StartButton" Content="Entrar al equipo" Style="{StaticResource SuccessButton}"
+                                        Padding="22,10" Click="Start_Click"
+                                        ToolTip="Inicia su sesión prepago en este equipo." />
+                            </StackPanel>
+
+                            <TextBlock x:Name="StartHintText" Style="{StaticResource Muted}" Margin="0,8,0,0"
+                                       TextWrapping="Wrap" Visibility="Collapsed" />
+                        </StackPanel>
+
+                        <Button Content="Usar otra cuenta" Style="{StaticResource GhostButton}"
+                                HorizontalAlignment="Left" Padding="18,9" Margin="0,18,0,4"
+                                Click="SwitchAccount_Click"
+                                ToolTip="Cierra la sesión de esta cuenta en la pantalla." />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ================= Estado ================= -->
+            <Border Grid.Row="2" Background="#0B1220" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="0,1,0,0" Padding="26,12">
+                <TextBlock x:Name="StatusText" Text="Listo." Style="{StaticResource Muted}"
+                           TextWrapping="Wrap" />
+            </Border>
+        </Grid>
+    </Border>
+</Window>

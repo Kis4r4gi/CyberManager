@@ -133,7 +133,7 @@ public static class StationClientEndpoints
         return app;
     }
 
-    private static async Task<Station> RequireStationAsync(HttpContext http, AppDbContext db)
+    internal static async Task<Station> RequireStationAsync(HttpContext http, AppDbContext db)
     {
         var idText = http.Request.Headers["X-Station-Id"].ToString();
         var token = http.Request.Headers["X-Station-Token"].ToString();
