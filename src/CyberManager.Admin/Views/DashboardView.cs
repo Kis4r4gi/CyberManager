@@ -852,8 +852,8 @@ public sealed class DashboardView : UserControl, IRefreshable
                         cashOpen = false;
                     }
 
-                    var dialog = new StopSessionDialog(session, _dashboard?.ExchangeRate ?? 0, cashOpen)
-                    { Owner = owner };
+                    var dialog = new StopSessionDialog(session, _dashboard?.ExchangeRate ?? 0, cashOpen,
+                        await LoadSessionConsumptionAsync(session.Id)) { Owner = owner };
 
                     if (dialog.ShowDialog() == true && dialog.Result is not null)
                         await App.Api.StopSessionAsync(session.Id, dialog.Result);
@@ -898,6 +898,18 @@ public sealed class DashboardView : UserControl, IRefreshable
                 {
                     var viewer = new ScreenViewerWindow(station.Id, station.Name) { Owner = owner };
                     viewer.Show();
+                    break;
+                }
+
+                case "updateclient":
+                {
+                    if (!Ui.Confirm($"¿Actualizar el cliente de {station.Name} a la última versión publicada?"))
+                        break;
+
+                    await App.Api.NotifyClientUpdateAsync(station.Id);
+                    Ui.Info($"Se envió el aviso de actualización a {station.Name}. " +
+                            "El cliente descargará la versión nueva y se reiniciará al terminar.",
+                        "Actualizar cliente");
                     break;
                 }
 
@@ -1041,5 +1053,12 @@ public sealed class DashboardView : UserControl, IRefreshable
         }, "No se pudo ejecutar la acción");
 
         await RefreshAsync();
+    }
+
+    /// <summary>Detalle de productos consumidos; si falla, el diálogo sigue sin el detalle.</summary>
+    private static async Task<SessionConsumptionDto?> LoadSessionConsumptionAsync(int sessionId)
+    {
+        try { return await App.Api.SessionConsumptionAsync(sessionId); }
+        catch { return null; }
     }
 }

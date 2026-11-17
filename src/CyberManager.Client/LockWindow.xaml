@@ -124,6 +124,9 @@
 
                 <TextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
                            Style="{StaticResource Muted}" />
+
+                <TextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Style="{StaticResource Muted}" />
             </Grid>
         </Border>
     </Grid>

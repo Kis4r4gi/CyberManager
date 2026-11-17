@@ -407,7 +407,8 @@ public sealed class StopSessionDialog : FormDialog
 
     public StopSessionRequest? Result { get; private set; }
 
-    public StopSessionDialog(SessionDto session, decimal exchangeRate, bool cashOpen)
+    public StopSessionDialog(SessionDto session, decimal exchangeRate, bool cashOpen,
+        SessionConsumptionDto? consumption = null)
         : base($"Cobrar y cerrar · {session.StationName}", "Revise el resumen antes de finalizar la sesión.")
     {
         _session = session;
@@ -415,6 +416,7 @@ public sealed class StopSessionDialog : FormDialog
         AddRow("Tiempo transcurrido", $"{session.ElapsedMinutes} min");
         AddRow("Cargo por tiempo", $"$ {session.TimeAmount:N2}");
         AddRow("Consumos", $"$ {session.ConsumptionAmount:N2}");
+        AddConsumptionDetail(consumption);
         AddSeparator();
         AddRow("Total USD", $"$ {session.TotalAmount:N2}", highlight: true);
         AddRow("Total Bs", $"Bs {session.TotalAmount * exchangeRate:N2}");
@@ -442,6 +444,74 @@ public sealed class StopSessionDialog : FormDialog
         {
             AddNote("No hay una caja abierta. Abra la caja antes de cobrar la sesión.", "DangerBrush");
             AcceptButton.IsEnabled = false;
+        }
+    }
+
+    /// <summary>Lista los productos consumidos y aclara cuánto queda por cobrar.</summary>
+    private void AddConsumptionDetail(SessionConsumptionDto? consumption)
+    {
+        if (consumption is null) return;
+
+        Body.Children.Add(new TextBlock
+        {
+            Text = "Productos consumidos",
+            Style = Style("Label"),
+            Margin = new Thickness(0, 10, 0, 4)
+        });
+
+        if (consumption.Items.Count == 0)
+        {
+            Body.Children.Add(new TextBlock
+            {
+                Text = "Sin productos consumidos.",
+                Style = Style("Muted"),
+                Margin = new Thickness(0, 2, 0, 2)
+            });
+            return;
+        }
+
+        foreach (var item in consumption.Items)
+        {
+            var row = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var label = new TextBlock
+            {
+                Text = $"{item.Quantity:0.##} × {item.Description} · $ {item.UnitPrice:N2} c/u",
+                Style = Style("Muted"),
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 12, 0)
+            };
+
+            var value = new TextBlock
+            {
+                Text = $"$ {item.Total:N2}",
+                Foreground = Brush("TextBrush"),
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            Grid.SetColumn(value, 1);
+            row.Children.Add(label);
+            row.Children.Add(value);
+            Body.Children.Add(row);
+        }
+
+        if (consumption.PendingTotal > 0 && consumption.PendingTotal < consumption.Total)
+        {
+            AddNote($"Consumos ya cobrados: $ {consumption.Total - consumption.PendingTotal:N2}. " +
+                    $"Pendientes al cerrar: $ {consumption.PendingTotal:N2}.");
+        }
+        else if (consumption.PendingTotal > 0)
+        {
+            AddNote($"Se cobrarán $ {consumption.PendingTotal:N2} de consumos al cerrar.");
+        }
+        else
+        {
+            AddNote("Los consumos de esta sesión ya están cobrados.");
         }
     }
 

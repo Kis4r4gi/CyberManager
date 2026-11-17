@@ -185,9 +185,13 @@
             <Border Grid.Row="2" Background="#0B1220" BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="0,1,0,0" Padding="26,12">
                 <Grid>
-                    <TextBlock x:Name="StatusText" Text="Cargue la configuración para comenzar."
-                               Style="{StaticResource Muted}" VerticalAlignment="Center"
-                               TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" />
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                        <TextBlock x:Name="StatusText" Text="Cargue la configuración para comenzar."
+                                   Style="{StaticResource Muted}"
+                                   TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="VersionText" Style="{StaticResource Muted}"
+                                   FontSize="11" Margin="0,2,0,0" HorizontalAlignment="Left" />
+                    </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Cancelar" Style="{StaticResource GhostButton}" Padding="18,10"

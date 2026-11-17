@@ -29,6 +29,7 @@ public static class Kit
         ["Activar / desactivar"] = "Activa o desactiva el registro seleccionado.",
         ["Activar sonido"] = "Activa el audio del equipo.",
         ["Actualizar"] = "Vuelve a cargar la información desde el servidor.",
+        ["Actualizar cliente"] = "Envía a este equipo el paquete de cliente más reciente.",
         ["Actualizar lista"] = "Actualiza la lista con los datos más recientes.",
         ["Agregar"] = "Añade el elemento a la lista.",
         ["Apagar equipo"] = "Apaga el equipo.",

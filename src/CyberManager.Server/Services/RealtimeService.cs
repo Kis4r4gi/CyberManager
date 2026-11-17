@@ -77,6 +77,17 @@ public class RealtimeService
                 $"Paquete de cliente {manifest.Version} disponible", manifest));
     }
 
+    /// <summary>Avisa solo a una estación (cliente y agente) que hay un paquete nuevo.</summary>
+    public async Task ClientUpdateAvailableAsync(ClientUpdateManifestDto manifest, int stationId)
+    {
+        await _station.Clients.Group($"station-{stationId}").SendAsync("ClientUpdateAvailable", manifest);
+        await _agent.Clients.Group(AgentGroup(stationId)).SendAsync("ClientUpdateAvailable", manifest);
+        await _admin.Clients.All.SendAsync("Event",
+            new RealtimeEvent("ClientUpdateAvailable",
+                $"Actualización de cliente {manifest.Version} enviada a la estación {stationId}",
+                manifest));
+    }
+
     public Task SendAgentCommandAsync(int stationId, AgentCommandType type, string? argument = null, int? durationSeconds = null)
     {
         var cmd = new AgentCommand(Guid.NewGuid(), type, argument, durationSeconds);

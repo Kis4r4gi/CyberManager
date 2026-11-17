@@ -1045,6 +1045,8 @@ con `client.zip` y `manifest.json` (versión, tamaño y SHA-256) del cliente de 
   de escritura en su carpeta.
 - En **Equipos** el box **Clientes** muestra cuántos equipos están al día y permite forzar el
   aviso con **Actualizar clientes**.
+- Desde el menú **Acciones ▾** de cada equipo, **Actualizar cliente** envía el aviso solo a ese
+  equipo (cliente y agente), sin afectar a las demás estaciones.
 
 El paquete se genera automáticamente con `scripts\build-installer.ps1` a partir de
 `dist\<arch>\Client` y queda en `dist\<arch>\Server\ClientUpdate`, que el instalador del servidor

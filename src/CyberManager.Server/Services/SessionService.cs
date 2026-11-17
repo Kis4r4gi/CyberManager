@@ -357,6 +357,43 @@ public class SessionService
         return Mappers.ToDto(s, await ConsumptionAsync(s.Id), DateTime.UtcNow);
     }
 
+    /// <summary>
+    /// Productos consumidos en la sesión (ventas completadas), agrupados por producto y
+    /// precio. <c>PendingTotal</c> es lo que aún falta cobrar al cerrar la sesión.
+    /// </summary>
+    public async Task<SessionConsumptionDto> ConsumptionDetailAsync(int sessionId)
+    {
+        var lines = await _db.SaleItems.AsNoTracking()
+            .Where(i => i.Sale!.SessionId == sessionId && i.Sale.Status == SaleStatus.Completed)
+            .Select(i => new
+            {
+                i.ProductId,
+                i.Description,
+                i.Quantity,
+                i.UnitPrice,
+                i.Total,
+                Pending = i.Sale!.PaymentMethod == PaymentMethod.Pending
+            })
+            .ToListAsync();
+
+        var items = lines
+            .GroupBy(i => new { i.ProductId, i.Description, i.UnitPrice })
+            .Select(g => new SessionConsumptionItemDto(
+                g.Key.ProductId,
+                g.Key.Description,
+                g.Sum(x => x.Quantity),
+                g.Key.UnitPrice,
+                Math.Round(g.Sum(x => x.Total), 2, MidpointRounding.AwayFromZero)))
+            .OrderBy(i => i.Description)
+            .ToList();
+
+        var total = Math.Round(lines.Sum(i => i.Total), 2, MidpointRounding.AwayFromZero);
+        var pending = Math.Round(lines.Where(i => i.Pending).Sum(i => i.Total), 2,
+            MidpointRounding.AwayFromZero);
+
+        return new SessionConsumptionDto(sessionId, total, pending, items);
+    }
+
     private async Task<CashSession> RequireCashAsync(Session session, string message)
     {
         // Si la sesión se abrió en una caja concreta, el cobro va a esa caja aunque

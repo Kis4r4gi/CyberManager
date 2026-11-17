@@ -27,6 +27,8 @@ public static class OperationEndpoints
 
         g.MapGet("/active", async (SessionService sessions) => Results.Ok(await sessions.ActiveAsync()));
         g.MapGet("/{id:int}", async (int id, SessionService sessions) => Results.Ok(await sessions.GetAsync(id)));
+        g.MapGet("/{id:int}/consumption", async (int id, SessionService sessions) =>
+            Results.Ok(await sessions.ConsumptionDetailAsync(id)));
 
         g.MapPost("/start", async (StartSessionRequest req, ClaimsPrincipal user, SessionService sessions) =>
             Results.Ok(await sessions.StartAsync(req, user.UserId())));

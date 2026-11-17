@@ -27,16 +27,13 @@ public sealed class StationsView : UserControl, IRefreshable
         _grid = Kit.Table(
             Kit.AutoCol("Equipo", nameof(StationRow.Name), 140),
             Kit.AutoCol("Tipo", nameof(StationRow.Kind), 80),
-            Kit.AutoCol("Plataforma", nameof(StationRow.Platform), 120),
             Kit.Col("Mandos", nameof(StationRow.Controllers), 75),
             Kit.AutoCol("Zona", nameof(StationRow.Zone), 110),
             Kit.AutoCol("Dirección IP", nameof(StationRow.Ip), 120),
             Kit.AutoCol("Tarifa", nameof(StationRow.Rate), 130),
             Kit.Col("USD/hora", nameof(StationRow.RatePerHour), 95, "{0:N2}"),
             Kit.TemplateCol("Estado", Kit.Pill(nameof(StationRow.Status), nameof(StationRow.StatusBrush)), 130),
-            Kit.Col("Sesión", nameof(StationRow.Session), 85),
             Kit.AutoCol("Última conexión", nameof(StationRow.LastSeen), 140),
-            Kit.AutoCol("Usuario Windows", nameof(StationRow.CurrentUser), 140),
             Kit.Col("Activo", nameof(StationRow.Active), 75),
             ActionsColumn());
 
@@ -658,7 +655,6 @@ public sealed class StationRow
         Source = station;
         Name = station.Name;
         Kind = Labels.StationKindName(station.Kind);
-        Platform = string.IsNullOrWhiteSpace(station.Platform) ? "—" : station.Platform!;
         Controllers = station.Kind == StationKind.Console
             ? (station.Controllers ?? 0).ToString()
             : "—";
@@ -668,16 +664,13 @@ public sealed class StationRow
         RatePerHour = station.RatePerHour;
         Status = Labels.StatusName(station.Status);
         StatusBrush = Labels.StatusColor(station.Status);
-        Session = station.CurrentSessionId is int id ? $"#{id}" : "—";
         LastSeen = station.LastSeenUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Nunca";
-        CurrentUser = string.IsNullOrWhiteSpace(station.CurrentUser) ? "—" : station.CurrentUser!;
         Active = station.Active ? "Sí" : "No";
     }
 
     public StationDto Source { get; }
     public string Name { get; }
     public string Kind { get; }
-    public string Platform { get; }
     public string Controllers { get; }
     public string Zone { get; }
     public string Ip { get; }
@@ -685,9 +678,7 @@ public sealed class StationRow
     public decimal RatePerHour { get; }
     public string Status { get; }
     public string StatusBrush { get; }
-    public string Session { get; }
     public string LastSeen { get; }
-    public string CurrentUser { get; }
     public string Active { get; }
 }
 

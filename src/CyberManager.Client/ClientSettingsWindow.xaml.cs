@@ -45,6 +45,7 @@ public partial class ClientSettingsWindow : Window
     {
         _api = api;
         InitializeComponent();
+        VersionText.Text = $"{L.T("Versión")} {AppInfo.Version}";
 
         Loaded += async (_, _) =>
         {

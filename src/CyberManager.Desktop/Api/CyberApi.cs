@@ -35,6 +35,7 @@ public class CyberApi : ApiClient
     public Task<BootstrapDto> BootstrapAsync() => GetAsync<BootstrapDto>("/api/catalog");
 
     public Task<SessionDto> StartSessionAsync(StartSessionRequest req) => PostAsync<SessionDto>("/api/sessions/start", req);
+    public Task<SessionConsumptionDto> SessionConsumptionAsync(int id) => GetAsync<SessionConsumptionDto>($"/api/sessions/{id}/consumption");
     public Task<SessionDto> StopSessionAsync(int id, StopSessionRequest req) => PostAsync<SessionDto>($"/api/sessions/{id}/stop", req);
     public Task<SessionDto> ExtendSessionAsync(int id, ExtendSessionRequest req) => PostAsync<SessionDto>($"/api/sessions/{id}/extend", req);
     public Task<SessionDto> PauseSessionAsync(int id, bool pause) => PostAsync<SessionDto>($"/api/sessions/{id}/pause", new PauseSessionRequest(id, pause));
@@ -81,8 +82,10 @@ public class CyberApi : ApiClient
         => GetAsync<ClientUpdateStatusDto>("/api/client-update/status");
 
     /// <summary>Avisa a estaciones y agentes que hay un paquete de cliente nuevo.</summary>
-    public Task NotifyClientUpdateAsync()
-        => PostAsync("/api/client-update/notify", new { });
+    public Task NotifyClientUpdateAsync(int? stationId = null)
+        => PostAsync(stationId is int id
+            ? $"/api/client-update/notify?stationId={id}"
+            : "/api/client-update/notify", new { });
 
     // ---- catálogo ----
     public Task<List<ProductDto>> ProductsAsync(bool includeInactive = false)

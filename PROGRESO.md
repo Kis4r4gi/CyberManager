@@ -1204,6 +1204,22 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   **1.3.1** sin bucle de actualización. El servidor instalado también quedó en **1.3.1**.
 - **Pendiente**: recompilar los instaladores 1.3.1 cuando el usuario lo pida; sin push ni release.
 
+### Detalle de consumos, versión del cliente y acción por equipo (1.3.2, 2026-11-17, sin publicar)
+
+- **Cobrar y cerrar**: el diálogo muestra los productos consumidos (cantidad, precio unitario y
+  total) agrupados por producto y precio, e indica cuánto ya está cobrado y cuánto queda pendiente.
+  Se alimenta del endpoint `GET /api/sessions/{id}/consumption`.
+- **Versión visible**: la pantalla de bloqueo y el pie de **Configuración del cliente** muestran la
+  versión instalada (`AppInfo.Version`).
+- **Tabla de equipos**: se quitaron las columnas **Plataforma**, **Usuario Windows** y **Sesión**;
+  la información sigue disponible en el resumen del equipo y en la edición.
+- **Actualizar cliente por equipo**: nueva acción en el menú **Acciones ▾**. El endpoint
+  `POST /api/client-update/notify?stationId=` envía el manifiesto solo al cliente y al agente de esa
+  estación. La acción global **Actualizar clientes** del box **Clientes** sigue avisando a todos.
+- **Despliegue local 1.3.2**: servidor y consola copiados a `C:\CyberManager\Servidor`, tarea
+  `CyberManagerServer` en `Running`, `/api/health` → `ok`. El paquete `ClientUpdate` 1.3.2
+  (SHA-256 `10050cf1…`) se envió a PC 01 y el estado quedó **1 al día, 0 pendientes**.
+
 ---
 
 ## Rutas y comandos clave

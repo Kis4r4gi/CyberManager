@@ -33,14 +33,20 @@ public static class ClientUpdateEndpoints
             Results.Ok(await updates.GetStatusAsync(db, ct)))
             .RequireAuthorization("Admin");
 
-        g.MapPost("/notify", async (ClientUpdateService updates, RealtimeService realtime,
-            CancellationToken ct) =>
+        g.MapPost("/notify", async (int? stationId, ClientUpdateService updates,
+            RealtimeService realtime, CancellationToken ct) =>
         {
-            var manifest = await updates.NotifyAsync(realtime, ct);
+            var manifest = await updates.NotifyAsync(realtime, ct, stationId);
             if (manifest is null)
                 throw new AppException("El servidor no tiene un paquete de cliente para distribuir.", 409);
 
-            return Results.Ok(new { sent = true, version = manifest.Version, size = manifest.Size });
+            return Results.Ok(new
+            {
+                sent = true,
+                stationId,
+                version = manifest.Version,
+                size = manifest.Size
+            });
         }).RequireAuthorization("Admin");
 
         return app;

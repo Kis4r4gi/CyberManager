@@ -35,6 +35,7 @@ public partial class LockWindow : Window
     public LockWindow()
     {
         InitializeComponent();
+        VersionText.Text = $"{L.T("Versión")} {AppInfo.Version}";
 
         _clockTimer.Tick += (_, _) => UpdateClock();
         Loaded += (_, _) =>

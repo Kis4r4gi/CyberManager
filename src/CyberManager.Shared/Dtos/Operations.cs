@@ -7,6 +7,17 @@ public record SessionDto(
     decimal RatePerHour, decimal TimeAmount, decimal ConsumptionAmount, decimal TotalAmount,
     bool Overtime, string? Notes, int? CashSessionId);
 
+/// <summary>Producto consumido en una sesión, agrupado por producto y precio unitario.</summary>
+public record SessionConsumptionItemDto(
+    int? ProductId, string Description, decimal Quantity, decimal UnitPrice, decimal Total);
+
+/// <summary>
+/// Detalle de los productos consumidos durante una sesión. <c>Total</c> incluye todo
+/// el consumo y <c>PendingTotal</c> lo que aún falta cobrar al cerrar.
+/// </summary>
+public record SessionConsumptionDto(
+    int SessionId, decimal Total, decimal PendingTotal, List<SessionConsumptionItemDto> Items);
+
 public record StartSessionRequest(
     int StationId, SessionType Type, int PlannedMinutes, int? CustomerId,
     int? RateId, decimal? CustomRatePerHour, string? Notes, bool ChargeUpfront,

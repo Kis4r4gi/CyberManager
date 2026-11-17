@@ -135,12 +135,16 @@ public sealed class ClientUpdateService
             message);
     }
 
-    public async Task<ClientUpdateManifestDto?> NotifyAsync(RealtimeService realtime, CancellationToken ct)
+    public async Task<ClientUpdateManifestDto?> NotifyAsync(RealtimeService realtime,
+        CancellationToken ct, int? stationId = null)
     {
         var manifest = GetManifest();
         if (manifest is null) return null;
 
-        await realtime.ClientUpdateAvailableAsync(manifest);
+        if (stationId is int id)
+            await realtime.ClientUpdateAvailableAsync(manifest, id);
+        else
+            await realtime.ClientUpdateAvailableAsync(manifest);
         return manifest;
     }
 
