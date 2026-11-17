@@ -1,9 +1,9 @@
 <Project>
   <!--
-    Versión de todos los ensamblados. `scripts/build-installer.ps1` incrementa la
-    versión menor y reinicia el patch (1.1.1 -> 1.2.0) en cada empaquetado.
+    VersiÃ³n de todos los ensamblados. `scripts/build-installer.ps1` incrementa la
+    versiÃ³n menor y reinicia el patch (1.1.1 -> 1.2.0) en cada empaquetado.
   -->
   <PropertyGroup>
-    <CyberManagerVersion>1.2.0</CyberManagerVersion>
+    <CyberManagerVersion>1.3.0</CyberManagerVersion>
   </PropertyGroup>
 </Project>
