@@ -830,6 +830,15 @@ public static class L
             ["Cerrar sin guardar"] = "Close without saving",
             ["Guarda la configuración en el servidor."] =
                 "Saves the settings on the server.",
+            ["Conexión con el servidor"] = "Server connection",
+            ["IP o URL del servidor"] = "Server IP or URL",
+            ["Buscar en la red"] = "Search the network",
+            ["Guardar dirección"] = "Save address",
+            ["IP de este equipo"] = "This station IP",
+            ["IP de este equipo no disponible"] = "This station IP not available",
+            ["IP de este equipo: (obteniendo...)"] = "This station IP: (getting...)",
+            ["IP de esta estación en su red; no es la IP del servidor."] =
+                "This station IP on its network; not the server IP.",
         };
 
         return map;

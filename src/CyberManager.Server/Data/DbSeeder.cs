@@ -85,6 +85,18 @@ public static class DbSeeder
                 "CreatedUtc" TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS "IX_SharedNotes_CreatedUtc" ON "SharedNotes" ("CreatedUtc");
+
+            CREATE TABLE IF NOT EXISTS "DeletedStationIdentities" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_DeletedStationIdentities" PRIMARY KEY AUTOINCREMENT,
+                "MacAddress" TEXT NULL,
+                "IpAddress" TEXT NULL,
+                "MachineName" TEXT NOT NULL,
+                "DeletedUtc" TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_DeletedStationIdentities_MacAddress"
+                ON "DeletedStationIdentities" ("MacAddress");
+            CREATE INDEX IF NOT EXISTS "IX_DeletedStationIdentities_IpAddress"
+                ON "DeletedStationIdentities" ("IpAddress");
             """);
 
         // Columnas añadidas para el control de consolas de videojuegos.

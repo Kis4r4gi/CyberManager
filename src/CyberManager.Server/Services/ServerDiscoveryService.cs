@@ -13,12 +13,15 @@ namespace CyberManager.Server.Services;
 public sealed class ServerDiscoveryService : BackgroundService
 {
     private readonly ILogger<ServerDiscoveryService> _log;
+    private readonly IServiceScopeFactory _scopes;
     private readonly int _port;
     private readonly ConcurrentDictionary<string, DateTime> _lastRequestUtc = new();
 
-    public ServerDiscoveryService(IConfiguration configuration, ILogger<ServerDiscoveryService> log)
+    public ServerDiscoveryService(IConfiguration configuration, ILogger<ServerDiscoveryService> log,
+        IServiceScopeFactory scopes)
     {
         _log = log;
+        _scopes = scopes;
         _port = configuration.GetValue<int?>("Server:Port") ?? 5080;
     }
 
@@ -73,6 +76,22 @@ public sealed class ServerDiscoveryService : BackgroundService
             {
                 _lastRequestUtc[requester] = DateTime.UtcNow;
                 _log.LogInformation("Petición de descubrimiento recibida desde {Requester}", requester);
+            }
+
+            // La petición también sirve para ubicar al cliente: si el firewall del
+            // equipo bloquea el escaneo inverso (UDP 5092), aquí llega su MAC y su IP.
+            try
+            {
+                using var scope = _scopes.CreateScope();
+                var discovery = scope.ServiceProvider.GetRequiredService<StationDiscoveryService>();
+                var localIp = NetworkIdentity.LocalIPv4Addresses(onlyWithGateway: true).FirstOrDefault()
+                              ?? NetworkIdentity.LocalIPv4() ?? "127.0.0.1";
+                await discovery.RegisterAnnouncementAsync(message, requester,
+                    $"http://{localIp}:{_port}", stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "No se pudo registrar la estación que buscó el servidor desde {Requester}", requester);
             }
 
             // Se responde con todas las direcciones locales utilizables: el equipo

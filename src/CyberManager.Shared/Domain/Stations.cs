@@ -65,6 +65,19 @@ public class Station
     public List<Session> Sessions { get; set; } = new();
 }
 
+/// <summary>
+/// Identidad de un equipo eliminado. Evita que el descubrimiento automático vuelva a
+/// dar de alta un PC que el administrador quitó del sistema.
+/// </summary>
+public class DeletedStationIdentity
+{
+    public int Id { get; set; }
+    public string? MacAddress { get; set; }
+    public string? IpAddress { get; set; }
+    public string MachineName { get; set; } = string.Empty;
+    public DateTime DeletedUtc { get; set; } = DateTime.UtcNow;
+}
+
 /// <summary>Sesión de uso de un equipo (tiempo vendido o por cobrar).</summary>
 public class Session
 {

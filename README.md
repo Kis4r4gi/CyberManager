@@ -87,19 +87,27 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   mandos visibles en el tablero y en la ficha del equipo.
 - **Escaneo de la red local**: desde *Equipos* el servidor descubre las estaciones instaladas
   (cliente y agente por UDP), muestra su IP, MAC y versión, y tras confirmar las registra y les
-  envía el ID y el token automáticamente.
+  envía el ID y el token automáticamente. El servidor también escanea cada minuto en segundo plano
+  y empareja por MAC antes que por ID, nombre o IP, así que un cambio de IP no crea duplicados.
 - **El servidor se encuentra solo**: si cambia la IP del servidor (reinicio del router o del
   equipo), el cliente, la consola y el agente lo buscan por difusión UDP (5094) y, si hace falta,
   recorriendo la subred; validan la dirección con el token del equipo y la guardan sin reinstalar ni
-  reconfigurar nada.
+  reconfigurar nada. El paquete de búsqueda incluye la MAC y el nombre del cliente, de modo que el
+  servidor también lo ubica y actualiza su IP aunque el firewall del equipo bloquee el escaneo
+  inverso por UDP 5092/5093.
 - **IP del servidor a la vista**: en *Equipos y zonas* y en la pestaña *Zonas* aparece una tarjeta
   con la IP/URL real del servidor y un botón **Copiar URL** para pegarla en la configuración de
   cualquier estación. La obtiene el propio servidor, así que funciona aunque la consola esté en
   otro equipo.
 - **IP manual desde la estación**: en el menú **Administrador** de la pantalla de bloqueo hay un
   campo **IP o URL del servidor** con **Buscar en la red**, **Probar conexión** y **Guardar
-  dirección**. Si el servidor cambió de IP y la credencial guardada permite entrar sin conexión,
-  el propio menú ofrece corregir la dirección; el cliente se reconecta en caliente sin reiniciarse.
+  dirección**, y justo debajo **IP de este equipo** para diagnosticar la red. Si el servidor cambió
+  de IP y la credencial guardada permite entrar sin conexión, el propio menú ofrece corregir la
+  dirección; el cliente se reconecta en caliente sin reiniciarse.
+- **Borrado definitivo de equipos**: *Equipos → Eliminar equipo* borra la estación y todas sus
+  sesiones, ventas, reservas y registros de agente/auditoría. Su MAC queda excluida del
+  descubrimiento automático para que un PC retirado no vuelva a aparecer; darlo de alta manualmente
+  desde el escaneo reincorpora el equipo y limpia esa exclusión.
 - **Desbloqueo de administrador sin conexión**: tras un inicio de sesión correcto, el cliente guarda
   una copia local de la contraseña de administrador (PBKDF2 + DPAPI, con límite de intentos) para
   poder abrir el equipo cuando el servidor no responde. Una contraseña rechazada por el servidor
@@ -968,7 +976,10 @@ por UDP el **ID y el token** definitivos. La estación los guarda en `config.jso
 en `appsettings.json`) y reconecta sola, sin escribirlos a mano.
 
 Los equipos deben estar encendidos y el firewall debe permitir esos puertos UDP. El instalador
-de estación crea la regla automáticamente.
+de estación crea la regla automáticamente. Aun cuando otro firewall bloquee 5092/5093, el cliente
+anuncia su MAC al buscar el servidor por UDP **5094**; el servidor aprovecha ese anuncio para
+actualizar su IP y reenviarle la configuración, sin intervención manual. El emparejamiento prioriza
+la MAC, por lo que cambiar de IP no genera un segundo equipo.
 
 ### Configuración manual
 

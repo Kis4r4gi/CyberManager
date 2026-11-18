@@ -34,6 +34,14 @@ public record DiscoveryApplyResult(
     int Configured,
     List<string> Messages);
 
+/// <summary>Resumen de la eliminación permanente de un equipo.</summary>
+public record StationDeleteResult(
+    int StationId,
+    int Sessions,
+    int Sales,
+    int Reservations,
+    int DeviceRegistrations);
+
 /// <summary>Paquete del cliente que el servidor guarda y distribuye a las estaciones.</summary>
 public record ClientUpdateManifestDto(
     string Version,

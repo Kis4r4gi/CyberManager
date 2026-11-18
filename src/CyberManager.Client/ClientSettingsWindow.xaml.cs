@@ -88,6 +88,7 @@ public partial class ClientSettingsWindow : Window
     private async Task LoadAsync()
     {
         ServerUrlBox.Text = App.Config.ServerUrl;
+        ShowLocalIp();
 
         if (_api is null)
         {
@@ -225,7 +226,8 @@ public partial class ClientSettingsWindow : Window
         SetStatus(L.T("Buscando el servidor en la red..."));
         try
         {
-            var found = await ServerLocator.FindWorkingAsync(ServerUrlBox.Text);
+            var found = await ServerLocator.FindWorkingAsync(ServerUrlBox.Text,
+                identity: App.StationIdentity());
             if (found is null)
             {
                 SetStatus(L.T("No se encontró ningún servidor CyberManager en la red."), true);
@@ -287,6 +289,17 @@ public partial class ClientSettingsWindow : Window
         DiscoverButton.IsEnabled = !busy;
         TestButton.IsEnabled = !busy;
         SaveButton.IsEnabled = !busy;
+    }
+
+    /// <summary>Muestra la IP LAN de esta estación para diagnosticar la conexión.</summary>
+    private void ShowLocalIp()
+    {
+        var ip = NetworkIdentity.LocalIPv4Addresses(onlyWithGateway: true).FirstOrDefault()
+                 ?? NetworkIdentity.LocalIPv4Addresses().FirstOrDefault();
+
+        LocalIpText.Text = string.IsNullOrWhiteSpace(ip)
+            ? L.T("IP de este equipo no disponible")
+            : $"{L.T("IP de este equipo")}: {ip}";
     }
 
     private static int ParseInt(string text, string label, int min, int max)

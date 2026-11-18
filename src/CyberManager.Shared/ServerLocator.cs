@@ -41,13 +41,14 @@ public static class ServerLocator
     /// equipo, las respuestas UDP y, si nada respondi�, el recorrido de la subred.
     /// </summary>
     public static async Task<IReadOnlyList<string>> FindCandidatesAsync(
-        string? preferredUrl = null, TimeSpan? udpTimeout = null, CancellationToken ct = default)
+        string? preferredUrl = null, TimeSpan? udpTimeout = null, CancellationToken ct = default,
+        DiscoveryIdentity? identity = null)
     {
         var list = new List<string>();
         AddUnique(list, preferredUrl);
         AddUnique(list, $"http://127.0.0.1:{DefaultPort}");
 
-        foreach (var url in await DiscoverUdpAsync(udpTimeout ?? TimeSpan.FromSeconds(2), ct))
+        foreach (var url in await DiscoverUdpAsync(udpTimeout ?? TimeSpan.FromSeconds(2), ct, identity))
             AddUnique(list, url);
 
         // Solo se recorre la red si ninguna direcci�n conocida responde.
@@ -70,9 +71,10 @@ public static class ServerLocator
 
     /// <summary>Primera direcci�n que responde como servidor de CyberManager.</summary>
     public static async Task<string?> FindWorkingAsync(
-        string? preferredUrl = null, TimeSpan? udpTimeout = null, CancellationToken ct = default)
+        string? preferredUrl = null, TimeSpan? udpTimeout = null, CancellationToken ct = default,
+        DiscoveryIdentity? identity = null)
     {
-        foreach (var url in await FindCandidatesAsync(preferredUrl, udpTimeout, ct))
+        foreach (var url in await FindCandidatesAsync(preferredUrl, udpTimeout, ct, identity))
         {
             if (await ProbeAsync(url, 2500, ct)) return url;
         }
@@ -124,7 +126,8 @@ public static class ServerLocator
         return ex.InnerException is not null && IsConnectionError(ex.InnerException);
     }
 
-    private static async Task<IReadOnlyList<string>> DiscoverUdpAsync(TimeSpan timeout, CancellationToken ct)
+    private static async Task<IReadOnlyList<string>> DiscoverUdpAsync(TimeSpan timeout,
+        CancellationToken ct, DiscoveryIdentity? identity)
     {
         var found = new List<string>();
 
@@ -135,7 +138,15 @@ public static class ServerLocator
             udp.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
 
             var request = DiscoveryProtocol.Encode(new DiscoveryMessage(
-                DiscoveryProtocol.FindServerMagic, Role: "client", SentUtc: DateTime.UtcNow));
+                DiscoveryProtocol.FindServerMagic,
+                Role: identity?.Role ?? "client",
+                StationId: identity?.StationId ?? 0,
+                Token: identity?.Token,
+                MachineName: identity?.MachineName,
+                IpAddress: identity?.IpAddress ?? NetworkIdentity.LocalIPv4(),
+                MacAddress: identity?.MacAddress ?? NetworkIdentity.PrimaryMac(),
+                Version: identity?.Version,
+                SentUtc: DateTime.UtcNow));
 
             foreach (var address in NetworkIdentity.BroadcastAddresses())
             {

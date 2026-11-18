@@ -1696,6 +1696,50 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: instalar/actualizar el cliente 1.3.22 en los PCs y comprobar desde la estación que
   el campo guarda la IP correcta. PC 01 sigue sin ser accesible por red.
 
+### Localización automática, IP local en el cliente y borrado definitivo (1.3.23–1.3.25, 2026-11-18)
+
+- **Diagnóstico**: el cliente de `192.168.1.9` sí encontraba el servidor (logs UDP 5094 cada 5
+  minutos), pero el escaneo inverso del servidor (`UDP 5092/5093`) devolvía cero equipos: el firewall
+  del cliente bloquea las respuestas entrantes. Además, un escaneo anterior había creado el duplicado
+  «Equipo 01» (id 23, IP `.9`, sin MAC) mientras que el PC real (id 11, MAC
+  `14:AB:C5:D4:30:F5`) quedó inactivo con la IP vieja `.10`.
+- **IP local del cliente**: `ClientSettingsWindow` muestra ahora «IP de este equipo: …» debajo de
+  «IP o URL del servidor», dentro de **Conexión con el servidor**, visible también sin conexión.
+  Usa `NetworkIdentity.LocalIPv4Addresses(onlyWithGateway: true)` con respaldo a todas las IPv4 y
+  traducciones nuevas en `Localization.cs` (`L.T`). El menú administrador sigue sin campos
+  superpuestos.
+- **Anuncio de identidad al buscar servidor** (`ServerLocator` + `DiscoveryIdentity`): el paquete
+  `CYBERMANAGER-FIND-SERVER-1` ahora incluye rol, StationId, token, nombre de máquina, IPv4, MAC y
+  versión del cliente/agente. `ServerDiscoveryService`, al responder por UDP 5094, registra o
+  actualiza la estación con esa identidad. Así el servidor la ubica **sin depender del firewall
+  entrante del cliente** y le reenvía el token correcto cuando hace falta.
+- **Descubrimiento automático del servidor**: `StationAutoDiscoveryWorker` escanea cada minuto
+  (arranca 20 s después de iniciar) si `ScannerAutoAdd` está activo. `StationDiscoveryService`
+  centraliza el emparejamiento por **MAC → ID → nombre → IP**, deduplica el lote, evita reactivar
+  bajas sin MAC y corrige tokens desactualizados. El escaneo manual de la consola usa la misma
+  lógica. Se conservan la sesión, la zona, la tarifa y el token de la fila original.
+- **Eliminación permanente**: `DELETE /api/stations/{id}` ya no solo desactiva. Borra sesiones,
+  ventas, artículos de venta, reservas, registros de agente y auditoría de la estación, y guarda su
+  MAC/IP en `DeletedStationIdentities` para que el descubrimiento automático no vuelva a dar de alta
+  un PC eliminado. El alta manual desde **Escanear la red** sí puede reincorporarlo y limpia la
+  exclusión. La tabla nueva se crea en bases antiguas desde `DbSeeder.EnsureCompatibilityAsync`.
+- **Pruebas**: compilación de la solución con 0 errores/0 advertencias. Con un anuncio UDP simulado
+  (`AA:BB:CC:DD:EE:FF`) se comprobó el alta automática (id 24), que `DELETE` devuelve 204 y borra la
+  fila, y que un segundo anuncio **no** la recrea (queda la exclusión en
+  `DeletedStationIdentities`). Se borró además el duplicado real id 23 sin sesiones activas; queda
+  la estación id 11 como único registro del PC 01. HttpClient también registró peticiones de
+  descubrimiento desde `192.168.1.9`.
+- **Versiones y despliegue**: 1.3.23 añadió la IP local y el borrado permanente; 1.3.24 incorporó el
+  anuncio de identidad; 1.3.25 agregó la tabla de exclusiones. Se recompilaron los tres instaladores
+  unificados para cada versión y se desplegó el servidor 1.3.25 en `C:\CyberManager\Servidor\Server`
+  con respaldos `_server-pre-1.3.23-*`, `_server-pre-1.3.24-*` y `_server-pre-1.3.25-*`. Base,
+  `appsettings.json`, `web.config`, `Logs` y `ClientUpdate` se conservaron; el manifiesto sirve
+  `client.zip` 1.3.25 con SHA-256 verificado y se envió la notificación a la estación 11.
+  `/api/health` devuelve `version: 1.3.25` e IP `192.168.1.8`.
+- **Pendiente**: cuando el cliente de PC 01 aplique el paquete 1.3.25, su anuncio UDP traerá la MAC y el
+  servidor debe emparejarlo con el id 11 y ponerlo en línea. La consola de este PC todavía ejecuta la
+  compilación anterior; basta reiniciarla para ver el texto nuevo de confirmación de borrado.
+
 ---
 
 ## Rutas y comandos clave

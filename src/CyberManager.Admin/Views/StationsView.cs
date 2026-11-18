@@ -688,15 +688,17 @@ public sealed class StationsView : UserControl, IRefreshable
 
         if (!Ui.Confirm(
                 $"¿Eliminar permanentemente el equipo {station.Name}? " +
-                "Esto desactivará el equipo y limpiará sus referencias.",
+                "Se borrarán también sus sesiones, ventas, reservas, registros de agente " +
+                "y auditoría. El equipo no volverá a agregarse automáticamente por escaneo. " +
+                "Esta acción no se puede deshacer.",
                 "Eliminar equipo"))
             return;
 
         _ = Ui.Run(async () =>
         {
-            await App.Api.DeactivateStationAsync(station.Id);
+            await App.Api.DeleteStationAsync(station.Id);
             await RefreshAsync();
-        }, "No se pudo desactivar el equipo");
+        }, "No se pudo eliminar el equipo");
     }
 
     // ---- escaneo de la red y actualización de los clientes ----

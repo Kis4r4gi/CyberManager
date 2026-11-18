@@ -55,6 +55,11 @@
                             <TextBlock Text="IP o URL del servidor" Style="{StaticResource Label}" />
                             <TextBox x:Name="ServerUrlBox" MaxLength="200" FontFamily="Consolas"
                                      ToolTip="Ejemplo: http://192.168.1.8:5080" />
+                            <TextBlock x:Name="LocalIpText" Style="{StaticResource Muted}"
+                                       FontFamily="Consolas" FontSize="11" Margin="0,5,0,0"
+                                       TextWrapping="Wrap"
+                                       ToolTip="IP de esta estación en su red; no es la IP del servidor."
+                                       Text="IP de este equipo: (obteniendo...)" />
                         </StackPanel>
 
                         <Button x:Name="DiscoverButton" Grid.Column="1" Content="Buscar en la red"

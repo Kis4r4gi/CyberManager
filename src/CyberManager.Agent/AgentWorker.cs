@@ -116,8 +116,11 @@ public class AgentWorker : BackgroundService
 
         try
         {
+            var identity = new DiscoveryIdentity("agent", options.StationId, options.Token,
+                Environment.MachineName, NetworkIdentity.LocalIPv4(), NetworkIdentity.PrimaryMac(),
+                AppInfo.Version);
             var found = await ServerLocator.FindWorkingAsync(options.ServerUrl,
-                TimeSpan.FromSeconds(2), ct);
+                TimeSpan.FromSeconds(2), ct, identity);
             if (found is null) return;
 
             if (string.Equals(ServerLocator.Normalize(found),

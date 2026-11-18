@@ -541,6 +541,11 @@ public partial class App : Application
         }
     }
 
+    /// <summary>Identidad que se anuncia al servidor para que pueda localizar este PC.</summary>
+    internal static DiscoveryIdentity StationIdentity()
+        => new("client", Config.StationId, Config.StationToken, Environment.MachineName,
+            NetworkIdentity.LocalIPv4(), NetworkIdentity.PrimaryMac(), AppInfo.Version);
+
     /// <summary>
     /// Busca el servidor en la red local cuando la dirección guardada no responde.
     /// Se limita a un intento cada 30 segundos para no saturar la red mientras el
@@ -555,7 +560,7 @@ public partial class App : Application
         _locating = true;
         try
         {
-            var found = await ServerLocator.FindWorkingAsync(Config.ServerUrl);
+            var found = await ServerLocator.FindWorkingAsync(Config.ServerUrl, identity: StationIdentity());
             if (found is null) return;
 
             // Sigue respondiendo la dirección actual: no hay nada que cambiar.

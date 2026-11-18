@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Rate> Rates => Set<Rate>();
     public DbSet<TimePackage> TimePackages => Set<TimePackage>();
     public DbSet<Station> Stations => Set<Station>();
+    public DbSet<DeletedStationIdentity> DeletedStationIdentities => Set<DeletedStationIdentity>();
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
 
@@ -51,6 +52,8 @@ public class AppDbContext : DbContext
         b.Entity<Setting>().HasKey(x => x.Key);
         b.Entity<Product>().HasIndex(x => x.Sku).IsUnique();
         b.Entity<Station>().HasIndex(x => x.Name).IsUnique();
+        b.Entity<DeletedStationIdentity>().HasIndex(x => x.MacAddress);
+        b.Entity<DeletedStationIdentity>().HasIndex(x => x.IpAddress);
         b.Entity<DeviceRegistration>().HasIndex(x => x.Token).IsUnique();
         b.Entity<Sale>().HasIndex(x => x.Number).IsUnique();
         b.Entity<Customer>().HasIndex(x => x.Name);

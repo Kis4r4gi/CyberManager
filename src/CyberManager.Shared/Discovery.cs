@@ -69,6 +69,19 @@ public sealed record DiscoveryMessage(
     string? Version = null,
     DateTime? SentUtc = null);
 
+/// <summary>
+/// Identidad que una estación incluye al buscar el servidor. Así el servidor puede
+/// ubicarla y registrarla aunque el firewall bloquee el puerto UDP 5092.
+/// </summary>
+public sealed record DiscoveryIdentity(
+    string Role = "client",
+    int StationId = 0,
+    string? Token = null,
+    string? MachineName = null,
+    string? IpAddress = null,
+    string? MacAddress = null,
+    string? Version = null);
+
 /// <summary>Utilidades para obtener la identidad de red del equipo local.</summary>
 public static class NetworkIdentity
 {

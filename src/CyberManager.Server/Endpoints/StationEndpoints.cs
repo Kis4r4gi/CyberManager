@@ -92,14 +92,9 @@ public static class StationEndpoints
             return Results.NoContent();
         }).RequireAuthorization("Admin");
 
-        g.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
+        g.MapDelete("/{id:int}", async (int id, StationDeletionService deletion, CancellationToken ct) =>
         {
-            var st = await db.Stations.FirstOrDefaultAsync(s => s.Id == id) ?? throw AppException.NotFound("Equipo");
-            if (await db.Sessions.AnyAsync(s => s.StationId == id
-                    && s.Status != SessionStatus.Closed && s.Status != SessionStatus.Cancelled))
-                throw new AppException("El equipo tiene una sesión activa.");
-            st.Active = false;
-            await db.SaveChangesAsync();
+            await deletion.DeleteAsync(id, ct);
             return Results.NoContent();
         }).RequireAuthorization("Admin");
 

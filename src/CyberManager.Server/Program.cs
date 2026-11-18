@@ -84,6 +84,8 @@ builder.Services.AddScoped<BackupService>();
 builder.Services.AddSingleton<UpdateService>();
 builder.Services.AddScoped<UpdateReminderService>();
 builder.Services.AddScoped<NetworkScanService>();
+builder.Services.AddScoped<StationDiscoveryService>();
+builder.Services.AddScoped<StationDeletionService>();
 builder.Services.AddSingleton<ClientUpdateService>();
 builder.Services.AddSingleton(new DatabaseInfo(dbFile));
 builder.Services.AddSingleton<TokenService>();
@@ -91,6 +93,7 @@ builder.Services.AddHostedService<StationMonitorService>();
 builder.Services.AddHostedService<BackupWorker>();
 builder.Services.AddHostedService<BcvRateWorker>();
 builder.Services.AddHostedService<ServerDiscoveryService>();
+builder.Services.AddHostedService<StationAutoDiscoveryWorker>();
 
 builder.Services.AddSignalR(o =>
     {
