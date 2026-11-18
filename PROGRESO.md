@@ -1663,9 +1663,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Detalle corregido**: la ventana ya no asigna `DialogResult` al cerrarse, porque ese valor sólo
   es válido cuando se abre con `ShowDialog()`. Ningún llamador lo utilizaba.
 - **Versión 1.3.22** en `version.props`; paquete `ClientUpdate\client.zip` regenerado con el
-  cliente nuevo (67.583.854 bytes, SHA-256 `edbd6f01…`, `publishedUtc`
-  2026-11-18T15:26:52.858Z, 276 entradas, sin `appsettings.json`). Servidor y consola se publican
-  con la misma versión para mantener la coherencia.
+  cliente nuevo (67.583.851 bytes, SHA-256 `8bb3936d…`, `publishedUtc`
+  2026-11-18T15:44:59.091Z, sin `appsettings.json`). Servidor y consola se publican con la misma
+  versión para mantener la coherencia.
 - **Despliegue local**: copiados servidor y consola a `C:\CyberManager\Servidor` con respaldos
   `_server-pre-1.3.22-20261118-1127` y `_admin-pre-1.3.22-20261118-1127`; base, `appsettings.json`
   y `web.config` intactos. `/api/health` → versión 1.3.22 e IP `192.168.1.8`. Manifiesto y zip del
@@ -1678,6 +1678,16 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (`b960a85..7d1a01a`, once commits: 1.3.10 a 1.3.22). También se envió la notificación de
   actualización a la estación 11 (`{"sent":true,"stationId":11,"version":"1.3.22"}`); el paquete
   sigue esperando a que PC 01 vuelva a conectarse. No se creó ningún release de GitHub.
+- **Instaladores unificados 1.3.22**: compilados con
+  `.\scripts\build-installer.ps1 -Version 1.3.22 -Architecture all -SkipVncDownload -NoBump`
+  (x64 + x86, TightVNC ya descargado y verificado):
+  - `artifacts\CyberManager-Servidor-1.3.22.exe`, 378,0 MB, SHA-256 `acb437f5…`.
+  - `artifacts\CyberManager-Estacion-1.3.22.exe`, 143,9 MB, SHA-256 `59a8fe7c…`.
+  - `artifacts\CyberManager-Unificado-1.3.22.exe`, 509,1 MB, SHA-256 `7289b2b7…`.
+  Los ejecutables quedan en `artifacts\`, excluidos por `.gitignore` (además, superan el límite
+  de 100 MB por archivo de GitHub), así que **no se suben al repositorio**; el "update del git" se
+  refiere al código y a este registro. El paquete `client.zip` regenerado por esta compilación se
+  copió al servidor y `/api/client-update/manifest` ya sirve el SHA-256 `8bb3936d…`.
 - **Pendiente**: instalar/actualizar el cliente 1.3.22 en los PCs y comprobar desde la estación que
   el campo guarda la IP correcta. PC 01 sigue sin ser accesible por red.
 
