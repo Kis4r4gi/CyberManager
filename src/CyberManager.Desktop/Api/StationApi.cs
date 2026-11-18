@@ -16,7 +16,8 @@ public class StationApi : ApiClient
     public string? StationMacAddress { get; }
 
     /// <summary>Autenticación por token del equipo (método principal).</summary>
-    public StationApi(string baseUrl, int stationId, string? token = null) : base(baseUrl)
+    public StationApi(string baseUrl, int stationId, string? token = null, TimeSpan? timeout = null)
+        : base(baseUrl, timeout)
     {
         StationId = stationId;
         Headers["X-Station-Id"] = stationId.ToString();
@@ -26,7 +27,7 @@ public class StationApi : ApiClient
 
     /// <summary>Autenticación por IP y MAC (compatibilidad) con token opcional.</summary>
     public StationApi(string baseUrl, int stationId, string ipAddress, string macAddress,
-        string? token = null) : base(baseUrl)
+        string? token = null, TimeSpan? timeout = null) : base(baseUrl, timeout)
     {
         StationId = stationId;
         StationIpAddress = string.IsNullOrWhiteSpace(ipAddress) ? null : ipAddress;

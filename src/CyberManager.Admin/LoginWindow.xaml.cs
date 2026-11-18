@@ -4,6 +4,7 @@ using CyberManager.Admin.Services;
 using CyberManager.Desktop.Api;
 using CyberManager.Desktop.Services;
 using CyberManager.Shared;
+using CyberManager.Shared.Dtos;
 
 namespace CyberManager.Admin;
 
@@ -73,9 +74,24 @@ public partial class LoginWindow : Window
             var config = AppConfig.Load("Admin");
             var url = ApiClient.Normalize(config.ServerUrl);
             var terminal = ApiClient.NormalizeTerminal(config.TerminalName);
-            var api = new CyberApi(url);
-            api.Headers[ApiClient.TerminalHeader] = terminal;
-            var response = await api.LoginAsync(UsernameBox.Text.Trim(), PasswordBox.Password);
+
+            CyberApi api;
+            LoginResponse response;
+            try
+            {
+                (api, response) = await TryLoginAsync(url, terminal, UsernameBox.Text.Trim(),
+                    PasswordBox.Password, TimeSpan.FromSeconds(8));
+            }
+            catch (Exception ex) when (ServerLocator.IsConnectionError(ex))
+            {
+                // El servidor pudo cambiar de IP: se busca en la red y se reintenta.
+                var found = await ServerLocator.FindWorkingAsync(url);
+                if (found is null) throw;
+
+                url = ApiClient.Normalize(found);
+                (api, response) = await TryLoginAsync(url, terminal, UsernameBox.Text.Trim(),
+                    PasswordBox.Password);
+            }
 
             App.SetSession(api, response, url, terminal);
 
@@ -96,6 +112,15 @@ public partial class LoginWindow : Window
             LoginButton.IsEnabled = true;
             LoginButton.Content = L.T("Entrar a la consola");
         }
+    }
+
+    private static async Task<(CyberApi Api, LoginResponse Response)> TryLoginAsync(
+        string url, string terminal, string username, string password, TimeSpan? timeout = null)
+    {
+        var api = new CyberApi(url, timeout);
+        api.Headers[ApiClient.TerminalHeader] = terminal;
+        var response = await api.LoginAsync(username, password);
+        return (api, response);
     }
 
     private void ShowError(string message)

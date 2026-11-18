@@ -37,6 +37,8 @@ public partial class App : Application
     private bool _restarting;
     private DateTime _lastUpdateCheck = DateTime.MinValue;
     private DateTime _lastConnectAttempt = DateTime.MinValue;
+    private DateTime _lastLocateAttempt = DateTime.MinValue;
+    private bool _locating;
     private DiscoveryResponder? _discovery;
     private SetupWindow? _setupWindow;
     private PrepaidWindow? _prepaidWindow;
@@ -226,34 +228,13 @@ public partial class App : Application
 
         // El token es la credencial principal; la IP/MAC se mantienen como respaldo
         // para equipos instalados antes de que el servidor asignara tokens.
-        Api = string.IsNullOrWhiteSpace(Config.StationToken)
-            ? new StationApi(Config.ServerUrl, Config.StationId,
-                Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty)
-            : new StationApi(Config.ServerUrl, Config.StationId, Config.StationToken);
-
-        Realtime = new StationRealtime();
-        Realtime.CommandReceived += OnCommandReceived;
-        Realtime.StationStateChanged += OnStationStateChanged;
-        Realtime.SessionWarning += OnSessionWarning;
-        Realtime.WallpaperChanged += OnWallpaperChanged;
-        Realtime.PromoVideosChanged += OnPromoVideosChanged;
-        Realtime.ScreenFrameRequested += OnScreenFrameRequested;
-        Realtime.RemoteInputReceived += OnRemoteInputReceived;
-        Realtime.ClientUpdateAvailable += OnClientUpdateAvailable;
-        Realtime.ConnectionChanged += OnRealtimeConnectionChanged;
+        Api = CreateStationApi();
+        Realtime = CreateRealtime();
 
         try
         {
             // Conectar usando el método apropiado según la configuración
-            if (!string.IsNullOrWhiteSpace(Config.StationToken))
-            {
-                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
-            }
-            else
-            {
-                await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId,
-                    Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty);
-            }
+            await ConnectRealtimeAsync();
             _lastConnectAttempt = DateTime.UtcNow;
             ClientLog.Info("Conectado al servidor en tiempo real.");
         }
@@ -279,6 +260,47 @@ public partial class App : Application
         // marca para que no se reinicie en bucle.
         ClientUpdateInstaller.TryDelete(Path.Combine(AppContext.BaseDirectory,
             ClientUpdateInstaller.PendingFile));
+    }
+
+    /// <summary>
+    /// Cliente de la API de la estación. El token es la credencial principal; la
+    /// IP/MAC se mantienen como respaldo para equipos instalados antes de que el
+    /// servidor asignara tokens.
+    /// </summary>
+    private StationApi CreateStationApi()
+        => CreateStationApi(Config.ServerUrl);
+
+    private StationApi CreateStationApi(string url, TimeSpan? timeout = null)
+        => string.IsNullOrWhiteSpace(Config.StationToken)
+            ? new StationApi(url, Config.StationId,
+                Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty,
+                null, timeout ?? TimeSpan.FromSeconds(15))
+            : new StationApi(url, Config.StationId, Config.StationToken,
+                timeout ?? TimeSpan.FromSeconds(15));
+
+    private StationRealtime CreateRealtime()
+    {
+        var realtime = new StationRealtime();
+        realtime.CommandReceived += OnCommandReceived;
+        realtime.StationStateChanged += OnStationStateChanged;
+        realtime.SessionWarning += OnSessionWarning;
+        realtime.WallpaperChanged += OnWallpaperChanged;
+        realtime.PromoVideosChanged += OnPromoVideosChanged;
+        realtime.ScreenFrameRequested += OnScreenFrameRequested;
+        realtime.RemoteInputReceived += OnRemoteInputReceived;
+        realtime.ClientUpdateAvailable += OnClientUpdateAvailable;
+        realtime.ConnectionChanged += OnRealtimeConnectionChanged;
+        return realtime;
+    }
+
+    private Task ConnectRealtimeAsync()
+    {
+        if (Api is null || Realtime is null) return Task.CompletedTask;
+
+        return string.IsNullOrWhiteSpace(Config.StationToken)
+            ? Realtime.ConnectAsync(Api.BaseUrl, Config.StationId,
+                Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty)
+            : Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
     }
 
     private void StartDiscovery()
@@ -497,6 +519,10 @@ public partial class App : Application
                     _barWindow?.ShowRestoredBackup();
                 }
             }
+
+            // La dirección guardada dejó de responder: puede que el servidor tenga
+            // otra IP. Se busca en la red y, si aparece, se reconecta sin reiniciar.
+            await TryRelocateServerAsync();
         }
 
         // El latido se envía aunque falle la consulta de estado, para que el
@@ -509,19 +535,103 @@ public partial class App : Application
             _lastConnectAttempt = DateTime.UtcNow;
             try
             {
-                // Reintentar conexión usando el método apropiado
-                if (!string.IsNullOrWhiteSpace(Config.StationToken))
-                {
-                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId, Config.StationToken);
-                }
-                else
-                {
-                    await Realtime.ConnectAsync(Api.BaseUrl, Config.StationId,
-                        Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty);
-                }
+                await ConnectRealtimeAsync();
             }
             catch { /* se reintenta luego */ }
         }
+    }
+
+    /// <summary>
+    /// Busca el servidor en la red local cuando la dirección guardada no responde.
+    /// Se limita a un intento cada 30 segundos para no saturar la red mientras el
+    /// servidor está apagado.
+    /// </summary>
+    private async Task TryRelocateServerAsync()
+    {
+        if (_locating || _shuttingDown || Api is null) return;
+        if (DateTime.UtcNow - _lastLocateAttempt < TimeSpan.FromSeconds(30)) return;
+
+        _lastLocateAttempt = DateTime.UtcNow;
+        _locating = true;
+        try
+        {
+            var found = await ServerLocator.FindWorkingAsync(Config.ServerUrl);
+            if (found is null) return;
+
+            // Sigue respondiendo la dirección actual: no hay nada que cambiar.
+            if (string.Equals(ServerLocator.Normalize(found),
+                    ServerLocator.Normalize(Api.BaseUrl), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            // Se comprueba con el token del equipo: así no se acepta cualquier
+            // servidor de la red que responda /api/health.
+            if (!await ValidateStationAsync(found)) return;
+
+            await SwitchServerAsync(found);
+        }
+        catch
+        {
+            // Sin red disponible: se reintenta en el próximo refresco.
+        }
+        finally
+        {
+            _locating = false;
+        }
+    }
+
+    /// <summary>
+    /// Comprueba que el servidor encontrado conoce este equipo: pide el estado con
+    /// el token de la estación. Un servidor ajeno (o con otro token) se descarta.
+    /// </summary>
+    private async Task<bool> ValidateStationAsync(string url)
+    {
+        StationApi? probe = null;
+        try
+        {
+            probe = CreateStationApi(url, TimeSpan.FromSeconds(8));
+            await probe.StateAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ClientLog.Error($"El servidor {url} no reconoce este equipo", ex);
+            return false;
+        }
+        finally
+        {
+            probe?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Cambia la dirección del servidor en caliente: guarda la nueva URL, reconstruye
+    /// la API y el canal en tiempo real y refresca el estado. No cierra la pantalla
+    /// de bloqueo ni la barra, así que el equipo no parpadea.
+    /// </summary>
+    private async Task SwitchServerAsync(string url)
+    {
+        url = ServerLocator.Normalize(url);
+        var previous = Config.ServerUrl;
+        ClientLog.Info($"Servidor encontrado en {url} (antes {previous}). Se reconecta.");
+
+        Config.ServerUrl = url;
+        try { Config.Save("Client"); } catch { /* carpeta de solo lectura */ }
+
+        Api?.Dispose();
+        Api = CreateStationApi();
+
+        var old = Realtime;
+        Realtime = null;
+        if (old is not null)
+        {
+            try { await old.DisposeAsync(); } catch { /* ya cerrado */ }
+        }
+
+        Realtime = CreateRealtime();
+        _lastConnectAttempt = DateTime.UtcNow;
+        try { await ConnectRealtimeAsync(); } catch { /* el refresco reintenta */ }
+
+        await RefreshAsync();
     }
 
     private Task SendHeartbeatAsync()
@@ -836,11 +946,27 @@ public partial class App : Application
         {
             login = new AdminLoginWindow();
             if (_lockWindow.IsVisible) login.Owner = _lockWindow;
-            if (login.ShowDialog() != true || login.Api is null) return;
+            if (login.ShowDialog() != true) return;
         }
         finally
         {
             _lockWindow.SuppressActivation = false;
+        }
+
+        // Sin conexión no hay configuración remota: el administrador desbloquea el
+        // equipo con la credencial guardada. Al volver el servidor, su estado manda.
+        if (login.Offline || login.Api is null)
+        {
+            ClientLog.Info("Desbloqueo local de administrador sin conexión al servidor.");
+            _forcedLock = false;
+            SetLocked(false, State);
+            MessageBox.Show(
+                "No hay conexión con el servidor. El equipo quedó desbloqueado con la " +
+                "credencial de administrador guardada en este equipo.\n\n" +
+                "Cuando vuelva la conexión, el servidor retomará el control de la estación.",
+                "CyberManager", MessageBoxButton.OK, MessageBoxImage.Information);
+            await RefreshAsync();
+            return;
         }
 
         _adminMode = true;

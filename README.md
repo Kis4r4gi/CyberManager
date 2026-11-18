@@ -88,6 +88,14 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Escaneo de la red local**: desde *Equipos* el servidor descubre las estaciones instaladas
   (cliente y agente por UDP), muestra su IP, MAC y versión, y tras confirmar las registra y les
   envía el ID y el token automáticamente.
+- **El servidor se encuentra solo**: si cambia la IP del servidor (reinicio del router o del
+  equipo), el cliente, la consola y el agente lo buscan por difusión UDP (5094) y, si hace falta,
+  recorriendo la subred; validan la dirección con el token del equipo y la guardan sin reinstalar ni
+  reconfigurar nada.
+- **Desbloqueo de administrador sin conexión**: tras un inicio de sesión correcto, el cliente guarda
+  una copia local de la contraseña de administrador (PBKDF2 + DPAPI, con límite de intentos) para
+  poder abrir el equipo cuando el servidor no responde. Una contraseña rechazada por el servidor
+  nunca usa esa copia.
 - **Actualización automática de los clientes**: el servidor publica el paquete del cliente junto
   a su instalación; las estaciones lo descargan, verifican el SHA-256 y se reinician con la
   versión nueva, sin reinstalar.
@@ -107,6 +115,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   incluyen la casilla **Mostrar contraseña**.
 - **Pantalla de bloqueo sin reloj**: desde la versión 1.3.11 el bloqueo no muestra la hora ni la
   fecha; el equipo sigue usando la hora local de Windows para la barra de sesión y el prepago.
+- **Identidad en el bloqueo**: el logo y el nombre del software van en la barra inferior izquierda,
+  y el nombre del equipo se muestra en blanco y en tamaño grande en la esquina superior derecha.
 - **Acciones por equipo en «Equipos»**: cada fila incluye un menú desplegable **Acciones** con
   subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
   bloquear, enviar mensaje, actualizar cliente, mantenimiento, activar/desactivar y eliminar. La

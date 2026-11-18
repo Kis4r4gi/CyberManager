@@ -18,9 +18,18 @@ public static class DiscoveryProtocol
     /// <summary>Puerto donde escucha el agente de Windows.</summary>
     public const int AgentPort = 5093;
 
+    /// <summary>Puerto donde el servidor responde a la b�squeda de la pantalla y la consola.</summary>
+    public const int ServerPort = 5094;
+
     public const string RequestMagic = "CYBERMANAGER-DISCOVER-1";
     public const string ResponseMagic = "CYBERMANAGER-STATION-1";
     public const string ConfigureMagic = "CYBERMANAGER-CONFIGURE-1";
+
+    /// <summary>Pregunta difundida por la pantalla, la consola o el agente: "�d�nde est� el servidor?".</summary>
+    public const string FindServerMagic = "CYBERMANAGER-FIND-SERVER-1";
+
+    /// <summary>Respuesta del servidor con su direcci�n actual en la red local.</summary>
+    public const string ServerMagic = "CYBERMANAGER-SERVER-1";
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -125,5 +134,87 @@ public static class NetworkIdentity
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Direcciones IPv4 de las interfaces activas. Con <paramref name="onlyWithGateway"/>
+    /// se limita a la red que realmente sale a Internet/LAN y se descartan adaptadores
+    /// virtuales (Hyper-V, VPN, etc.).
+    /// </summary>
+    public static IReadOnlyList<string> LocalIPv4Addresses(bool onlyWithGateway = false)
+    {
+        try
+        {
+            var result = new List<string>();
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
+                    or NetworkInterfaceType.Tunnel) continue;
+
+                var properties = nic.GetIPProperties();
+                if (onlyWithGateway && !properties.GatewayAddresses.Any(g =>
+                        g.Address is not null && !g.Address.Equals(IPAddress.Any)))
+                    continue;
+
+                foreach (var unicast in properties.UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    if (IPAddress.IsLoopback(unicast.Address)) continue;
+                    var text = unicast.Address.ToString();
+                    if (text.StartsWith("169.254.", StringComparison.Ordinal)) continue;
+                    if (!result.Contains(text)) result.Add(text);
+                }
+            }
+
+            return result;
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    /// <summary>
+    /// Direcciones de difusi�n donde buscar al servidor: la global y la de cada
+    /// subred activa. Un router puede filtrar 255.255.255.255, pero casi siempre
+    /// deja pasar la difusi�n de la propia subred.
+    /// </summary>
+    public static IReadOnlyList<IPAddress> BroadcastAddresses()
+    {
+        var result = new List<IPAddress> { IPAddress.Broadcast };
+        try
+        {
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
+                    or NetworkInterfaceType.Tunnel) continue;
+
+                foreach (var unicast in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (unicast.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    var mask = unicast.IPv4Mask;
+                    if (mask is null) continue;
+
+                    var ipBytes = unicast.Address.GetAddressBytes();
+                    var maskBytes = mask.GetAddressBytes();
+                    if (ipBytes.Length != 4 || maskBytes.Length != 4) continue;
+
+                    var broadcast = new byte[4];
+                    for (var i = 0; i < 4; i++)
+                        broadcast[i] = (byte)(ipBytes[i] | ~maskBytes[i]);
+
+                    var address = new IPAddress(broadcast);
+                    if (!result.Contains(address)) result.Add(address);
+                }
+            }
+        }
+        catch
+        {
+            // Sin informaci�n de interfaces queda solo la difusi�n global.
+        }
+
+        return result;
     }
 }

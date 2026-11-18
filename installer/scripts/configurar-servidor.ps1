@@ -64,12 +64,20 @@ if ($RegistrarTarea) {
 }
 
 if ($AbrirFirewall) {
-    Write-Step "Abriendo el puerto TCP 5080 en el Firewall de Windows..."
+    Write-Step "Abriendo el puerto TCP 5080 y el UDP 5094 en el Firewall de Windows..."
     $ruleName = "CyberManager Server 5080"
     Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
     New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP `
         -LocalPort 5080 -Action Allow -Profile Domain,Private,Public `
         -Description "Acceso de las estaciones al servidor de CyberManager." | Out-Null
+
+    # UDP 5094: las pantallas, la consola y los agentes preguntan dónde está el
+    # servidor. Así un cambio de IP no obliga a reconfigurar cada equipo.
+    $discoveryRule = "CyberManager Server 5094 (descubrimiento)"
+    Remove-NetFirewallRule -DisplayName $discoveryRule -ErrorAction SilentlyContinue
+    New-NetFirewallRule -DisplayName $discoveryRule -Direction Inbound -Protocol UDP `
+        -LocalPort 5094 -Action Allow -Profile Domain,Private,Public `
+        -Description "Descubrimiento automático del servidor de CyberManager." | Out-Null
 }
 
 Write-Host ""

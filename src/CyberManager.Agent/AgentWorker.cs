@@ -20,6 +20,7 @@ public class AgentWorker : BackgroundService
     private HubConnection? _hub;
     private string _state = "locked";
     private DateTime _lastFilterUpdate = DateTime.MinValue;
+    private DateTime _lastLocateAttempt = DateTime.MinValue;
 
     public AgentWorker(AgentConfigStore config, ClientUpdateApplier updates,
         ILogger<AgentWorker> log, ILogger<WebFilterService> filterLog)
@@ -85,6 +86,7 @@ public class AgentWorker : BackgroundService
                 catch (Exception ex)
                 {
                     _log.LogWarning(ex, "No se pudo contactar al servidor");
+                    await TryRelocateAsync(options, stoppingToken);
                 }
             }
 
@@ -101,6 +103,36 @@ public class AgentWorker : BackgroundService
             await _hub.DisposeAsync();
 
         _filter.Dispose();
+    }
+
+    /// <summary>
+    /// Si el servidor no responde en la dirección guardada, se busca en la red local
+    /// (UDP 5094 y, si hace falta, recorrido de la subred) y se guarda la nueva.
+    /// </summary>
+    private async Task TryRelocateAsync(AgentOptions options, CancellationToken ct)
+    {
+        if (DateTime.UtcNow - _lastLocateAttempt < TimeSpan.FromSeconds(30)) return;
+        _lastLocateAttempt = DateTime.UtcNow;
+
+        try
+        {
+            var found = await ServerLocator.FindWorkingAsync(options.ServerUrl,
+                TimeSpan.FromSeconds(2), ct);
+            if (found is null) return;
+
+            if (string.Equals(ServerLocator.Normalize(found),
+                    ServerLocator.Normalize(options.ServerUrl), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _log.LogInformation("Servidor encontrado en {Url}; se actualiza la configuración del agente",
+                found);
+            _config.Save(options.StationId, options.Token, found);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _log.LogDebug(ex, "No se pudo buscar el servidor en la red");
+        }
     }
 
     private async Task ConnectAsync(AgentOptions options, CancellationToken ct)

@@ -1548,6 +1548,62 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   SHA-256 `013a9da3…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
+### Descubrimiento automático del servidor y desbloqueo sin conexión (1.3.20, 2026-11-18, sin publicar)
+
+- **Causa del corte**: el servidor cambió de `192.168.1.10` a `192.168.1.8` y cada cliente seguía
+  con la URL vieja en `%LOCALAPPDATA%\CyberManager\Client\config.json`, así que nunca volvía a
+  conectar. Ahora se corrige solo.
+- **El servidor se anuncia** (`ServerDiscoveryService`, UDP 5094): al recibir
+  `CYBERMANAGER-FIND-SERVER-1` responde `CYBERMANAGER-SERVER-1` con su URL actual, nombre del
+  equipo y versión. Se responde una vez por cada IPv4 local utilizable (la de la ruta al solicitante,
+  las que tienen puerta de enlace y el resto) para que un adaptador virtual (Hyper-V, WSL, VPN) no
+  tape la IP real. `/api/health` ahora incluye `app` y `version`.
+- **Buscador compartido** (`CyberManager.Shared.ServerLocator`): prueba la URL guardada, el propio
+  equipo, la difusión UDP y, como último recurso, recorre la subred con `/api/health`. El cliente, la
+  consola y el agente lo usan.
+- **Cliente**: si `/api/station/state` falla, busca el servidor (un intento cada 30 s), valida el
+  candidato con el token de la estación (`/api/station/state`) y cambia la URL en caliente —
+  reconstruye `StationApi` y SignalR sin cerrar el bloqueo ni la barra— guardando `ServerUrl`.
+- **Consola**: si el login falla por red (nunca ante un 401), busca el servidor, reintenta con
+  `admin` y guarda la URL encontrada en `%LOCALAPPDATA%\CyberManager\Admin\config.json`. El primer
+  intento usa 8 s de tiempo máximo para que el descubrimiento empiece pronto.
+- **Agente**: ante un fallo de conexión busca el servidor y actualiza `appsettings.json`; el
+  trabajador reconecta solo.
+- **Desbloqueo sin conexión** (`AdminCredentialCache`): cada login de administrador correcto en el
+  cliente guarda un hash PBKDF2-SHA256 (150.000 iteraciones, sal aleatoria) cifrado con DPAPI en
+  `%LOCALAPPDATA%\CyberManager\Client\admin-offline.dat`. Si el servidor no responde, la contraseña
+  de administrador abre el equipo con esa copia; un 401 del servidor nunca cae en la caché. Tras 5
+  fallos hay 5 minutos de espera.
+- **Firewall**: `configurar-servidor.ps1` abre UDP 5094 además de TCP 5080, y las casillas de los
+  instaladores lo mencionan.
+- **Bloqueo**: el logo pasó del encabezado a la barra inferior izquierda junto al nombre del
+  software; el nombre del equipo quedó en blanco y a 28 px.
+- **Versión 1.3.20** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.20 (67.582.145 bytes, SHA-256 `de1ae1f0…`,
+  `publishedUtc` 2026-11-18T14:47:31.884Z).
+- **Despliegue local**: respaldos `_bin-pre-1.3.20-20261118-1037` y `_admin-pre-1.3.20-20261118-1040`;
+  servidor y consola copiados a `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`,
+  `appsettings.json` ni `web.config`); tarea `CyberManagerServer` en `Running`,
+  `/api/health` → `{"status":"ok","app":"CyberManager","version":"1.3.20"}`; regla de firewall
+  UDP 5094 creada; manifiesto 1.3.20.
+- **Prueba en vivo**: una difusión a `255.255.255.255:5094` devolvió `192.168.1.8` y `172.30.64.1`
+  (adaptador virtual) con versión 1.3.20, y `ServerLocator` los listó como candidatos. La consola se
+  abrió con `ServerUrl` apuntando a una IP falsa (`192.168.1.99`) y, tras descubrir el servidor,
+  inició sesión en 14 s y abrió «CyberManager · Administración · v1.3.20», corrigiendo el archivo de
+  configuración. La consola de prueba se cerró al terminar.
+- **Prueba de la caché local**: con un proyecto de prueba aislado se comprobó `NotAvailable` antes
+  de sembrar, `Ok` con `admin/admin123`, `Invalid` con contraseña o usuario malos, `LockedOut` en el
+  quinto fallo y al intentar de nuevo con la contraseña correcta, y 5 minutos de espera. El archivo
+  `admin-offline.dat` quedó cifrado (sin «admin» en claro) y se borró al terminar la prueba.
+- **Detalle corregido**: cuando vencía el bloqueo de 5 minutos, el siguiente fallo volvía a
+  responder `LockedOut`; ahora se limpia el contador y la fecha al vencer.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.20-x64.zip` (35.627.231 bytes,
+  SHA-256 `4e4df824…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+  reiniciar el servicio `CyberManagerAgent`: así ese equipo también podrá encontrar el servidor si
+  vuelve a cambiar de IP.
+- **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; el agente debe actualizarse a
+  mano porque la PC no está accesible por red.
+
 ---
 
 ## Rutas y comandos clave
@@ -1691,6 +1747,11 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   (`magic` de petición, respuesta y configuración). El escaneo difunde a la red y barre cada /24;
   espera unos segundos y agrupa por MAC/IP. La autenticación de estación acepta `X-Station-Token`
   o, como compatibilidad, IP/MAC; el token es la credencial principal.
+- **Descubrimiento del servidor (1.3.20)**: el servidor escucha además UDP **5094**
+  (`CYBERMANAGER-FIND-SERVER-1` → `CYBERMANAGER-SERVER-1`) y anuncia todas sus IPv4. El cliente, la
+  consola y el agente usan `CyberManager.Shared.ServerLocator` para encontrar la dirección nueva,
+  validarla con el token del equipo y guardarla. La regla de firewall UDP 5094 se crea en
+  `configurar-servidor.ps1` y en los instaladores.
 - **Actualización de clientes**: el paquete se genera en `dist\<arch>\Server\ClientUpdate`
   (`client.zip` + `manifest.json` con versión y SHA-256) y el instalador del servidor copia la
   carpeta. El agente (SYSTEM) y el cliente comparan con `VersionUtil`; para reemplazar archivos en

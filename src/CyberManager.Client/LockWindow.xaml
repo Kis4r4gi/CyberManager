@@ -46,19 +46,15 @@
         <!-- ================= Encabezado ================= -->
         <Grid Grid.Row="0" Margin="44,30,44,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Width="46" Height="46" CornerRadius="12" Background="{StaticResource AccentBrush}">
-                    <TextBlock Text="C" FontSize="26" FontWeight="Bold" Foreground="#04131B"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
                 <local:OutlinedTextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="24" FontWeight="Bold"
-                           Margin="14,0,0,0" VerticalAlignment="Center"
+                           VerticalAlignment="Center"
                            Fill="{StaticResource TextBrush}" Stroke="#E6000000" StrokeThickness="1.6"
                            Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="22" FontWeight="SemiBold"
-                           HorizontalAlignment="Right" Fill="{StaticResource AccentBrush}"
+                <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="28" FontWeight="SemiBold"
+                           HorizontalAlignment="Right" Fill="#FFFFFF"
                            Stroke="#E6000000" StrokeThickness="1.6"
                            Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
                 <local:OutlinedTextBlock x:Name="ZoneText" Text="Zona estándar" FontSize="15"
@@ -123,12 +119,32 @@
         <Border Grid.Row="2" Margin="44,0,44,30" Padding="20,15" Background="#590F172A"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
             <Grid>
-                <local:OutlinedTextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Logo y nombre del software, en la esquina inferior izquierda. -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="34" Height="34" CornerRadius="9" Background="{StaticResource AccentBrush}">
+                        <TextBlock Text="C" FontSize="19" FontWeight="Bold" Foreground="#04131B"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <local:OutlinedTextBlock Text="CyberManager" FontSize="16" FontWeight="Bold"
+                               Margin="10,0,0,0" VerticalAlignment="Center"
+                               Fill="#FFFFFF" Stroke="#E6000000" StrokeThickness="1.2"
+                               Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />
+                </StackPanel>
+
+                <local:OutlinedTextBlock x:Name="FooterText" Grid.Column="1" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Margin="16,0"
                            FontSize="15" Fill="#FFFFFF"
                            Stroke="#E6000000" StrokeThickness="1.2"
                            Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />
 
-                <local:OutlinedTextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                <local:OutlinedTextBlock x:Name="VersionText" Grid.Column="2" HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
                            FontSize="15" Fill="{StaticResource MutedBrush}"
                            Stroke="#E6000000" StrokeThickness="1.2"
                            Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />

@@ -10,7 +10,7 @@ namespace CyberManager.Desktop.Api;
 /// <summary>Acceso tipado a la API del servidor.</summary>
 public class CyberApi : ApiClient
 {
-    public CyberApi(string baseUrl) : base(baseUrl) { }
+    public CyberApi(string baseUrl, TimeSpan? timeout = null) : base(baseUrl, timeout) { }
 
     // ---- auth ----
     public async Task<LoginResponse> LoginAsync(string username, string password)

@@ -90,6 +90,7 @@ builder.Services.AddSingleton<TokenService>();
 builder.Services.AddHostedService<StationMonitorService>();
 builder.Services.AddHostedService<BackupWorker>();
 builder.Services.AddHostedService<BcvRateWorker>();
+builder.Services.AddHostedService<ServerDiscoveryService>();
 
 builder.Services.AddSignalR(o =>
     {
@@ -204,7 +205,12 @@ app.MapGet("/", () => Results.Ok(new
     timeUtc = DateTime.UtcNow
 })).AllowAnonymous();
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+app.MapGet("/api/health", () => Results.Ok(new
+{
+    status = "ok",
+    app = "CyberManager",
+    version = AppInfo.Version
+})).AllowAnonymous();
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();

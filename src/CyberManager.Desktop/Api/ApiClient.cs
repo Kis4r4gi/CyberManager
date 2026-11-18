@@ -29,10 +29,10 @@ public class ApiClient : IDisposable
     public bool HasToken => !string.IsNullOrWhiteSpace(Token);
     public Dictionary<string, string> Headers { get; } = new();
 
-    public ApiClient(string baseUrl)
+    public ApiClient(string baseUrl, TimeSpan? timeout = null)
     {
         BaseUrl = Normalize(baseUrl);
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = TimeSpan.FromSeconds(30) };
+        _http = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = timeout ?? TimeSpan.FromSeconds(30) };
     }
 
     /// <summary>Libera el HttpClient para no dejar sockets abiertos al reconfigurar el equipo.</summary>
