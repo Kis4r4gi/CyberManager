@@ -1455,8 +1455,30 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   3 px o menos, es decir, el contorno se dibuja. Brillo medio 63,2 y desviación 48,1; sin reloj, sin
   fecha y sin tasa. PC 01 ya pasó sola a 1.3.13 y su sesión prepago #4 sigue activa; recibirá 1.3.14
   en la siguiente comprobación.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.14-x64.zip` (35.666.370 bytes,
-  SHA-256 `719b8de5…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.15.
+
+---
+
+### Fuente más grande en el bloqueo (1.3.15, 2026-11-18, sin publicar)
+
+- **Textos más grandes y legibles**: nombre del negocio 19 → **24**, equipo 17 → **22**, zona 12 → **15**,
+  título 22 → **30**, mensaje 15 → **18**, saludo y versión 12 → **15**. El contorno subió a 3,5–4 px
+  en los textos principales y 2,5 px en los pequeños, y el mensaje amplió su ancho de 560 a 620 px.
+  El pie conserva el mismo alto porque el borde tiene relleno holgado.
+- **Versión 1.3.15** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.15 (67.673.083 bytes, SHA-256 `1a30323c…`,
+  `publishedUtc` 2026-11-18T12:27:48.887Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.15-20261118-0831`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.15; servidor 1.3.15.
+- **Prueba en vivo**: estación temporal 19 (desactivada al terminar) con el cliente 1.3.15. Las cajas
+  de texto medidas por UI Automation crecieron: título 281×40 → **383×55**, equipo 176×32 → **226×41**,
+  versión 94×22 → **118×28**. El contorno se mantiene: 96,8 % de los píxeles del título y 100 % de los
+  del equipo y la versión tienen trazo oscuro a 3 px o menos. Brillo medio 62,5 y desviación 48,1; sin
+  reloj, sin fecha y sin tasa. PC 01 seguía en 1.3.13 al cerrar la prueba y recibirá 1.3.15 en su
+  siguiente comprobación.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.15-x64.zip` (35.666.392 bytes,
+  SHA-256 `aa12e930…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---

@@ -50,18 +50,18 @@
                     <TextBlock Text="C" FontSize="26" FontWeight="Bold" Foreground="#04131B"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <local:OutlinedTextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="19" FontWeight="Bold"
+                <local:OutlinedTextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="24" FontWeight="Bold"
                            Margin="14,0,0,0" VerticalAlignment="Center"
-                           Fill="{StaticResource TextBrush}" Stroke="#D9000000" StrokeThickness="3" />
+                           Fill="{StaticResource TextBrush}" Stroke="#D9000000" StrokeThickness="3.5" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="17" FontWeight="SemiBold"
+                <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="22" FontWeight="SemiBold"
                            HorizontalAlignment="Right" Fill="{StaticResource AccentBrush}"
-                           Stroke="#D9000000" StrokeThickness="3" />
-                <local:OutlinedTextBlock x:Name="ZoneText" Text="Zona estándar" FontSize="12"
+                           Stroke="#D9000000" StrokeThickness="3.5" />
+                <local:OutlinedTextBlock x:Name="ZoneText" Text="Zona estándar" FontSize="15"
                            HorizontalAlignment="Right" Fill="{StaticResource MutedBrush}"
-                           Stroke="#D9000000" StrokeThickness="2" />
+                           Stroke="#D9000000" StrokeThickness="2.5" />
             </StackPanel>
         </Grid>
 
@@ -74,14 +74,14 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
 
-            <local:OutlinedTextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="22" FontWeight="Bold"
-                       HorizontalAlignment="Center" Margin="0,30,0,0" Fill="{StaticResource AccentBrush}"
-                       Stroke="#D9000000" StrokeThickness="3" />
+            <local:OutlinedTextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="30" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,26,0,0" Fill="{StaticResource AccentBrush}"
+                       Stroke="#D9000000" StrokeThickness="4" />
             <local:OutlinedTextBlock x:Name="MessageText" Text="Solicite al cajero para iniciar su sesión."
-                       FontSize="15" Fill="{StaticResource MutedBrush}"
-                       HorizontalAlignment="Center" Margin="0,10,0,0"
-                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="560"
-                       Stroke="#D9000000" StrokeThickness="2.5" />
+                       FontSize="18" Fill="{StaticResource MutedBrush}"
+                       HorizontalAlignment="Center" Margin="0,12,0,0"
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="620"
+                       Stroke="#D9000000" StrokeThickness="3" />
 
             <StackPanel x:Name="LoginPanel" HorizontalAlignment="Center" Margin="0,26,0,0">
                 <Button x:Name="LoginButton" Content="Iniciar sesión" Style="{StaticResource PrimaryButton}"
@@ -119,12 +119,12 @@
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
             <Grid>
                 <local:OutlinedTextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="12" Fill="{StaticResource MutedBrush}"
-                           Stroke="#D9000000" StrokeThickness="2" />
+                           FontSize="15" Fill="{StaticResource MutedBrush}"
+                           Stroke="#D9000000" StrokeThickness="2.5" />
 
                 <local:OutlinedTextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           FontSize="12" Fill="{StaticResource MutedBrush}"
-                           Stroke="#D9000000" StrokeThickness="2" />
+                           FontSize="15" Fill="{StaticResource MutedBrush}"
+                           Stroke="#D9000000" StrokeThickness="2.5" />
             </Grid>
         </Border>
     </Grid>
