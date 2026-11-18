@@ -52,16 +52,19 @@
                 </Border>
                 <local:OutlinedTextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="24" FontWeight="Bold"
                            Margin="14,0,0,0" VerticalAlignment="Center"
-                           Fill="{StaticResource TextBrush}" Stroke="#D9000000" StrokeThickness="3.5" />
+                           Fill="{StaticResource TextBrush}" Stroke="#E6000000" StrokeThickness="1.6"
+                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
                 <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="22" FontWeight="SemiBold"
                            HorizontalAlignment="Right" Fill="{StaticResource AccentBrush}"
-                           Stroke="#D9000000" StrokeThickness="3.5" />
+                           Stroke="#E6000000" StrokeThickness="1.6"
+                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
                 <local:OutlinedTextBlock x:Name="ZoneText" Text="Zona estándar" FontSize="15"
                            HorizontalAlignment="Right" Fill="{StaticResource MutedBrush}"
-                           Stroke="#D9000000" StrokeThickness="2.5" />
+                           Stroke="#E6000000" StrokeThickness="1.2"
+                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />
             </StackPanel>
         </Grid>
 
@@ -76,12 +79,14 @@
 
             <local:OutlinedTextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="30" FontWeight="Bold"
                        HorizontalAlignment="Center" Margin="0,26,0,0" Fill="{StaticResource AccentBrush}"
-                       Stroke="#D9000000" StrokeThickness="4" />
+                       Stroke="#E6000000" StrokeThickness="1.8"
+                       Glow="#FF000000" GlowOpacity="0.9" GlowRadius="9" />
             <local:OutlinedTextBlock x:Name="MessageText" Text="Solicite al cajero para iniciar su sesión."
                        FontSize="18" Fill="#FFFFFF"
                        HorizontalAlignment="Center" Margin="0,12,0,0"
                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="620"
-                       Stroke="#D9000000" StrokeThickness="3" />
+                       Stroke="#E6000000" StrokeThickness="1.5"
+                       Glow="#FF000000" GlowOpacity="0.9" GlowRadius="6" />
 
             <StackPanel x:Name="LoginPanel" HorizontalAlignment="Center" Margin="0,26,0,0">
                 <Button x:Name="LoginButton" Content="Iniciar sesión" Style="{StaticResource PrimaryButton}"
@@ -120,11 +125,13 @@
             <Grid>
                 <local:OutlinedTextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
                            FontSize="15" Fill="#FFFFFF"
-                           Stroke="#D9000000" StrokeThickness="2.5" />
+                           Stroke="#E6000000" StrokeThickness="1.2"
+                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />
 
                 <local:OutlinedTextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"
                            FontSize="15" Fill="{StaticResource MutedBrush}"
-                           Stroke="#D9000000" StrokeThickness="2.5" />
+                           Stroke="#E6000000" StrokeThickness="1.2"
+                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="5" />
             </Grid>
         </Border>
     </Grid>

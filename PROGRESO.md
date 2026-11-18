@@ -1496,8 +1496,32 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Prueba en vivo**: estación temporal 20 (desactivada al terminar) con el cliente 1.3.16; el mensaje
   tiene 967 píxeles blancos y el saludo 221, todos con contorno oscuro a 3 px o menos. La versión sigue
   en gris. Sin errores en el log del cliente ni en el del servidor.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.16-x64.zip` (35.666.347 bytes,
-  SHA-256 `b2a196a8…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.18.
+
+---
+
+### Contorno fino con resplandor oscuro (1.3.18, 2026-11-18, sin publicar)
+
+- **Contorno más fino**: el trazo del bloqueo bajó a 1,2–1,8 px (antes 2,5–4 px), de modo que el
+  borde ya no engrosa las letras.
+- **Resplandor hacia afuera**: `OutlinedTextBlock` incorpora `Glow`, `GlowRadius` y `GlowOpacity`.
+  El halo se dibuja con 16 pasadas de trazo concéntricas, cada una más fina y opaca hacia el glifo,
+  lo que produce un degradado suave hacia afuera en vez de un borde duro. Radios: 9 px en el título,
+  7 px en negocio/equipo, 6 px en el mensaje y 5 px en zona, saludo y versión, con negro al 90 %.
+  El control reserva ese espacio en la medida para que el halo no se recorte.
+- **Versión 1.3.18** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.18 (67.673.889 bytes, SHA-256 `ee20b6d3…`,
+  `publishedUtc` 2026-11-18T12:45:54.427Z). La 1.3.17 fue un ajuste intermedio con el halo demasiado
+  sólido; se reemplazó por esta versión más suave.
+- **Despliegue local**: respaldo `_bin-pre-1.3.18-20261118-0852`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.18; servidor 1.3.18.
+- **Prueba en vivo**: estación temporal 22 (desactivada al terminar) con el cliente 1.3.18. El perfil
+  de luminancia desde el borde del título sube de 28 (2 px) a 49 (3 px), 54 (4 px) y ~65 (12 px),
+  frente al fondo de ~65–70: el halo se desvanece de forma gradual. El mensaje muestra la misma
+  progresión (42 → 48 → 70). Sin errores en el cliente ni en el servidor.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.18-x64.zip` (35.666.376 bytes,
+  SHA-256 `89d19892…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---
