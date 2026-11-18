@@ -1740,7 +1740,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   servidor debe emparejarlo con el id 11 y ponerlo en línea. La consola de este PC todavía ejecuta la
   compilación anterior; basta reiniciarla para ver el texto nuevo de confirmación de borrado.
 
-### Consola maximizada, mantenimiento que abre el terminal y estados instantáneos (1.3.26–1.3.30, 2026-11-18)
+### Consola maximizada, mantenimiento que abre el terminal y estados instantáneos (1.3.26–1.3.31, 2026-11-18)
 
 - **Escaneo ARP en español** (1.3.26): `NetworkScanService.ScanArp` acepta tanto `dynamic` como
   `dinámico`, por lo que `/api/stations/scan` volvió a ver el PC 01 (`192.168.1.9`,
@@ -1758,16 +1758,17 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   Minimizar deja el cliente en segundo plano; Cerrar pide confirmación y finaliza la aplicación;
   Desinstalar lanza el desinstalador. `ExitRequested` se maneja igual que `UninstallRequested` en
   `App.xaml.cs`.
-- **Estado al cerrar el cliente** (1.3.29–1.3.30): el latido del agente ya no puede devolver un equipo
+- **Estado al cerrar el cliente** (1.3.29–1.3.31): el latido del agente ya no puede devolver un equipo
   a «Disponible»; ese estado lo decide el cliente. `StationHub` ahora ofrece `ClientClosing`, que
   marca «Sin conexión» de inmediato y avisa a la consola por SignalR. Si el proceso muere sin avisar,
   `OnDisconnectedAsync` hace lo mismo tras 2 s. El cliente invoca `ClientClosing` desde `OnExit`
-  antes de cerrar SignalR, con un plazo de 2 s para no retrasar el apagado.
+  antes de cerrar SignalR. La llamada se espera de forma síncrona (máximo 2 s) porque WPF apaga el
+  dispatcher en cuanto `OnExit` devuelve el control y un `await` podría no llegar a ejecutarse.
 - **Pruebas y despliegue**: compilación con 0 errores/0 advertencias en cada versión; instaladores
-  unificados regenerados para 1.3.26–1.3.30. Servidor y consola desplegados con respaldos
-  `_server-pre-1.3.*` y `_admin-pre-1.3.*`. `/api/health` sirve `version: 1.3.30`, IP `192.168.1.8`;
-  `manifest.json` y `client.zip` coinciden en tamaño (`67.588.095`) y SHA-256
-  (`3ea1e2e9…`). Se envió la notificación de actualización a la estación 11. Con estaciones de prueba
+  unificados regenerados para 1.3.26–1.3.31. Servidor y consola desplegados con respaldos
+  `_server-pre-1.3.*` y `_admin-pre-1.3.*`. `/api/health` sirve `version: 1.3.31`, IP `192.168.1.8`;
+  `manifest.json` y `client.zip` coinciden en tamaño (`67.588.141`) y SHA-256
+  (`11a55bbe…`). Se envió la notificación de actualización a la estación 11. Con estaciones de prueba
   creadas por API se verificó que un latido pone el equipo «Disponible», que `ClientClosing` lo deja
   «Sin conexión» de inmediato y que una desconexión sin aviso lo hace en unos 2 s. Las estaciones de
   prueba se eliminaron con `DELETE` (204).

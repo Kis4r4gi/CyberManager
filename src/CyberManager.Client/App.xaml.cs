@@ -1197,12 +1197,16 @@ public partial class App : Application
         }
 
         // Aviso explícito antes de soltar SignalR: esperar a que el servidor note
-        // la desconexión dejaba el equipo como «Disponible» varios segundos.
-        if (Realtime is not null)
+        // la desconexión dejaba el equipo como «Disponible» varios segundos. Se
+        // espera de forma síncrona porque WPF apaga el dispatcher en cuanto OnExit
+        // devuelve el control; un await aquí podría no llegar a ejecutarse.
+        var closingRealtime = Realtime;
+        if (closingRealtime is not null)
         {
             try
             {
-                await Realtime.ClosingAsync().WaitAsync(TimeSpan.FromSeconds(2));
+                Task.Run(() => closingRealtime.ClosingAsync())
+                    .Wait(TimeSpan.FromSeconds(2));
             }
             catch
             {
