@@ -1677,7 +1677,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   advertencias) y se hicieron push de los commits locales a `origin/main`
   (`b960a85..7d1a01a`, once commits: 1.3.10 a 1.3.22). También se envió la notificación de
   actualización a la estación 11 (`{"sent":true,"stationId":11,"version":"1.3.22"}`); el paquete
-  sigue esperando a que PC 01 vuelva a conectarse. No se creó ningún release de GitHub.
+  sigue esperando a que PC 01 vuelva a conectarse.
 - **Instaladores unificados 1.3.22**: compilados con
   `.\scripts\build-installer.ps1 -Version 1.3.22 -Architecture all -SkipVncDownload -NoBump`
   (x64 + x86, TightVNC ya descargado y verificado):
@@ -1688,6 +1688,11 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   de 100 MB por archivo de GitHub), así que **no se suben al repositorio**; el "update del git" se
   refiere al código y a este registro. El paquete `client.zip` regenerado por esta compilación se
   copió al servidor y `/api/client-update/manifest` ya sirve el SHA-256 `8bb3936d…`.
+- **Release de GitHub**: a petición del usuario se publicó
+  https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.22 con **sólo dos assets**:
+  `CyberManager-Servidor-1.3.22.exe` (396.364.885 bytes, SHA-256 `acb437f5…`) y
+  `CyberManager-Estacion-1.3.22.exe` (150.860.390 bytes, SHA-256 `59a8fe7c…`). El instalador
+  *Unificado* quedó fuera de la release, como se pidió.
 - **Pendiente**: instalar/actualizar el cliente 1.3.22 en los PCs y comprobar desde la estación que
   el campo guarda la IP correcta. PC 01 sigue sin ser accesible por red.
 
