@@ -1604,7 +1604,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; el agente debe actualizarse a
   mano porque la PC no está accesible por red.
 
-### IP del servidor visible y diagnóstico de conexión (1.3.21, 2026-11-18, sin publicar)
+### IP del servidor visible y diagnóstico de conexión (1.3.21, 2026-11-18)
 
 - **Motivo**: el usuario informó que el servidor seguía sin conectar con los clientes. Revisión en
   vivo: `/api/health` correcto, `0.0.0.0:5080` y UDP `5094` escuchando, firewall con ambas reglas
@@ -1635,7 +1635,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; los demás PCs deben tener el
   cliente instalado y ejecutándose. El paquete de agente 1.3.20 sigue siendo válido para PC 01.
 
-### Configuración manual de la IP del servidor desde la estación (1.3.22, 2026-11-18, sin publicar)
+### Configuración manual de la IP del servidor desde la estación (1.3.22, 2026-11-18)
 
 - **Motivo**: el usuario pidió poder configurar manualmente la IP de conexión al servidor desde el
   menú de administrador del cliente, para los casos en que el descubrimiento automático no baste.
@@ -1673,6 +1673,11 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Agente 1.3.22**: `C:\CyberManager\CyberManager-Agente-1.3.22-x64.zip` (35.627.237 bytes,
   SHA-256 `5382ac3b…`, sin `appsettings.json`) para actualizar PC 01 cuando vuelva a estar
   accesible.
+- **Publicación**: a petición del usuario se recompiló el cliente en Release (0 errores y 0
+  advertencias) y se hicieron push de los commits locales a `origin/main`
+  (`b960a85..7d1a01a`, once commits: 1.3.10 a 1.3.22). También se envió la notificación de
+  actualización a la estación 11 (`{"sent":true,"stationId":11,"version":"1.3.22"}`); el paquete
+  sigue esperando a que PC 01 vuelva a conectarse. No se creó ningún release de GitHub.
 - **Pendiente**: instalar/actualizar el cliente 1.3.22 en los PCs y comprobar desde la estación que
   el campo guarda la IP correcta. PC 01 sigue sin ser accesible por red.
 
