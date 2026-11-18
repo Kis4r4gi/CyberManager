@@ -23,14 +23,17 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="StationText" Text="PC-01" FontSize="12" FontWeight="SemiBold"
                                    VerticalAlignment="Center" />
-                        <TextBlock x:Name="CustomerText" Text="Sesión activa" FontSize="10"
-                                   Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
-                                   VerticalAlignment="Center" MaxWidth="150"
-                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="CustomerSeparator" Text="·" FontSize="11"
+                                   Foreground="{StaticResource MutedBrush}" Margin="6,0,0,0"
+                                   VerticalAlignment="Center" Visibility="Collapsed" />
+                        <TextBlock x:Name="CustomerText" Text="" FontSize="10.5"
+                                   Foreground="{StaticResource MutedBrush}" Margin="6,0,0,0"
+                                   VerticalAlignment="Center" MaxWidth="160"
+                                   TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
                     </StackPanel>
-                    <TextBlock x:Name="DescriptionText" Text="Sesión activa" FontSize="9.5"
+                    <TextBlock x:Name="DescriptionText" Text="" FontSize="9.5"
                                Foreground="{StaticResource MutedBrush}" MaxWidth="220"
-                               TextTrimming="CharacterEllipsis" />
+                               TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
                 </StackPanel>
 
                 <Rectangle Width="1" Fill="{StaticResource BorderBrush}" Margin="0,2,10,2" />

@@ -1192,11 +1192,12 @@ public sealed class SettingsView : UserControl, IRefreshable
 
         panel.Children.Add(Kit.Section("Barra flotante del cliente"));
         panel.Children.Add(Description(
-            "La barra muestra el tiempo y el monto de la sesión sobre el escritorio del cliente. " +
-            "Puede cambiar el texto descriptivo y el tamaño sin reiniciar los equipos."));
+            "La barra muestra el nombre del equipo, el cliente, el tiempo y el monto de la sesión " +
+            "sobre el escritorio del cliente. Puede cambiar el tamaño y, si lo desea, añadir un " +
+            "texto bajo el nombre del equipo."));
         var bar = new UniformGrid { Columns = 2 };
-        AddText(bar, "SessionBarDescription", "Descripción de la barra",
-            "Sesión activa · consulte su tiempo y consumo");
+        AddText(bar, "SessionBarDescription", "Descripción de la barra (opcional)",
+            "Mensaje bajo el nombre del equipo");
         AddText(bar, "SessionBarScale", "Tamaño de la barra (%)", "100");
         panel.Children.Add(bar);
 

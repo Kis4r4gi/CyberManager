@@ -455,7 +455,7 @@ public static class DbSeeder
                 WallpaperSettings.DefaultRotationSeconds),
             [SettingsKeys.WallpaperActiveId] = string.Empty,
             [SettingsKeys.BundledWallpapersVersion] = string.Empty,
-            [SettingsKeys.SessionBarDescription] = "Sesión activa · consulte su tiempo y consumo",
+            [SettingsKeys.SessionBarDescription] = string.Empty,
             [SettingsKeys.SessionBarScale] = "100",
             [SettingsKeys.VncViewerPath] = string.Empty,
             [SettingsKeys.VncDefaultPort] = "5900",

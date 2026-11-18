@@ -96,7 +96,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,12">
-                            <TextBlock Text="Texto descriptivo de la barra de sesión" Style="{StaticResource Label}" />
+                            <TextBlock Text="Texto descriptivo de la barra de sesión (opcional)" Style="{StaticResource Label}" />
                             <TextBox x:Name="SessionBarDescriptionBox" MaxLength="160" />
                         </StackPanel>
 

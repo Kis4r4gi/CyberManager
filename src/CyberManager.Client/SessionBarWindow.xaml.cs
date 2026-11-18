@@ -51,15 +51,25 @@ public partial class SessionBarWindow : Window
         _state = state;
 
         StationText.Text = state.Name;
-        DescriptionText.Text = string.IsNullOrWhiteSpace(state.SessionBarDescription)
-            ? L.T("Sesión activa")
-            : state.SessionBarDescription!;
+
+        // La descripción es opcional: si no hay texto configurado no se muestra
+        // ningún renglón extra en la barra.
+        var description = state.SessionBarDescription?.Trim();
+        DescriptionText.Text = description ?? string.Empty;
+        DescriptionText.Visibility = string.IsNullOrEmpty(description)
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
         var scale = Math.Clamp(state.SessionBarScale, 70, 160) / 100d;
         RootScale.ScaleX = scale;
         RootScale.ScaleY = scale;
 
         var session = state.Session;
-        CustomerText.Text = session?.CustomerName ?? L.T("Sesión activa");
+        var customer = session?.CustomerName?.Trim();
+        var hasCustomer = !string.IsNullOrEmpty(customer);
+        CustomerText.Text = customer ?? string.Empty;
+        CustomerText.Visibility = hasCustomer ? Visibility.Visible : Visibility.Collapsed;
+        CustomerSeparator.Visibility = hasCustomer ? Visibility.Visible : Visibility.Collapsed;
 
         if (session is null)
         {

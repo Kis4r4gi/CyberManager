@@ -1288,6 +1288,19 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`. PC 01 se actualizó a 1.3.6 y
   reporta en línea.
 
+### Nombre del cliente en la barra y sin textos de relleno (1.3.7, 2026-11-18, sin publicar)
+
+- **Nombre del cliente junto al equipo**: la barra muestra `PC 01 · Nombre del cliente`; si la
+  sesión no tiene cliente registrado solo se muestra el nombre del equipo.
+- **Sin «Sesión activa»**: se eliminaron los textos de relleno del cliente y de la descripción.
+  La descripción (`SessionBarDescription`) ahora es opcional: si está vacía no se dibuja ningún
+  renglón extra. El valor por defecto del sembrador quedó vacío y en la instalación local se
+  limpió el texto anterior.
+- **Despliegue local 1.3.7**: servidor, consola y paquete `ClientUpdate` 1.3.7 copiados a
+  `C:\CyberManager\Servidor` (SHA-256 `5a8694c4…`, respaldo `_clientupdate-1.3.6-20261117-2236`),
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`. PC 01 se actualizó a 1.3.7 y
+  reporta en línea.
+
 ---
 
 ## Rutas y comandos clave
