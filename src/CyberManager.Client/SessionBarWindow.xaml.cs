@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CyberManager.Desktop.Services;
@@ -17,9 +18,11 @@ public partial class SessionBarWindow : Window
     private bool _hasAnchor;
     private bool _paused;
     private bool _prepaid;
+    private bool _countdown;
     private bool _overtime;
     private int _sessionId;
     private string? _warningText;
+    private bool _collapsed;
 
     public event Action? OrderRequested;
     /// <summary>El cliente prepago quiere comprar más minutos.</summary>
@@ -35,6 +38,7 @@ public partial class SessionBarWindow : Window
         Loaded += (_, _) =>
         {
             Loc.Apply(this);
+            ApplyCollapsedState();
             PositionTopCenter();
             _ticker.Start();
         };
@@ -80,6 +84,9 @@ public partial class SessionBarWindow : Window
             _warningText = null;
 
         _prepaid = session.Type == SessionType.Prepaid;
+        // En prepago el reloj muestra el tiempo restante, así que avanza hacia
+        // atrás; en postpago muestra el tiempo transcurrido y avanza hacia adelante.
+        _countdown = _prepaid;
         _overtime = session.Overtime;
         RechargeButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
         FinishButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
@@ -164,7 +171,7 @@ public partial class SessionBarWindow : Window
         if (_paused) return _anchorSeconds;
 
         var delta = (int)Math.Max(0, (DateTime.UtcNow - _anchorAt).TotalSeconds);
-        return _anchorSeconds + delta;
+        return _countdown ? _anchorSeconds - delta : _anchorSeconds + delta;
     }
 
     private void Tick()
@@ -177,32 +184,52 @@ public partial class SessionBarWindow : Window
         var danger = (Brush)FindResource("DangerBrush");
         var warning = (Brush)FindResource("WarningBrush");
 
+        string text;
+        Brush color;
+        string? warningText = null;
+
         if (_prepaid && session.Type != SessionType.Free)
         {
             if (seconds >= 0)
             {
-                TimeText.Text = Format(seconds);
-                TimeText.Foreground = seconds <= 300 ? warning : accent;
-                WarningText.Visibility = _warningText is null ? Visibility.Collapsed : Visibility.Visible;
+                text = Format(seconds);
+                color = seconds <= 300 ? warning : accent;
+                warningText = _warningText;
             }
             else
             {
-                TimeText.Text = "+" + Format(-seconds);
-                TimeText.Foreground = danger;
-                WarningText.Text = L.T("¡Tiempo agotado!");
-                WarningText.Visibility = Visibility.Visible;
+                text = "+" + Format(-seconds);
+                color = danger;
+                warningText = L.T("¡Tiempo agotado!");
             }
         }
         else
         {
-            TimeText.Text = Format(seconds);
-            TimeText.Foreground = accent;
+            text = Format(seconds);
+            color = accent;
             if (_overtime)
             {
-                TimeText.Foreground = danger;
-                WarningText.Text = L.T("¡Tiempo agotado!");
-                WarningText.Visibility = Visibility.Visible;
+                color = danger;
+                warningText = L.T("¡Tiempo agotado!");
             }
+        }
+
+        TimeText.Text = text;
+        TimeText.Foreground = color;
+        CollapsedTimeText.Text = text;
+        CollapsedTimeText.Foreground = color;
+        CollapsedWarningText.Visibility = warningText is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        if (warningText is null)
+        {
+            WarningText.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            WarningText.Text = warningText;
+            WarningText.Visibility = Visibility.Visible;
         }
     }
 
@@ -230,6 +257,38 @@ public partial class SessionBarWindow : Window
     private void Account_Click(object sender, RoutedEventArgs e)
     {
         AccountPopup.IsOpen = !AccountPopup.IsOpen;
+    }
+
+    private void Collapse_Click(object sender, RoutedEventArgs e) => SetCollapsed(true);
+
+    private void Expand_Click(object sender, MouseButtonEventArgs e) => SetCollapsed(false);
+
+    /// <summary>
+    /// Oculta la barra y deja un icono flotante con el tiempo de la sesión. El
+    /// estado se conserva mientras el cliente siga abierto, incluso si la barra
+    /// se oculta entre sesiones.
+    /// </summary>
+    private void SetCollapsed(bool collapsed)
+    {
+        if (_collapsed == collapsed)
+        {
+            ApplyCollapsedState();
+            return;
+        }
+
+        _collapsed = collapsed;
+        if (collapsed) AccountPopup.IsOpen = false;
+
+        ApplyCollapsedState();
+        UpdateLayout();
+        PositionTopCenter();
+        Tick();
+    }
+
+    private void ApplyCollapsedState()
+    {
+        ExpandedPanel.Visibility = _collapsed ? Visibility.Collapsed : Visibility.Visible;
+        CollapsedPanel.Visibility = _collapsed ? Visibility.Visible : Visibility.Collapsed;
     }
 }
 

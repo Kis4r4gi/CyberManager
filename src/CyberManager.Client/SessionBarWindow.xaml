@@ -10,53 +10,89 @@
         <Grid.LayoutTransform>
             <ScaleTransform x:Name="RootScale" ScaleX="1" ScaleY="1" />
         </Grid.LayoutTransform>
-        <Border Background="#F20F172A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                CornerRadius="14" Padding="16,10">
+
+        <!-- ================= Barra compacta ================= -->
+        <Border x:Name="ExpandedPanel" Background="#F20F172A" BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1" CornerRadius="12" Padding="10,6">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.55" Color="Black" />
+                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.5" Color="Black" />
             </Border.Effect>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="StationText" Text="PC-01" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock x:Name="DescriptionText" Text="Sesión activa" FontSize="10.5"
-                               Foreground="{StaticResource MutedBrush}" MaxWidth="260"
+                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="StationText" Text="PC-01" FontSize="12" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <TextBlock x:Name="CustomerText" Text="Sesión activa" FontSize="10"
+                                   Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" MaxWidth="150"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock x:Name="DescriptionText" Text="Sesión activa" FontSize="9.5"
+                               Foreground="{StaticResource MutedBrush}" MaxWidth="220"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="CustomerText" Text="Sesión activa" Style="{StaticResource Muted}" />
                 </StackPanel>
 
-                <Rectangle Width="1" Fill="{StaticResource BorderBrush}" Margin="0,2,16,2" />
+                <Rectangle Width="1" Fill="{StaticResource BorderBrush}" Margin="0,2,10,2" />
 
-                <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="TimeLabel" Text="TIEMPO RESTANTE" FontSize="10" FontWeight="SemiBold"
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="TimeLabel" Text="TIEMPO RESTANTE" FontSize="9" FontWeight="SemiBold"
                                Foreground="{StaticResource MutedBrush}" />
-                    <TextBlock x:Name="TimeText" Text="00:00" FontSize="22" FontWeight="Bold"
+                    <TextBlock x:Name="TimeText" Text="00:00" FontSize="18" FontWeight="Bold"
                                Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock x:Name="WarningText" Text="¡Tiempo agotado!" FontSize="10" FontWeight="SemiBold"
+                    <TextBlock x:Name="WarningText" Text="¡Tiempo agotado!" FontSize="9" FontWeight="SemiBold"
                                Foreground="{StaticResource DangerBrush}" Visibility="Collapsed" />
                 </StackPanel>
 
-                <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
-                    <TextBlock Text="CONSUMO" FontSize="10" FontWeight="SemiBold"
+                <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="CONSUMO" FontSize="9" FontWeight="SemiBold"
                                Foreground="{StaticResource MutedBrush}" />
-                    <TextBlock x:Name="AmountText" Text="$ 0,00" FontSize="18" FontWeight="Bold" />
-                    <TextBlock x:Name="AmountBsText" Text="Bs 0,00" Style="{StaticResource Muted}" />
+                    <TextBlock x:Name="AmountText" Text="$ 0,00" FontSize="14" FontWeight="Bold" />
+                    <TextBlock x:Name="AmountBsText" Text="Bs 0,00" FontSize="9.5"
+                               Style="{StaticResource Muted}" />
                 </StackPanel>
 
                 <Button Content="Pedir productos" Style="{StaticResource PrimaryButton}"
-                        Padding="14,9" Click="Order_Click"
+                        Padding="10,6" FontSize="11" Click="Order_Click"
                         ToolTip="Abre el pedido de productos." />
                 <Button x:Name="AccountButton" Content="Mi cuenta" Style="{StaticResource GhostButton}"
-                        Padding="12,9" Margin="8,0,0,0" Click="Account_Click"
+                        Padding="9,6" FontSize="11" Margin="6,0,0,0" Click="Account_Click"
                         ToolTip="Muestra el consumo de la sesión." />
-                <Button x:Name="RechargeButton" Content="Recargar tiempo" Style="{StaticResource GhostButton}"
-                        Padding="12,9" Margin="8,0,0,0" Click="Recharge_Click"
+                <Button x:Name="RechargeButton" Content="Recargar" Style="{StaticResource GhostButton}"
+                        Padding="9,6" FontSize="11" Margin="6,0,0,0" Click="Recharge_Click"
                         Visibility="Collapsed"
                         ToolTip="Compra más minutos prepago para esta sesión." />
-                <Button x:Name="FinishButton" Content="Finalizar sesión" Style="{StaticResource DangerButton}"
-                        Padding="12,9" Margin="8,0,0,0" Click="Finish_Click"
+                <Button x:Name="FinishButton" Content="Finalizar" Style="{StaticResource DangerButton}"
+                        Padding="9,6" FontSize="11" Margin="6,0,0,0" Click="Finish_Click"
                         Visibility="Collapsed"
                         ToolTip="Finaliza la sesión prepago y devuelve los minutos no usados." />
+                <Button x:Name="CollapseButton" Content="▴" Style="{StaticResource GhostButton}"
+                        Padding="8,4" FontSize="11" Margin="6,0,0,0" Click="Collapse_Click"
+                        ToolTip="Ocultar la barra en un icono flotante." />
+            </StackPanel>
+        </Border>
+
+        <!-- ================= Icono flotante ================= -->
+        <Border x:Name="CollapsedPanel" Visibility="Collapsed"
+                Background="#F20F172A" BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1" CornerRadius="18" Padding="12,6"
+                Cursor="Hand" MouseLeftButtonUp="Expand_Click"
+                ToolTip="Mostrar la barra de sesión.">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.5" Color="Black" />
+            </Border.Effect>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                           Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="CollapsedTimeText" Text="00:00" FontSize="15" FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}" Margin="6,0,0,0"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="CollapsedWarningText" Text="!" FontSize="12" FontWeight="Bold"
+                           Foreground="{StaticResource DangerBrush}" Margin="6,0,0,0"
+                           VerticalAlignment="Center" Visibility="Collapsed" />
+                <TextBlock Text="▾" FontSize="10" Margin="8,0,0,0"
+                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 

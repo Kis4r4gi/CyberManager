@@ -1293,8 +1293,11 @@ Módulo para bloquear sitios de contenido no deseado. Se administra en
 
 ### Barra flotante del cliente
 
-La barra de sesión muestra el tiempo restante y el monto a cancelar sobre el escritorio del
-cliente. En *Configuración → Control remoto y filtro* puede cambiar:
+La barra de sesión muestra el tiempo de la sesión y el monto a cancelar sobre el escritorio del
+cliente. En **prepago** el reloj es **regresivo** (tiempo restante) y, al agotarse, sigue en
+positivo con el excedente; en **postpago** muestra el tiempo transcurrido. El botón **▴** oculta
+la barra en un **icono flotante** con el tiempo y un aviso cuando queda poco; al pulsarlo se
+restaura la barra completa. En *Configuración → Control remoto y filtro* puede cambiar:
 
 - **Descripción de la barra** (`SessionBarDescription`): texto que aparece bajo el nombre del
   equipo, por ejemplo «Sesión activa · consulte su tiempo y consumo».

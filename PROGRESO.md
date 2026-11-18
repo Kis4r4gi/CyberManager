@@ -1272,6 +1272,22 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `CyberManagerServer` en `Running`, `/api/health` → `ok`. El paquete `ClientUpdate` se mantuvo en
   1.3.4 porque el cliente no cambió; PC 01 sigue en 1.3.4 y reporta en línea (latido < 5 s).
 
+### Barra de sesión compacta, icono flotante y reloj prepago regresivo (1.3.6, 2026-11-18, sin publicar)
+
+- **Barra más pequeña**: se redujeron rellenos, tipografías e iconos de la barra de sesión para
+  ocupar menos espacio sin perder el tiempo, el consumo ni los accesos a pedidos y cuenta.
+- **Icono flotante**: el botón **▴** oculta la barra y deja un icono compacto con el tiempo de la
+  sesión (y un signo de aviso cuando queda poco). Al pulsarlo se restaura la barra. El estado se
+  conserva mientras el cliente siga abierto.
+- **Reloj prepago regresivo**: el contador usaba el ancla del postpago y sumaba segundos, por lo
+  que en prepago avanzaba en vez de descontar. Ahora `SessionBarWindow` distingue el sentido del
+  reloj: en prepago resta desde `RemainingMinutes` y, al llegar a cero, muestra el excedente con
+  signo **+**; en postpago sigue sumando el tiempo transcurrido.
+- **Despliegue local 1.3.6**: servidor, consola y paquete `ClientUpdate` 1.3.6 copiados a
+  `C:\CyberManager\Servidor` (SHA-256 `cfc00690…`, respaldo `_clientupdate-1.3.5-20261117-2231`),
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`. PC 01 se actualizó a 1.3.6 y
+  reporta en línea.
+
 ---
 
 ## Rutas y comandos clave
