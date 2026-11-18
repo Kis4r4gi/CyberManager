@@ -1370,6 +1370,53 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 ---
 
+### Reloj retirado y fondo más visible en el bloqueo (1.3.11, 2026-11-18, sin publicar)
+
+- **Sin reloj ni fecha en la pantalla de bloqueo**: se quitaron `ClockText`/`DateText` de
+  `LockWindow.xaml` y el temporizador que los actualizaba (`_clockTimer`, `_lastClockSecond`,
+  `UpdateClock` y `Capitalize`). La pantalla conserva el icono, «EQUIPO BLOQUEADO», el mensaje, el
+  botón de inicio de sesión y el pie con la tasa, el texto y la versión.
+- **Fondo más visible**: el velo del bloqueo pasó de `#99`/`#CC`/`#F2` (60/80/95 %) a
+  `#33`/`#73`/`#B3` (20/45/70 %), de modo que el fondo sincronizado se aprecia con claridad sin
+  perder legibilidad en el texto.
+- **Versión 1.3.11** en `version.props`; publicación x64 regenerada
+  (`dist\x64\{Server,Admin,Client,Agent,Uninstaller}`) y paquete `ClientUpdate\client.zip` 1.3.11
+  (67.669.609 bytes, SHA-256 `dfda5411…`, `publishedUtc` 2026-11-18T11:56:11.638Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.11-20261118-0800`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.11; servidor y
+  consola reportan 1.3.11.
+- **Prueba en vivo**: estación temporal 15 (desactivada al terminar) con el cliente 1.3.11; la
+  ventana de bloqueo no contiene reloj ni fecha, descargó la galería y el fondo se ve a través del
+  velo (brillo medio 44,6/255 y desviación 33,3 en la captura). PC 01 recibirá 1.3.11 con el
+  actualizador; su sesión prepago #2 (id 4) sigue activa.
+- **Pendiente**: el **agente** de PC 01 sigue en 1.3.9; los puertos 445, 5985 y 3389 del equipo no
+  están accesibles, así que la actualización debe hacerse en el propio equipo. El paquete final del
+  agente se detalla en la sección 1.3.12.
+
+---
+
+### Tasa del día retirada del bloqueo (1.3.12, 2026-11-18, sin publicar)
+
+- **Sin «Tasa del día» en la pantalla de bloqueo**: se quitó del pie el bloque con la etiqueta
+  «Tasa del día:» y el valor `1 USD = … Bs` (`RateText`); el pie conserva el texto de bienvenida
+  centrado y la versión a la derecha. La tasa sigue disponible en la consola, la caja y el resumen
+  de «Mi cuenta».
+- **Versión 1.3.12** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.12 (67.669.421 bytes, SHA-256 `1ed7102b…`,
+  `publishedUtc` 2026-11-18T11:59:07.193Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.12-20261118-0803`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.12; servidor 1.3.12.
+- **Prueba en vivo**: estación temporal 16 (desactivada al terminar) con el cliente 1.3.12; la
+  ventana de bloqueo muestra negocio, equipo, «EQUIPO BLOQUEADO», el mensaje, el botón de inicio de
+  sesión, «¡Gracias por su visita!» y «Versión 1.3.12», sin reloj, sin fecha y sin tasa.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.12-x64.zip` (35.666.345 bytes,
+  SHA-256 `b475c624…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+  reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
+
+---
+
 ## Rutas y comandos clave
 
 Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberManager`).

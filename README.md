@@ -105,8 +105,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Login cómodo en la pantalla de bloqueo**: el cursor permanece en el campo de usuario mientras
   se escribe, el menú flotante se cierra con **ESC** y los formularios de acceso y registro
   incluyen la casilla **Mostrar contraseña**.
-- **Reloj de 12 horas**: la pantalla de bloqueo muestra la hora con formato `h:mm:ss tt` usando
-  la hora local del equipo (Windows), no la del servidor.
+- **Pantalla de bloqueo sin reloj**: desde la versión 1.3.11 el bloqueo no muestra la hora ni la
+  fecha; el equipo sigue usando la hora local de Windows para la barra de sesión y el prepago.
 - **Acciones por equipo en «Equipos»**: cada fila incluye un menú desplegable **Acciones** con
   subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
   bloquear, enviar mensaje, actualizar cliente, mantenimiento, activar/desactivar y eliminar. La
@@ -137,8 +137,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   administrador; se aplica en cada equipo mediante el archivo `hosts` y un proxy local opcional.
 - Aviso y bloqueo automático al agotarse el tiempo contratado (configurable).
 - **Equipo siempre despierto y reloj local**: mientras el cliente está en ejecución impide la
-  suspensión, la hibernación y el apagado automático de la pantalla, y la hora de la pantalla de
-  bloqueo se toma del reloj de Windows del propio equipo.
+  suspensión, la hibernación y el apagado automático de la pantalla, y la hora de la sesión y del
+  prepago se toma del reloj de Windows del propio equipo.
 - Galería de fondos sincronizada: los equipos bloqueados muestran un fondo fijo o una
   presentación rotativa controlada desde la consola; la rotación avanza solo tras 2 minutos sin
   actividad, como un salvapantallas.
@@ -1166,8 +1166,9 @@ En modo **Presentación rotativa** la rotación funciona como un salvapantallas:
 el equipo lleva **2 minutos sin actividad** (teclado o ratón). Cualquier movimiento detiene la
 rotación y mantiene el fondo actual; al volver a quedar inactivo, se reanuda.
 
-> El fondo se muestra con una capa oscura para mantener legibles el reloj, el nombre del equipo y
-> los mensajes. Al iniciar una sesión, la pantalla de bloqueo se oculta y la rotación se detiene.
+> El fondo se muestra con un velo suave (20 % arriba, 70 % abajo) para que la imagen se aprecie
+> con claridad y el nombre del equipo y los mensajes sigan siendo legibles. Al iniciar una sesión,
+> la pantalla de bloqueo se oculta y la rotación se detiene.
 
 ---
 

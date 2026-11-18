@@ -1,9 +1,7 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Threading;
 using CyberManager.Desktop.Services;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
@@ -12,9 +10,6 @@ namespace CyberManager.Client;
 
 public partial class LockWindow : Window
 {
-    private readonly DispatcherTimer _clockTimer =
-        new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(250) };
-    private int _lastClockSecond = -1;
     private KeyboardBlocker? _blocker;
     private ImageSource? _wallpaper;
     private string? _promoPath;
@@ -38,17 +33,13 @@ public partial class LockWindow : Window
         InitializeComponent();
         VersionText.Text = $"{L.T("Versión")} {AppInfo.Version}";
 
-        _clockTimer.Tick += (_, _) => UpdateClock();
         Loaded += (_, _) =>
         {
             Loc.Apply(this);
-            UpdateClock();
-            _clockTimer.Start();
             _blocker ??= new KeyboardBlocker();
         };
         Closed += (_, _) =>
         {
-            _clockTimer.Stop();
             _blocker?.Dispose();
         };
         Closing += (_, e) =>
@@ -72,7 +63,6 @@ public partial class LockWindow : Window
         {
             StationText.Text = $"PC-{App.Config.StationId:D2}";
             ZoneText.Text = L.T("Sin conexión");
-            RateText.Text = "1 USD = — Bs";
             BusinessNameText.Text = "CyberManager";
             FooterText.Text = string.Empty;
             TitleText.Text = L.T("EQUIPO BLOQUEADO");
@@ -81,13 +71,9 @@ public partial class LockWindow : Window
             return;
         }
 
-        // El reloj de la pantalla usa la hora local del equipo (Windows).
-        UpdateClock();
-
         BusinessNameText.Text = state.BusinessName;
         StationText.Text = state.Name;
         ZoneText.Text = state.ZoneName ?? L.T("Estación");
-        RateText.Text = $"1 USD = {state.ExchangeRate:N2} Bs";
         FooterText.Text = state.Footer ?? string.Empty;
 
         if (state.Session is not null && state.Session.Status == SessionStatus.Paused)
@@ -251,21 +237,4 @@ public partial class LockWindow : Window
         LoginPopup.IsOpen = false;
         AdminLoginRequested?.Invoke();
     }
-
-    private void UpdateClock()
-    {
-        // Reloj de 12 horas con AM/PM usando la hora local del equipo (Windows).
-        // Se consulta varias veces por segundo para que el segundero no se salte
-        // cuando el hilo de interfaz está ocupado, pero solo se redibuja al cambiar.
-        var now = DateTime.Now;
-        if (now.Second == _lastClockSecond) return;
-        _lastClockSecond = now.Second;
-
-        var culture = L.IsEnglish ? CultureInfo.GetCultureInfo("en-US") : CultureInfo.GetCultureInfo("es-VE");
-        ClockText.Text = now.ToString("h:mm:ss tt", culture);
-        DateText.Text = Capitalize(now.ToString("dddd, d 'de' MMMM 'de' yyyy", culture));
-    }
-
-    private static string Capitalize(string text)
-        => string.IsNullOrEmpty(text) ? text : char.ToUpper(text[0]) + text[1..];
 }
