@@ -111,6 +111,10 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
   bloquear, enviar mensaje, mantenimiento, activar/desactivar y eliminar. La barra de botones
   inferiores se retiró; el clic derecho abre el mismo menú.
+- **Estado en línea confiable**: la presencia se calcula por el último latido (90 s) y no por la
+  ocupación del equipo, así que un PC apagado se muestra **Sin conexión** aunque conserve una
+  sesión abierta. La lista de *Equipos* y el tablero se refrescan solos al recibir cambios y cada
+  pocos segundos.
 - Consumo de productos cargado a la sesión (se cobra al cerrar) o cobrado directo en caja.
 - Reservas de equipos por fecha y hora, con confirmación y cancelación.
 - Mensajes al cliente y órdenes de bloqueo, apagado, reinicio y cierre de sesión.

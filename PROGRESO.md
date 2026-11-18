@@ -1252,6 +1252,26 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `CyberManagerServer` en `Running`, `/api/health` → `ok`, paquete `ClientUpdate` 1.3.4
   (SHA-256 `6b553ef6…`). PC 01 se actualizó a 1.3.4 y quedó **Disponible/en línea**.
 
+### Estado en línea confiable y refresco automático (1.3.5, 2026-11-18, sin publicar)
+
+- **Presencia por latido**: `StationPresence` calcula si un equipo está en línea con su
+  `LastSeenUtc` (margen de 90 s) en lugar de mirar el estado de ocupación. Así un PC apagado se
+  muestra **Sin conexión** aunque tenga una sesión abierta, y un equipo en mantenimiento apagado
+  ya no cuenta como «en línea».
+- **Lista de equipos**: `StationsView` no se refrescaba después de abrirse, por lo que conservaba
+  el estado viejo (PC 01 aparecía desconectado aunque estuviera reportando). Ahora se suscribe a
+  `StationStateChanged` y a los eventos `StationOnline/Offline`, `AgentOnline/Offline`,
+  `SessionStarted/Ended` y `StationMaintenance`, y además recarga cada 20 s. La fila seleccionada
+  se conserva entre refrescos.
+- **Filtros y resumen**: **En línea** / **Desconectados** usan la presencia por latido; el resumen
+  «X en línea» ya no incluye equipos apagados en mantenimiento.
+- **Tablero**: `DashboardService` cuenta las estaciones en línea con `StationPresence`, y cada
+  tarjeta muestra **Sin conexión** si el equipo dejó de reportar, aunque el estado guardado sea
+  «En uso» o «Disponible».
+- **Despliegue local 1.3.5**: servidor y consola copiados a `C:\CyberManager\Servidor`, tarea
+  `CyberManagerServer` en `Running`, `/api/health` → `ok`. El paquete `ClientUpdate` se mantuvo en
+  1.3.4 porque el cliente no cambió; PC 01 sigue en 1.3.4 y reporta en línea (latido < 5 s).
+
 ---
 
 ## Rutas y comandos clave

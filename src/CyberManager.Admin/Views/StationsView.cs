@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CyberManager.Desktop.Api;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
@@ -21,6 +22,12 @@ public sealed class StationsView : UserControl, IRefreshable
     private List<StationDto> _stations = new();
     private List<ZoneDto> _zones = new();
     private List<RateDto> _rates = new();
+
+    // La lista se refresca sola: el servidor no empuja la lista completa de
+    // equipos, solo los cambios de estado, así que se recarga al recibir un
+    // evento y además cada 20 s para no quedarse con datos viejos.
+    private readonly DispatcherTimer _debounce = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _autoRefresh = new() { Interval = TimeSpan.FromSeconds(20) };
 
     public StationsView()
     {
@@ -121,12 +128,12 @@ public sealed class StationsView : UserControl, IRefreshable
         _statusFilter.ItemsSource = new[]
         {
             new StatusOption("Todos los estados", null),
-            new StatusOption("En línea", s => s.Status != StationStatus.Offline),
+            new StatusOption("En línea", s => StationPresence.IsOnline(s.LastSeenUtc)),
             new StatusOption("Disponibles", s => s.Status == StationStatus.Available),
             new StatusOption("En uso", s => s.Status == StationStatus.InUse),
             new StatusOption("En pausa", s => s.Status == StationStatus.Paused),
             new StatusOption("Mantenimiento", s => s.Status == StationStatus.Maintenance),
-            new StatusOption("Desconectados", s => s.Status == StationStatus.Offline)
+            new StatusOption("Desconectados", s => !StationPresence.IsOnline(s.LastSeenUtc))
         };
         _statusFilter.SelectedIndex = 0;
         _statusFilter.Width = 160;
@@ -184,7 +191,69 @@ public sealed class StationsView : UserControl, IRefreshable
             _grid.PreviewMouseRightButtonDown += OnGridRightButtonDown;
         }
 
-        Loaded += async (_, _) => await Ui.Run(RefreshAsync, "No se pudieron cargar los equipos");
+        _debounce.Tick += async (_, _) =>
+        {
+            _debounce.Stop();
+            await RefreshSilentAsync();
+        };
+        _autoRefresh.Tick += async (_, _) => await RefreshSilentAsync();
+
+        Loaded += async (_, _) =>
+        {
+            Subscribe();
+            _autoRefresh.Start();
+            await Ui.Run(RefreshAsync, "No se pudieron cargar los equipos");
+        };
+        Unloaded += (_, _) =>
+        {
+            Unsubscribe();
+            _autoRefresh.Stop();
+        };
+    }
+
+    private void Subscribe()
+    {
+        if (App.Realtime is null) return;
+        Unsubscribe();
+        App.Realtime.StationStateChanged += OnStationState;
+        App.Realtime.EventReceived += OnRealtimeEvent;
+    }
+
+    private void Unsubscribe()
+    {
+        if (App.Realtime is null) return;
+        App.Realtime.StationStateChanged -= OnStationState;
+        App.Realtime.EventReceived -= OnRealtimeEvent;
+    }
+
+    private void OnStationState(StationStateEvent e) => Dispatcher.BeginInvoke(() =>
+    {
+        _debounce.Stop();
+        _debounce.Start();
+    });
+
+    private void OnRealtimeEvent(RealtimeEvent e)
+    {
+        if (e.Type is not ("StationOnline" or "StationOffline" or "AgentOnline" or "AgentOffline"
+            or "SessionStarted" or "SessionEnded" or "StationMaintenance")) return;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            _debounce.Stop();
+            _debounce.Start();
+        });
+    }
+
+    private async Task RefreshSilentAsync()
+    {
+        try
+        {
+            await RefreshAsync();
+        }
+        catch
+        {
+            // El servidor puede estar reiniciando; se reintenta en el próximo ciclo.
+        }
     }
 
     private StationDto? Selected => (_grid.SelectedItem as StationRow)?.Source;
@@ -304,6 +373,7 @@ public sealed class StationsView : UserControl, IRefreshable
     {
         var term = _searchBox.Text.Trim();
         var status = (_statusFilter.SelectedItem as StatusOption)?.Match;
+        var selectedId = Selected?.Id;
 
         var filtered = _stations
             .Where(s => status is null || status(s))
@@ -320,7 +390,15 @@ public sealed class StationsView : UserControl, IRefreshable
 
         _grid.ItemsSource = filtered.Select(s => new StationRow(s)).ToList();
 
-        var online = _stations.Count(s => s.Status != StationStatus.Offline);
+        // La lista se refresca sola; se conserva la fila seleccionada para que el
+        // menú de acciones siga apuntando al mismo equipo.
+        if (selectedId is int id)
+        {
+            var row = _grid.Items.OfType<StationRow>().FirstOrDefault(r => r.Source.Id == id);
+            if (row is not null) _grid.SelectedItem = row;
+        }
+
+        var online = _stations.Count(s => StationPresence.IsOnline(s.LastSeenUtc));
 
         _summaryText.Text = $"{filtered.Count} equipos visibles · {online} en línea · " +
                             $"{_stations.Count(s => s.Status == StationStatus.Paused)} en pausa";
@@ -669,8 +747,15 @@ public sealed class StationRow
         Ip = string.IsNullOrWhiteSpace(station.IpAddress) ? "—" : station.IpAddress!;
         Rate = station.RateName ?? "Sin tarifa";
         RatePerHour = station.RatePerHour;
-        Status = Labels.StatusName(station.Status);
-        StatusBrush = Labels.StatusColor(station.Status);
+        IsOnline = StationPresence.IsOnline(station.LastSeenUtc);
+
+        // La columna «Estado» refleja la presencia: un equipo sin latido se
+        // muestra como «Sin conexión» aunque conserve una sesión abierta.
+        var displayStatus = IsOnline || station.Status == StationStatus.Maintenance
+            ? station.Status
+            : StationStatus.Offline;
+        Status = Labels.StatusName(displayStatus);
+        StatusBrush = Labels.StatusColor(displayStatus);
         LastSeen = station.LastSeenUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Nunca";
         Active = station.Active ? "Sí" : "No";
     }
@@ -683,6 +768,7 @@ public sealed class StationRow
     public string Ip { get; }
     public string Rate { get; }
     public decimal RatePerHour { get; }
+    public bool IsOnline { get; }
     public string Status { get; }
     public string StatusBrush { get; }
     public string LastSeen { get; }

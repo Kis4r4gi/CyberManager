@@ -83,7 +83,7 @@ public class DashboardService
 
         return new DashboardDto(
             stations.Count,
-            stations.Count(s => s.Status != StationStatus.Offline),
+            stations.Count(s => StationPresence.IsOnline(s.LastSeenUtc, now)),
             stations.Count(s => s.Status == StationStatus.Available),
             stations.Count(s => s.Status == StationStatus.InUse),
             stations.Count(s => s.Status == StationStatus.Paused),

@@ -557,12 +557,17 @@ public sealed class DashboardView : UserControl, IRefreshable
 
     private Border BuildTile(StationSummaryDto station, decimal rate)
     {
-        var statusColor = Labels.StatusColor(station.Status);
+        var full = _stations.FirstOrDefault(s => s.Id == station.Id);
+        var online = full is null || StationPresence.IsOnline(full.LastSeenUtc);
+        var displayStatus = online || station.Status == StationStatus.Maintenance
+            ? station.Status
+            : StationStatus.Offline;
+
+        var statusColor = Labels.StatusColor(displayStatus);
         var accent = ColorFrom(statusColor);
         var overtime = station.Overtime;
         var scale = AppearanceService.Current.StationCardScale / 100.0;
 
-        var full = _stations.FirstOrDefault(s => s.Id == station.Id);
         var kind = full?.Kind ?? StationKind.Pc;
         var detail = Labels.StationKindName(kind);
         if (!string.IsNullOrWhiteSpace(full?.Platform)) detail += $" · {full!.Platform}";
@@ -618,7 +623,7 @@ public sealed class DashboardView : UserControl, IRefreshable
         });
         header.Children.Add(nameStack);
 
-        var pill = Pill(Labels.StatusName(station.Status), statusColor, scale);
+        var pill = Pill(Labels.StatusName(displayStatus), statusColor, scale);
         pill.VerticalAlignment = VerticalAlignment.Top;
         Grid.SetColumn(pill, 1);
         header.Children.Add(pill);
@@ -689,7 +694,7 @@ public sealed class DashboardView : UserControl, IRefreshable
         }
         else
         {
-            var (statusText, timeText, timeHint) = station.Status switch
+            var (statusText, timeText, timeHint) = displayStatus switch
             {
                 StationStatus.Maintenance => ("En mantenimiento", "—", "fuera de servicio"),
                 StationStatus.Offline => ("Sin conexión", "—", "equipo apagado"),
