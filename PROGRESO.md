@@ -1157,8 +1157,8 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   `-ClientExe`). La tarea se inicia con `schtasks /Run /TN "CyberManagerClient"` al finalizar la
   instalación y se elimina en `[UninstallRun]`. `scripts/install-client-startup.ps1` reutiliza el
   mismo script y se eliminó su parámetro `-AllUsers`.
-- **Reloj de 12 horas sincronizado**: `LockWindow` muestra `h:mm:ss tt` y calcula `_serverOffset`
-  con `state.ServerTimeUtc`, de modo que todas las estaciones muestran la hora del servidor.
+- **Reloj de 12 horas**: `LockWindow` muestra `h:mm:ss tt` con la hora local del equipo
+  (Windows). Ya no aplica el desfase de `state.ServerTimeUtc`.
 - **`configurar-agente.ps1`**: se quitó `#Requires -RunAsAdministrator`, que impedía analizar el
   script y solo mostraba un error de sintaxis. Ahora se auto-eleva con `Start-Process -Verb RunAs`
   conservando `$PSBoundParameters` y `-NoExit`.
@@ -1219,6 +1219,18 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Despliegue local 1.3.2**: servidor y consola copiados a `C:\CyberManager\Servidor`, tarea
   `CyberManagerServer` en `Running`, `/api/health` → `ok`. El paquete `ClientUpdate` 1.3.2
   (SHA-256 `10050cf1…`) se envió a PC 01 y el estado quedó **1 al día, 0 pendientes**.
+
+### Columnas de equipos y reloj local (1.3.3, 2026-11-18, sin publicar)
+
+- **Tabla de equipos**: las columnas se ajustan automáticamente al ancho del encabezado y del
+  texto de cada celda (`ColumnWidth` y `Width` en `Auto`, `MinWidth = 0`) y siguen siendo
+  redimensionables arrastrando el borde del encabezado.
+- **Reloj del cliente**: `LockWindow` usa `DateTime.Now` del propio equipo; se eliminó
+  `_serverOffset` y la corrección con `state.ServerTimeUtc`.
+- **Despliegue local 1.3.3**: servidor y consola copiados a `C:\CyberManager\Servidor`, tarea
+  `CyberManagerServer` en `Running`, `/api/health` → `ok`, paquete `ClientUpdate` 1.3.3
+  (SHA-256 `8ac9532a…`). PC 01 estaba desconectado al momento del aviso; aplicará la versión al
+  volver a conectarse.
 
 ---
 

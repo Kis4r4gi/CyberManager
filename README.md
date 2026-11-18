@@ -105,8 +105,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Login cómodo en la pantalla de bloqueo**: el cursor permanece en el campo de usuario mientras
   se escribe, el menú flotante se cierra con **ESC** y los formularios de acceso y registro
   incluyen la casilla **Mostrar contraseña**.
-- **Reloj de 12 horas sincronizado**: la pantalla de bloqueo muestra la hora con formato
-  `h:mm:ss tt` y la corrige con la hora del servidor, de modo que todas las estaciones coinciden.
+- **Reloj de 12 horas**: la pantalla de bloqueo muestra la hora con formato `h:mm:ss tt` usando
+  la hora local del equipo (Windows), no la del servidor.
 - **Acciones por equipo en «Equipos»**: cada fila incluye un menú desplegable **Acciones** con
   subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
   bloquear, enviar mensaje, mantenimiento, activar/desactivar y eliminar. La barra de botones

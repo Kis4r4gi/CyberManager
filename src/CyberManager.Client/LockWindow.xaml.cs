@@ -16,7 +16,6 @@ public partial class LockWindow : Window
     private KeyboardBlocker? _blocker;
     private ImageSource? _wallpaper;
     private string? _promoPath;
-    private TimeSpan _serverOffset;
 
     public bool AllowClose { get; set; }
     /// <summary>Evita que la pantalla recupere el foco mientras hay un diálogo abierto encima.</summary>
@@ -70,11 +69,7 @@ public partial class LockWindow : Window
             return;
         }
 
-        // El reloj de la pantalla sigue la hora del servidor (no la del equipo).
-        var serverUtc = state.ServerTimeUtc.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(state.ServerTimeUtc, DateTimeKind.Utc)
-            : state.ServerTimeUtc.ToUniversalTime();
-        _serverOffset = serverUtc - DateTime.UtcNow;
+        // El reloj de la pantalla usa la hora local del equipo (Windows).
         UpdateClock();
 
         BusinessNameText.Text = state.BusinessName;
@@ -231,8 +226,8 @@ public partial class LockWindow : Window
 
     private void UpdateClock()
     {
-        // Reloj de 12 horas con AM/PM, corregido con el desfase del servidor.
-        var now = DateTime.Now + _serverOffset;
+        // Reloj de 12 horas con AM/PM usando la hora local del equipo (Windows).
+        var now = DateTime.Now;
         var culture = L.IsEnglish ? CultureInfo.GetCultureInfo("en-US") : CultureInfo.GetCultureInfo("es-VE");
         ClockText.Text = now.ToString("h:mm:ss tt", culture);
         DateText.Text = Capitalize(now.ToString("dddd, d 'de' MMMM 'de' yyyy", culture));

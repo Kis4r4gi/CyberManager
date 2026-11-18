@@ -38,13 +38,20 @@ public sealed class StationsView : UserControl, IRefreshable
             ActionsColumn());
 
         // La lista de equipos se muestra sin el marco grande: sin borde, sin fondo
-        // sólido y sin franjas alternas. Cada columna se ajusta a su contenido.
+        // sólido y sin franjas alternas. Cada columna se ajusta al texto de su
+        // contenido y de su encabezado, y el usuario puede arrastrar el borde para
+        // cambiar el ancho cuando lo necesite.
         _grid.Background = Brushes.Transparent;
         _grid.RowBackground = Brushes.Transparent;
         _grid.AlternatingRowBackground = Brushes.Transparent;
         _grid.BorderThickness = new Thickness(0);
+        _grid.ColumnWidth = DataGridLength.Auto;
+        _grid.CanUserResizeColumns = true;
         foreach (var column in _grid.Columns)
+        {
+            column.MinWidth = 0;
             column.Width = DataGridLength.Auto;
+        }
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
