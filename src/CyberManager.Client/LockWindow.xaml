@@ -7,6 +7,11 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
 
+    <Window.Resources>
+        <!-- Sombra para que el texto se lea sobre fondos claros sin oscurecer la imagen. -->
+        <DropShadowEffect x:Key="TextShadow" Color="#000000" BlurRadius="12" ShadowDepth="0" Opacity="0.85" />
+    </Window.Resources>
+
     <Grid>
         <Grid.Background>
             <RadialGradientBrush Center="0.5,0.18" GradientOrigin="0.5,0.18" RadiusX="1.05" RadiusY="1.05">
@@ -31,13 +36,13 @@
         <Image x:Name="WallpaperImage" Grid.RowSpan="3" Stretch="UniformToFill"
                Visibility="Collapsed" Opacity="0" IsHitTestVisible="False" />
 
-        <!-- Velo suave: deja ver el fondo y mantiene legible el texto. -->
+        <!-- Velo muy suave: el fondo se ve vivo y el texto se apoya en su sombra. -->
         <Border Grid.RowSpan="3" IsHitTestVisible="False">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#33070B14" Offset="0" />
-                    <GradientStop Color="#73070B14" Offset="0.45" />
-                    <GradientStop Color="#B3070B14" Offset="1" />
+                    <GradientStop Color="#00070B14" Offset="0" />
+                    <GradientStop Color="#1F070B14" Offset="0.45" />
+                    <GradientStop Color="#66070B14" Offset="1" />
                 </LinearGradientBrush>
             </Border.Background>
         </Border>
@@ -50,20 +55,21 @@
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <TextBlock x:Name="BusinessNameText" Text="CyberManager" FontSize="19" FontWeight="Bold"
-                           Margin="14,0,0,0" VerticalAlignment="Center" />
+                           Margin="14,0,0,0" VerticalAlignment="Center" Effect="{StaticResource TextShadow}" />
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
                 <TextBlock x:Name="StationText" Text="PC-01" FontSize="17" FontWeight="SemiBold"
-                           HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}" />
+                           HorizontalAlignment="Right" Foreground="{StaticResource AccentBrush}"
+                           Effect="{StaticResource TextShadow}" />
                 <TextBlock x:Name="ZoneText" Text="Zona estándar" Style="{StaticResource Muted}"
-                           HorizontalAlignment="Right" />
+                           HorizontalAlignment="Right" Effect="{StaticResource TextShadow}" />
             </StackPanel>
         </Grid>
 
         <!-- ================= Centro ================= -->
         <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Border Width="104" Height="104" CornerRadius="30" Background="#16233A"
+            <Border Width="104" Height="104" CornerRadius="30" Background="#CC16233A"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" HorizontalAlignment="Center">
                 <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="44"
                            Foreground="{StaticResource AccentBrush}"
@@ -71,11 +77,13 @@
             </Border>
 
             <TextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="22" FontWeight="Bold"
-                       HorizontalAlignment="Center" Margin="0,30,0,0" Foreground="{StaticResource AccentBrush}" />
+                       HorizontalAlignment="Center" Margin="0,30,0,0" Foreground="{StaticResource AccentBrush}"
+                       Effect="{StaticResource TextShadow}" />
             <TextBlock x:Name="MessageText" Text="Solicite al cajero para iniciar su sesión."
                        FontSize="15" Foreground="{StaticResource MutedBrush}"
                        HorizontalAlignment="Center" Margin="0,10,0,0"
-                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="560" />
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="560"
+                       Effect="{StaticResource TextShadow}" />
 
             <StackPanel x:Name="LoginPanel" HorizontalAlignment="Center" Margin="0,26,0,0">
                 <Button x:Name="LoginButton" Content="Iniciar sesión" Style="{StaticResource PrimaryButton}"
@@ -109,14 +117,14 @@
         </StackPanel>
 
         <!-- ================= Pie ================= -->
-        <Border Grid.Row="2" Margin="44,0,44,30" Padding="20,15" Background="#B30F172A"
+        <Border Grid.Row="2" Margin="44,0,44,30" Padding="20,15" Background="#590F172A"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
             <Grid>
                 <TextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Style="{StaticResource Muted}" />
+                           Style="{StaticResource Muted}" Effect="{StaticResource TextShadow}" />
 
                 <TextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"
-                           Style="{StaticResource Muted}" />
+                           Style="{StaticResource Muted}" Effect="{StaticResource TextShadow}" />
             </Grid>
         </Border>
     </Grid>

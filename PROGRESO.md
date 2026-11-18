@@ -1411,8 +1411,29 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Prueba en vivo**: estación temporal 16 (desactivada al terminar) con el cliente 1.3.12; la
   ventana de bloqueo muestra negocio, equipo, «EQUIPO BLOQUEADO», el mensaje, el botón de inicio de
   sesión, «¡Gracias por su visita!» y «Versión 1.3.12», sin reloj, sin fecha y sin tasa.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.12-x64.zip` (35.666.345 bytes,
-  SHA-256 `b475c624…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.13.
+
+---
+
+### Más transparencia y fondos más vistosos (1.3.13, 2026-11-18, sin publicar)
+
+- **Velo casi transparente**: el degradado del bloqueo pasó a `#00`/`#1F`/`#66` (0 % arriba,
+  12 % al centro y 40 % abajo). La tarjeta del pie bajó a 35 % de opacidad y el recuadro del icono
+  a 80 %.
+- **Texto legible sin oscurecer la imagen**: se añadió una sombra negra (`DropShadowEffect`,
+  desenfoque 12, opacidad 0,85) al nombre del negocio, equipo/zona, título, mensaje, saludo y
+  versión, de modo que el fondo se aprecia vivo aunque la imagen sea clara.
+- **Versión 1.3.13** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.13 (67.669.722 bytes, SHA-256 `bfd72bea…`,
+  `publishedUtc` 2026-11-18T12:18:10.578Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.13-20261118-0810`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.13; servidor 1.3.13.
+- **Prueba en vivo**: estación temporal 17 (desactivada al terminar) con el cliente 1.3.13; la
+  captura pasó de brillo medio 44,6 y desviación 33,3 (1.3.11) a **62,9 y 48,0**, señal de que el
+  fondo se ve con más luz y contraste. El cliente arrancó sin errores de XAML.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.13-x64.zip` (35.666.368 bytes,
+  SHA-256 `6c81f40d…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---
