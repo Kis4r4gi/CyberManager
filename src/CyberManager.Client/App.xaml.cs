@@ -612,7 +612,7 @@ public partial class App : Application
     {
         url = ServerLocator.Normalize(url);
         var previous = Config.ServerUrl;
-        ClientLog.Info($"Servidor encontrado en {url} (antes {previous}). Se reconecta.");
+        ClientLog.Info($"Servidor configurado en {url} (antes {previous}). Se reconecta.");
 
         Config.ServerUrl = url;
         try { Config.Save("Client"); } catch { /* carpeta de solo lectura */ }
@@ -632,6 +632,27 @@ public partial class App : Application
         try { await ConnectRealtimeAsync(); } catch { /* el refresco reintenta */ }
 
         await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Aplica la dirección escrita por el administrador en el menú de administrador.
+    /// Reutiliza el cambio en caliente del descubrimiento automático: guarda la URL,
+    /// reconstruye la API y SignalR y refresca el estado de la estación.
+    /// </summary>
+    internal static async Task ApplyServerAddressAsync(string url)
+    {
+        url = ServerLocator.Normalize(url);
+        ClientLog.Info($"El administrador configuró manualmente el servidor en {url}.");
+
+        if (Application.Current is App app)
+        {
+            await app.SwitchServerAsync(url);
+            return;
+        }
+
+        // Pruebas aisladas de la ventana: no hay ciclo de vida del cliente activo.
+        Config.ServerUrl = url;
+        Config.Save("Client");
     }
 
     private Task SendHeartbeatAsync()
@@ -954,17 +975,38 @@ public partial class App : Application
         }
 
         // Sin conexión no hay configuración remota: el administrador desbloquea el
-        // equipo con la credencial guardada. Al volver el servidor, su estado manda.
+        // equipo con la credencial guardada y puede corregir la IP del servidor.
+        // Al volver el servidor, su estado manda.
         if (login.Offline || login.Api is null)
         {
             ClientLog.Info("Desbloqueo local de administrador sin conexión al servidor.");
             _forcedLock = false;
             SetLocked(false, State);
-            MessageBox.Show(
+
+            var answer = MessageBox.Show(
                 "No hay conexión con el servidor. El equipo quedó desbloqueado con la " +
                 "credencial de administrador guardada en este equipo.\n\n" +
-                "Cuando vuelva la conexión, el servidor retomará el control de la estación.",
-                "CyberManager", MessageBoxButton.OK, MessageBoxImage.Information);
+                "¿Desea indicar manualmente la IP del servidor para reconectar?",
+                "CyberManager", MessageBoxButton.YesNo, MessageBoxImage.Information,
+                MessageBoxResult.Yes);
+
+            if (answer == MessageBoxResult.Yes)
+            {
+                // Modo reducido: sólo la dirección del servidor, sin ajustes remotos.
+                var addressWindow = new ClientSettingsWindow(null);
+                if (_lockWindow.IsVisible) addressWindow.Owner = _lockWindow;
+                try
+                {
+                    addressWindow.ShowDialog();
+                }
+                finally
+                {
+                    L.SetLanguage(Config.Language);
+                    Loc.Apply(_lockWindow);
+                    if (_barWindow is not null) Loc.Apply(_barWindow);
+                }
+            }
+
             await RefreshAsync();
             return;
         }

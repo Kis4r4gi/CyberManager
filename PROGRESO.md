@@ -1635,6 +1635,47 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; los demás PCs deben tener el
   cliente instalado y ejecutándose. El paquete de agente 1.3.20 sigue siendo válido para PC 01.
 
+### Configuración manual de la IP del servidor desde la estación (1.3.22, 2026-11-18, sin publicar)
+
+- **Motivo**: el usuario pidió poder configurar manualmente la IP de conexión al servidor desde el
+  menú de administrador del cliente, para los casos en que el descubrimiento automático no baste.
+- **Interfaz**: `ClientSettingsWindow` (XAML y code-behind) incluye ahora la sección **Conexión con
+  el servidor** con `ServerUrlBox`, `DiscoverButton` (**Buscar en la red**), `TestButton`
+  (**Probar conexión**) y el botón **Guardar dirección**. La dirección se normaliza con
+  `ServerLocator.Normalize` y se comprueba con `ServerLocator.ProbeAsync` (`/api/health`) antes de
+  guardarse. La ayuda recuerda que no se debe escribir `localhost` desde una estación.
+- **Modo sin conexión**: el login offline sigue sin abrir los ajustes remotos, pero después de
+  desbloquear el equipo pregunta si se desea indicar la IP; si se acepta, abre la misma ventana en
+  modo reducido (sólo la dirección, sin ajustes remotos ni desinstalación) mediante
+  `new ClientSettingsWindow(null)`. También se puede corregir la IP con el menú de administrador
+  normal cuando los ajustes remotos no cargan.
+- **Aplicación en caliente**: `App.ApplyServerAddressAsync` reutiliza `SwitchServerAsync`: guarda
+  `Config.ServerUrl` de forma atómica, reconstruye `StationApi` y SignalR y refresca el estado sin
+  cerrar la pantalla de bloqueo ni la barra de sesión. Si la dirección no responde, se muestra el
+  error y no se guarda nada.
+- **Prueba aislada**: con un arnés WPF que abre `ClientSettingsWindow(null)` se comprobó por UI
+  Automation que aparecen **Conexión con el servidor**, **IP o URL del servidor**, **Buscar en la
+  red**, **Probar conexión** y **Guardar dirección**, y que **Datos del negocio** y **Mantenimiento**
+  quedan ocultos. Al escribir `192.168.1.8`, **Probar conexión** mostró «Conexión correcta con
+  http://192.168.1.8:5080/» y **Guardar dirección** cerró la ventana y dejó
+  `{"ServerUrl":"http://192.168.1.8:5080/",...}` en la configuración. **Buscar en la red** completó
+  el campo con una dirección que responde. El archivo de configuración de prueba se borró.
+- **Detalle corregido**: la ventana ya no asigna `DialogResult` al cerrarse, porque ese valor sólo
+  es válido cuando se abre con `ShowDialog()`. Ningún llamador lo utilizaba.
+- **Versión 1.3.22** en `version.props`; paquete `ClientUpdate\client.zip` regenerado con el
+  cliente nuevo (67.583.854 bytes, SHA-256 `edbd6f01…`, `publishedUtc`
+  2026-11-18T15:26:52.858Z, 276 entradas, sin `appsettings.json`). Servidor y consola se publican
+  con la misma versión para mantener la coherencia.
+- **Despliegue local**: copiados servidor y consola a `C:\CyberManager\Servidor` con respaldos
+  `_server-pre-1.3.22-20261118-1127` y `_admin-pre-1.3.22-20261118-1127`; base, `appsettings.json`
+  y `web.config` intactos. `/api/health` → versión 1.3.22 e IP `192.168.1.8`. Manifiesto y zip del
+  cliente verificados por tamaño y SHA-256.
+- **Agente 1.3.22**: `C:\CyberManager\CyberManager-Agente-1.3.22-x64.zip` (35.627.237 bytes,
+  SHA-256 `5382ac3b…`, sin `appsettings.json`) para actualizar PC 01 cuando vuelva a estar
+  accesible.
+- **Pendiente**: instalar/actualizar el cliente 1.3.22 en los PCs y comprobar desde la estación que
+  el campo guarda la IP correcta. PC 01 sigue sin ser accesible por red.
+
 ---
 
 ## Rutas y comandos clave

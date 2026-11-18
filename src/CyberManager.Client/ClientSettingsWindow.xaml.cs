@@ -14,12 +14,14 @@ namespace CyberManager.Client;
 /// <summary>
 /// Configuración del cliente para administradores. Los valores se leen y se guardan
 /// en el servidor (<c>/api/settings</c>) con el token del administrador; el idioma
-/// se conserva solo en este equipo.
+/// y la dirección del servidor se conservan solo en este equipo. Sin conexión se
+/// abre un modo reducido que permite corregir la IP del servidor manualmente.
 /// </summary>
 public partial class ClientSettingsWindow : Window
 {
-    private readonly CyberApi _api;
+    private readonly CyberApi? _api;
     private bool _busy;
+    private bool _remoteLoaded;
 
     /// <summary>Indica que los cambios se guardaron correctamente.</summary>
     public bool Saved { get; private set; }
@@ -41,11 +43,21 @@ public partial class ClientSettingsWindow : Window
         public override string ToString() => Text;
     }
 
-    public ClientSettingsWindow(CyberApi api)
+    /// <param name="api">API autenticada, o <c>null</c> si el administrador entró sin conexión.</param>
+    public ClientSettingsWindow(CyberApi? api)
     {
         _api = api;
         InitializeComponent();
         VersionText.Text = $"{L.T("Versión")} {AppInfo.Version}";
+
+        if (_api is null)
+        {
+            SubtitleText.Text = "Establezca la dirección del servidor para reconectar esta estación.";
+            RemoteSections.Visibility = Visibility.Collapsed;
+            MaintenanceSection.Visibility = Visibility.Collapsed;
+            SaveButton.Content = "Guardar dirección";
+            SaveButton.ToolTip = "Guarda la dirección en este equipo y reconecta el cliente.";
+        }
 
         Loaded += async (_, _) =>
         {
@@ -75,6 +87,14 @@ public partial class ClientSettingsWindow : Window
 
     private async Task LoadAsync()
     {
+        ServerUrlBox.Text = App.Config.ServerUrl;
+
+        if (_api is null)
+        {
+            SetStatus(L.T("Escriba la IP del servidor y pulse «Guardar dirección»."));
+            return;
+        }
+
         SetStatus(L.T("Cargando la configuración del servidor..."));
 
         try
@@ -104,13 +124,15 @@ public partial class ClientSettingsWindow : Window
                 .FirstOrDefault(o => o.Value == mode.ToString()) ?? WallpaperModeBox.Items[0];
 
             LanguageBox.SelectedIndex = L.IsEnglish ? 1 : 0;
+            _remoteLoaded = true;
 
             SetStatus(L.T("Revisa los datos y pulsa «Guardar cambios»."));
         }
         catch (Exception ex)
         {
-            SetStatus(ex.Message, true);
-            SaveButton.IsEnabled = false;
+            // Aunque no carguen los ajustes remotos, se puede corregir la IP.
+            SetStatus(L.T("No se pudieron cargar los ajustes remotos; sólo se podrá cambiar la dirección."), true);
+            ClientLog.Error("No se pudieron cargar los ajustes del cliente", ex);
         }
     }
 
@@ -118,47 +140,68 @@ public partial class ClientSettingsWindow : Window
     {
         if (_busy) return;
 
+        _busy = true;
+        SetBusy(true);
         try
         {
-            var scale = ParseInt(SessionBarScaleBox.Text, "La escala de la barra", 70, 160);
-            var rotation = ParseInt(WallpaperRotationBox.Text, "Los segundos entre fondos",
-                WallpaperSettings.MinRotationSeconds, WallpaperSettings.MaxRotationSeconds);
-            var warning = ParseInt(WarningMinutesBox.Text, "Los minutos de aviso", 0, 120);
-            var grace = ParseInt(GraceMinutesBox.Text, "Los minutos de gracia", 0, 120);
+            // La dirección se comprueba siempre, incluso sin conexión con el
+            // servidor anterior: es la forma de recuperarse de un cambio de IP.
+            if (string.IsNullOrWhiteSpace(ServerUrlBox.Text))
+                throw new InvalidOperationException("Escriba la IP o la URL del servidor.");
 
-            var mode = (WallpaperModeBox.SelectedItem as Option)?.Value ?? nameof(WallpaperMode.None);
+            var address = ServerLocator.Normalize(ServerUrlBox.Text);
+            SetStatus(L.T("Comprobando la dirección del servidor..."));
+            if (!await ServerLocator.ProbeAsync(address, 3000))
+                throw new InvalidOperationException(
+                    "No se pudo comprobar la dirección. Revise la IP y que el servidor esté encendido.");
+
+            Dictionary<string, string>? values = null;
             var language = (LanguageBox.SelectedItem as Option)?.Value ?? "es";
 
-            var values = new Dictionary<string, string>
+            if (_api is not null && _remoteLoaded)
             {
-                ["BusinessName"] = BusinessNameBox.Text.Trim(),
-                ["BusinessTaxId"] = BusinessTaxIdBox.Text.Trim(),
-                ["BusinessPhone"] = BusinessPhoneBox.Text.Trim(),
-                ["BusinessAddress"] = BusinessAddressBox.Text.Trim(),
-                ["LocalCurrencySymbol"] = LocalCurrencySymbolBox.Text.Trim(),
-                ["TicketFooter"] = TicketFooterBox.Text.Trim(),
-                ["SessionBarDescription"] = SessionBarDescriptionBox.Text.Trim(),
-                ["SessionBarScale"] = scale.ToString(CultureInfo.InvariantCulture),
-                ["WallpaperMode"] = mode,
-                ["WallpaperRotationSeconds"] = rotation.ToString(CultureInfo.InvariantCulture),
-                ["WarningMinutes"] = warning.ToString(CultureInfo.InvariantCulture),
-                ["GraceMinutes"] = grace.ToString(CultureInfo.InvariantCulture),
-                ["AllowPostpaid"] = (AllowPostpaidCheck.IsChecked == true).ToString(),
-                ["AutoLockOvertime"] = (AutoLockOvertimeCheck.IsChecked == true).ToString()
-            };
+                var scale = ParseInt(SessionBarScaleBox.Text, "La escala de la barra", 70, 160);
+                var rotation = ParseInt(WallpaperRotationBox.Text, "Los segundos entre fondos",
+                    WallpaperSettings.MinRotationSeconds, WallpaperSettings.MaxRotationSeconds);
+                var warning = ParseInt(WarningMinutesBox.Text, "Los minutos de aviso", 0, 120);
+                var grace = ParseInt(GraceMinutesBox.Text, "Los minutos de gracia", 0, 120);
+                var mode = (WallpaperModeBox.SelectedItem as Option)?.Value ?? nameof(WallpaperMode.None);
 
-            _busy = true;
-            SaveButton.IsEnabled = false;
+                values = new Dictionary<string, string>
+                {
+                    ["BusinessName"] = BusinessNameBox.Text.Trim(),
+                    ["BusinessTaxId"] = BusinessTaxIdBox.Text.Trim(),
+                    ["BusinessPhone"] = BusinessPhoneBox.Text.Trim(),
+                    ["BusinessAddress"] = BusinessAddressBox.Text.Trim(),
+                    ["LocalCurrencySymbol"] = LocalCurrencySymbolBox.Text.Trim(),
+                    ["TicketFooter"] = TicketFooterBox.Text.Trim(),
+                    ["SessionBarDescription"] = SessionBarDescriptionBox.Text.Trim(),
+                    ["SessionBarScale"] = scale.ToString(CultureInfo.InvariantCulture),
+                    ["WallpaperMode"] = mode,
+                    ["WallpaperRotationSeconds"] = rotation.ToString(CultureInfo.InvariantCulture),
+                    ["WarningMinutes"] = warning.ToString(CultureInfo.InvariantCulture),
+                    ["GraceMinutes"] = grace.ToString(CultureInfo.InvariantCulture),
+                    ["AllowPostpaid"] = (AllowPostpaidCheck.IsChecked == true).ToString(),
+                    ["AutoLockOvertime"] = (AutoLockOvertimeCheck.IsChecked == true).ToString()
+                };
+            }
+
             SetStatus(L.T("Guardando los cambios..."));
 
-            await _api.SaveSettingsAsync(values);
+            if (values is not null && _api is not null)
+                await _api.SaveSettingsAsync(values);
 
-            App.Config.Language = language;
-            App.Config.Save("Client");
-            L.SetLanguage(language);
+            if (_remoteLoaded)
+            {
+                App.Config.Language = language;
+                App.Config.Save("Client");
+                L.SetLanguage(language);
+            }
+
+            // Guarda la URL y reconstruye API/SignalR sin reiniciar el cliente.
+            await App.ApplyServerAddressAsync(address);
 
             Saved = true;
-            DialogResult = true;
             Close();
         }
         catch (Exception ex)
@@ -168,8 +211,82 @@ public partial class ClientSettingsWindow : Window
         finally
         {
             _busy = false;
-            SaveButton.IsEnabled = true;
+            SetBusy(false);
         }
+    }
+
+    /// <summary>Busca el servidor por UDP para completar el campo automáticamente.</summary>
+    private async void Discover_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy) return;
+
+        _busy = true;
+        SetBusy(true);
+        SetStatus(L.T("Buscando el servidor en la red..."));
+        try
+        {
+            var found = await ServerLocator.FindWorkingAsync(ServerUrlBox.Text);
+            if (found is null)
+            {
+                SetStatus(L.T("No se encontró ningún servidor CyberManager en la red."), true);
+                return;
+            }
+
+            ServerUrlBox.Text = ServerLocator.Normalize(found);
+            SetStatus(L.T($"Servidor encontrado en {ServerUrlBox.Text}. Compruebe la conexión y guarde."));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message, true);
+        }
+        finally
+        {
+            _busy = false;
+            SetBusy(false);
+        }
+    }
+
+    /// <summary>Comprueba sólo la dirección escrita, sin guardarla todavía.</summary>
+    private async void Test_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy) return;
+
+        if (string.IsNullOrWhiteSpace(ServerUrlBox.Text))
+        {
+            SetStatus(L.T("Escriba la IP o la URL del servidor."), true);
+            return;
+        }
+
+        var address = ServerLocator.Normalize(ServerUrlBox.Text);
+        _busy = true;
+        SetBusy(true);
+        SetStatus(L.T("Comprobando la conexión..."));
+        try
+        {
+            if (!await ServerLocator.ProbeAsync(address, 3000))
+            {
+                SetStatus(L.T("La dirección no responde como servidor CyberManager."), true);
+                return;
+            }
+
+            SetStatus(L.T($"Conexión correcta con {address}."));
+        }
+        catch (Exception ex)
+        {
+            SetStatus(ex.Message, true);
+        }
+        finally
+        {
+            _busy = false;
+            SetBusy(false);
+        }
+    }
+
+    private void SetBusy(bool busy)
+    {
+        DiscoverButton.IsEnabled = !busy;
+        TestButton.IsEnabled = !busy;
+        SaveButton.IsEnabled = !busy;
     }
 
     private static int ParseInt(string text, string label, int min, int max)
@@ -197,7 +314,6 @@ public partial class ClientSettingsWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
-        DialogResult = false;
         Close();
     }
 
@@ -242,7 +358,6 @@ public partial class ClientSettingsWindow : Window
         }
 
         UninstallRequested = true;
-        DialogResult = true;
         Close();
     }
 }

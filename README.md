@@ -96,6 +96,10 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   con la IP/URL real del servidor y un botón **Copiar URL** para pegarla en la configuración de
   cualquier estación. La obtiene el propio servidor, así que funciona aunque la consola esté en
   otro equipo.
+- **IP manual desde la estación**: en el menú **Administrador** de la pantalla de bloqueo hay un
+  campo **IP o URL del servidor** con **Buscar en la red**, **Probar conexión** y **Guardar
+  dirección**. Si el servidor cambió de IP y la credencial guardada permite entrar sin conexión,
+  el propio menú ofrece corregir la dirección; el cliente se reconecta en caliente sin reiniciarse.
 - **Desbloqueo de administrador sin conexión**: tras un inicio de sesión correcto, el cliente guarda
   una copia local de la contraseña de administrador (PBKDF2 + DPAPI, con límite de intentos) para
   poder abrir el equipo cuando el servidor no responde. Una contraseña rechazada por el servidor

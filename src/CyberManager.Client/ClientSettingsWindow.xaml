@@ -42,6 +42,34 @@
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled" Padding="26,0,26,0">
                 <StackPanel>
+                    <!-- Conexión con el servidor (también disponible sin conexión) -->
+                    <TextBlock Text="Conexión con el servidor" Style="{StaticResource H2}" Margin="0,4,0,10" />
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="IP o URL del servidor" Style="{StaticResource Label}" />
+                            <TextBox x:Name="ServerUrlBox" MaxLength="200" FontFamily="Consolas"
+                                     ToolTip="Ejemplo: http://192.168.1.8:5080" />
+                        </StackPanel>
+
+                        <Button x:Name="DiscoverButton" Grid.Column="1" Content="Buscar en la red"
+                                Style="{StaticResource GhostButton}" Padding="14,8" Margin="0,16,8,0"
+                                VerticalAlignment="Top" Click="Discover_Click"
+                                ToolTip="Busca el servidor CyberManager en la red local y completa la dirección." />
+                        <Button x:Name="TestButton" Grid.Column="2" Content="Probar conexión"
+                                Style="{StaticResource GhostButton}" Padding="14,8" Margin="0,16,0,0"
+                                VerticalAlignment="Top" Click="Test_Click"
+                                ToolTip="Comprueba que la dirección responda como servidor CyberManager." />
+                    </Grid>
+                    <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14" FontSize="11"
+                               Text="Use la IP de la PC donde corre el servidor (por ejemplo 192.168.1.8). No escriba localhost: esta dirección la usará el cliente desde cada estación." />
+
+                    <StackPanel x:Name="RemoteSections">
                     <!-- Negocio -->
                     <TextBlock Text="Datos del negocio" Style="{StaticResource H2}" Margin="0,4,0,10" />
                     <Grid Margin="0,0,0,4">
@@ -165,6 +193,7 @@
                     </Grid>
 
                     <!-- Mantenimiento -->
+                    <StackPanel x:Name="MaintenanceSection">
                     <TextBlock Text="Mantenimiento" Style="{StaticResource H2}" Margin="0,8,0,10" />
                     <Border Background="#151C2C" BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,8">
@@ -187,6 +216,8 @@
                                     ToolTip="Cierra el cliente y ejecuta el desinstalador de CyberManager." />
                         </Grid>
                     </Border>
+                    </StackPanel>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 
