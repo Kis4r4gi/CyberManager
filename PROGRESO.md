@@ -1320,6 +1320,54 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   El paquete `ClientUpdate` se mantuvo en 1.3.7 porque el cliente no cambió; PC 01 sigue en 1.3.7
   y reporta en línea.
 
+### Correcciones altas y medias del cliente y del servidor (1.3.9 → 1.3.10, 2026-11-18, sin publicar)
+
+- **Órdenes del menú Acciones que no llegaban al cliente (alto)**: las conexiones SignalR de la
+  estación (`StationRealtime`), de la consola (`AdminRealtime`) y del agente (`AgentWorker`) no
+  registraban `JsonStringEnumConverter`, pero el servidor envía los enums como texto
+  (`"command":"Message"`). El mensaje llegaba al socket y fallaba al deserializar, así que el
+  manejador nunca se ejecutaba: mensajes, capturas de pantalla, control remoto, cambio de fondos,
+  volumen y apagado remoto quedaban sin efecto. Se añadió
+  `AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))`
+  a las cuatro conexiones. Verificado en vivo: el mensaje se mostró, `KillProcess notepad` cerró el
+  Bloc de notas y `KillProcess explorer` fue rechazado por la lista de procesos protegidos.
+- **Sesión iniciada desde la consola dejaba el equipo bloqueado (alto)**: `SessionService.StartAsync`
+  enviaba `Unlock` pero no limpiaba `Station.IsLocked`, por lo que el cliente volvía a bloquearse en
+  el siguiente refresco de estado (5 s). Ahora el inicio guarda `IsLocked = false`; `StopAsync`
+  guarda `IsLocked = true` y `TransferAsync` bloquea el origen y desbloquea el destino. Verificado:
+  la sesión #6 iniciada por API desbloqueó el cliente y el cierre lo volvió a bloquear.
+- **Cliente (medios)**: instancia única con mutex `Local\CyberManagerClient-<equipo>` y espera de
+  15 s durante una actualización; manejadores globales de excepción con `client-errors.log`; registro
+  `client.log` rotativo de 1 MB; token de estación cifrado con DPAPI (`TokenProtector`), migración
+  desde texto plano y guardado atómico de `AppConfig`; `InputBlocker` con TTL de 10 min y liberación
+  al desconectar; `KillProcess` con lista de procesos protegidos; `DiscoveryResponder` solo acepta
+  `Configure` del servidor configurado y no entrega el token si el equipo ya está configurado;
+  validación y normalización de IP/MAC en el asistente; `SessionBackupService` ya no infla el total
+  en prepago; barra y ventana prepago usan el símbolo de moneda configurado y la contraseña se limpia
+  al cerrar; relanzador de actualización con espera y marca `update.pending` borrada tras arrancar;
+  retirada la casilla `KioskMode`; `configurar-cliente.ps1` registra la tarea
+  `CyberManagerClientWatchdog`.
+- **Servidor (medios)**: reembolso prepago con `SessionCalculator.BilledMinutes` (techo) para no
+  devolver minutos no consumidos; `ExtendAsync` y `RechargeAsync` desbloquean el equipo al
+  ampliar/recargar; login prepago bloqueado 60 s tras 5 fallos (HTTP 429); `RequireStationAsync`
+  exige `X-Station-Token` cuando el equipo ya tiene token.
+- **Versión 1.3.10**: el paquete 1.3.9 llegó a PC 01 antes del arreglo de SignalR y, como el cliente
+  solo actualiza a una versión mayor, la corrección se publicó como **1.3.10**. PC 01 se actualizó
+  sola y reporta 1.3.10 con la sesión prepago #2 (id 4) intacta; la base conserva los 424 productos.
+- **Despliegue local 1.3.10**: respaldos `_bin-pre-1.3.9-20261117-2341`,
+  `_admin-pre-1.3.9-20261117-2341`, `_bin-pre-1.3.9-fix-20261117-2352` y
+  `_bin-pre-1.3.10-20261118-0749`; servidor y consola copiados a `C:\CyberManager\Servidor`
+  (excluyendo `cybermanager.db*`, `appsettings.json` y `web.config`); `ClientUpdate\client.zip`
+  1.3.10 (67.670.321 bytes, SHA-256 `82f48e47…`); tarea `CyberManagerServer` en `Running`,
+  `/api/health` → `ok` y manifiesto 1.3.10.
+- **Pruebas en vivo**: estaciones temporales 13 y 14 (desactivadas al terminar) con las sesiones #5
+  y #6 cerradas con `ChargeTime=false`, sin movimientos de caja. Se verificaron bloqueo, login de
+  administrador, configuración sin campos superpuestos y sin «Modo kiosco», barra compacta con el
+  nombre del equipo, «Mi cuenta», «Pedir productos», cierre y rebloqueo.
+- **Pendiente**: reinstalar el **agente** en PC 01 con `installer\scripts\configurar-agente.ps1`
+  para que reciba el arreglo de SignalR (apagado, reinicio y cierre de sesión remotos); el
+  actualizador de cliente solo reemplaza la carpeta `Client`.
+
 ---
 
 ## Rutas y comandos clave

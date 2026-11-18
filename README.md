@@ -1109,7 +1109,7 @@ Para quitar solo el inicio automático (sin desinstalar el cliente):
 - CyberManager **no** implementa un modo kiosco de Windows. Para impedir el acceso al escritorio
   use las políticas del equipo (shell personalizado, bloqueo de la barra de tareas, del
   Administrador de tareas y de las teclas Windows). La antigua opción «Modo kiosco» no tenía
-  efecto y se retiró en la versión 1.3.9.
+  efecto y se retiró en la versión 1.3.10.
 - `Ctrl+Alt+Del` no se puede interceptar desde el cliente: si el usuario de la estación es
   administrador local, puede cerrar el cliente o la sesión. Para un kiosco real use una cuenta
   estándar con políticas restrictivas.
