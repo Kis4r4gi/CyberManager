@@ -660,10 +660,11 @@ tiempo; todas comparten la misma base de datos y cada PC abre y cierra su propio
 
 - **Servidor**: se instala una sola vez en el equipo principal (por ejemplo, `192.168.1.10`, puerto
   5080). No instale el servidor en las demás PCs ni comparta el archivo `cybermanager.db` por red.
-- **Consolas**: en cada PC de caja instale la consola de administración y escriba en el login la URL
-  del servidor (`http://192.168.1.10:5080`) y un nombre de **Caja de este equipo** distinto en cada
-  PC (`CAJA-1`, `CAJA-2`, …). El nombre se guarda en `config.json` y viaja al servidor en la
-  cabecera `X-Cash-Terminal`.
+- **Consolas**: en cada PC de caja instale la consola de administración. El login ya no pide la URL
+  ni el nombre de la caja: se toman de `%LOCALAPPDATA%\CyberManager\Admin\config.json` (`ServerUrl` y
+  `TerminalName`). En una PC nueva, ajuste esos valores antes de iniciar sesión; por defecto usa
+  `http://127.0.0.1:5080` y el nombre del equipo. El nombre viaja al servidor en la cabecera
+  `X-Cash-Terminal`.
 - **Turnos independientes**: cada caja abre su turno, registra sus movimientos y lo cierra sin
   afectar a las demás. El historial de *Caja* muestra la columna **Caja** para saber a qué terminal
   pertenece cada turno. Una misma caja no puede tener dos turnos abiertos a la vez.

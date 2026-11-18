@@ -1520,8 +1520,32 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   de luminancia desde el borde del título sube de 28 (2 px) a 49 (3 px), 54 (4 px) y ~65 (12 px),
   frente al fondo de ~65–70: el halo se desvanece de forma gradual. El mensaje muestra la misma
   progresión (42 → 48 → 70). Sin errores en el cliente ni en el servidor.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.18-x64.zip` (35.666.376 bytes,
-  SHA-256 `89d19892…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.19.
+
+---
+
+### Login de la consola sin servidor, caja ni datos fiscales (1.3.19, 2026-11-18, sin publicar)
+
+- **Formulario más simple**: se quitaron del login de la consola los campos **Servidor** y
+  **Caja de este equipo**, y los recuadros informativos **MONEDA BASE** (USD $ / Bs) e **IMPUESTOS**
+  (IVA 16 % · IGTF 3 %). Quedan solo **Usuario**, **Contraseña** y el botón **Entrar a la consola**.
+- **Configuración automática**: la URL y el nombre de la caja se leen de
+  `%LOCALAPPDATA%\CyberManager\Admin\config.json` (`ServerUrl` y `TerminalName`). Si no existen, se
+  usan `http://127.0.0.1:5080` y el nombre del equipo; el nombre viaja al servidor en la cabecera
+  `X-Cash-Terminal`. Al iniciar sesión se normalizan y se guardan de nuevo en ese archivo.
+- **Versión 1.3.19** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.19 (67.673.867 bytes, SHA-256 `4a552dfa…`,
+  `publishedUtc` 2026-11-18T14:12:27.385Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.19-20261118-0856`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.19; servidor 1.3.19.
+- **Prueba en vivo**: se abrió la consola 1.3.19 y UI Automation confirmó que ya no aparecen
+  «Servidor», «Caja de este equipo», «MONEDA BASE» ni «IMPUESTOS»; solo hay dos campos editables
+  (`UsernameBox` y `PasswordBox`). Se inició sesión con `admin/admin123` y abrió la ventana
+  «CyberManager · Administración · v1.3.19» usando la configuración guardada. La consola de prueba se
+  cerró al terminar.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.19-x64.zip` (35.666.363 bytes,
+  SHA-256 `013a9da3…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---

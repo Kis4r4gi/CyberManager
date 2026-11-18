@@ -27,8 +27,6 @@ public partial class LoginWindow : Window
         _placementKey = "login:" + Environment.UserName;
 
         var config = AppConfig.Load("Admin");
-        ServerUrlBox.Text = config.ServerUrl;
-        TerminalBox.Text = ApiClient.NormalizeTerminal(config.TerminalName);
         UsernameBox.Text = string.IsNullOrWhiteSpace(username)
             ? config.LastUsername ?? "admin"
             : username;
@@ -70,15 +68,17 @@ public partial class LoginWindow : Window
 
         try
         {
-            var api = new CyberApi(ServerUrlBox.Text);
-            var terminal = ApiClient.NormalizeTerminal(TerminalBox.Text);
+            // La dirección del servidor y el nombre de la caja se toman de la
+            // configuración guardada; ya no se piden en el inicio de sesión.
+            var config = AppConfig.Load("Admin");
+            var url = ApiClient.Normalize(config.ServerUrl);
+            var terminal = ApiClient.NormalizeTerminal(config.TerminalName);
+            var api = new CyberApi(url);
             api.Headers[ApiClient.TerminalHeader] = terminal;
             var response = await api.LoginAsync(UsernameBox.Text.Trim(), PasswordBox.Password);
 
-            var url = ApiClient.Normalize(ServerUrlBox.Text);
             App.SetSession(api, response, url, terminal);
 
-            var config = AppConfig.Load("Admin");
             config.ServerUrl = url;
             config.TerminalName = terminal;
             config.LastUsername = response.Username;

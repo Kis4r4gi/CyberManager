@@ -41,21 +41,6 @@
                     <TextBlock Text="Sesiones prepago y postpago, caja en bolívares y dólares, inventario, facturación venezolana y reportes en tiempo real."
                                FontSize="14" Foreground="{StaticResource MutedBrush}" Margin="0,18,0,0"
                                TextWrapping="Wrap" MaxWidth="420" LineHeight="22" />
-
-                    <StackPanel Orientation="Horizontal" Margin="0,36,0,0">
-                        <Border Style="{StaticResource Panel}" Padding="14,10" Margin="0,0,10,0">
-                            <StackPanel>
-                                <TextBlock Text="MONEDA BASE" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock Text="USD $ / Bs" FontWeight="SemiBold" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource Panel}" Padding="14,10">
-                            <StackPanel>
-                                <TextBlock Text="IMPUESTOS" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}" />
-                                <TextBlock Text="IVA 16% · IGTF 3%" FontWeight="SemiBold" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
                 </StackPanel>
 
                 <TextBlock Text="CyberManager · Venezuela" VerticalAlignment="Bottom"
@@ -70,13 +55,7 @@
                 <TextBlock Text="Ingrese sus credenciales para abrir la consola."
                            Style="{StaticResource Muted}" Margin="0,6,0,26" />
 
-                <TextBlock Text="Servidor" Style="{StaticResource Label}" />
-                <TextBox x:Name="ServerUrlBox" ToolTip="Ejemplo: http://192.168.1.10:5080" />
-
-                <TextBlock Text="Caja de este equipo" Style="{StaticResource Label}" Margin="0,16,0,4" />
-                <TextBox x:Name="TerminalBox" ToolTip="Nombre de esta caja. Cada PC conectada al mismo servidor debe tener un nombre distinto (por ejemplo, CAJA-1 y CAJA-2)." />
-
-                <TextBlock Text="Usuario" Style="{StaticResource Label}" Margin="0,16,0,4" />
+                <TextBlock Text="Usuario" Style="{StaticResource Label}" Margin="0,0,0,4" />
                 <TextBox x:Name="UsernameBox" />
 
                 <TextBlock Text="Contraseña" Style="{StaticResource Label}" Margin="0,16,0,4" />
