@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Publica CyberManager y genera los instaladores unificados de servidor y estación.
+    Publica CyberManager y genera los instaladores de servidor y estación.
 
 .DESCRIPTION
     Crea distribuciones autocontenidas para Windows x64 y x86 (no requieren .NET instalado
@@ -18,8 +18,8 @@
 
 .PARAMETER Architecture
     Payloads a publicar: all (x64 y x86, valor por defecto), x64 o x86. Los instaladores
-    unificados requieren ambas arquitecturas; use x64 o x86 junto con -SkipInstaller para
-    publicaciones de diagnóstico.
+    Los instaladores requieren ambas arquitecturas; use x64 o x86 junto con -SkipInstaller
+    para publicaciones de diagnóstico.
 
 .PARAMETER Configuration
     Configuración de compilación. Por defecto Release.
@@ -235,13 +235,12 @@ elseif (-not $NoBump) {
 $architectures = if ($Architecture -eq "all") { @("x64", "x86") } else { @($Architecture) }
 
 if (-not $SkipInstaller -and $architectures.Count -lt 2) {
-    throw "Los instaladores unificados incluyen x64 y x86. Use -Architecture all o agregue -SkipInstaller para publicar una sola arquitectura."
+    throw "Los instaladores incluyen x64 y x86. Use -Architecture all o agregue -SkipInstaller para publicar una sola arquitectura."
 }
 
 $installers = @(
     @{ Iss = Join-Path $installerDir "CyberManager.Servidor.iss"; Name = "Servidor"; Display = "Servidor" },
-    @{ Iss = Join-Path $installerDir "CyberManager.Estacion.iss"; Name = "Estacion"; Display = "Estación" },
-    @{ Iss = Join-Path $installerDir "CyberManager.Unificado.iss"; Name = "Unificado"; Display = "Unificado (servidor o estación)" }
+    @{ Iss = Join-Path $installerDir "CyberManager.Estacion.iss"; Name = "Estacion"; Display = "Estación" }
 )
 
 $projects = [ordered]@{
@@ -400,7 +399,7 @@ else {
 
     foreach ($arch in @("x64", "x86")) {
         if (-not (Test-Path (Join-Path $distRoot $arch))) {
-            throw "No existe dist\$arch. Los instaladores unificados requieren ambos payloads; ejecute el script con -Architecture all."
+            throw "No existe dist\$arch. Los instaladores requieren ambos payloads; ejecute el script con -Architecture all."
         }
 
         if (-not (Test-Path (Join-Path $distRoot "$arch\Uninstaller"))) {
@@ -408,12 +407,12 @@ else {
         }
     }
 
-    # Los instaladores por arquitectura quedaron reemplazados por los unificados.
+    # Limpia instaladores antiguos de una sola arquitectura.
     Get-ChildItem -Path $artifacts -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match '^CyberManager-(Servidor|Estacion)-.+-x(64|86)\.exe$' } |
         Remove-Item -Force -ErrorAction SilentlyContinue
 
-    Write-Step "Generando los instaladores unificados (x64 + x86) con Inno Setup..."
+    Write-Step "Generando los instaladores (x64 + x86) con Inno Setup..."
     $generated = @()
 
     foreach ($installer in $installers) {
@@ -422,7 +421,7 @@ else {
         $setup = Join-Path $artifacts "CyberManager-$($installer.Name)-$Version.exe"
         if (Test-Path $setup) { Remove-Item -Path $setup -Force }
 
-        Write-Step "Compilando instalador unificado de $($installer.Display)..."
+        Write-Step "Compilando instalador de $($installer.Display)..."
         & $iscc "/DMyAppVersion=$Version" $installer.Iss
         if ($LASTEXITCODE -ne 0) { throw "Falló la compilación del instalador de $($installer.Display)." }
 

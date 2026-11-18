@@ -13,11 +13,11 @@ estación), unificados por arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
-La solución compila con **0 errores** y **0 advertencias**. Se generan **tres instaladores**:
-el **unificado** (permite escoger servidor o estación al abrir) y los dos separados (Servidor y
-Estación). Cada uno incluye los payloads de x64 y x86 y selección automática de la arquitectura al
-instalar. El **servidor 1.3.0 está instalado y corriendo** (tarea programada, puerto 5080) en este
-equipo con la ruta `C:\CyberManager\Servidor`, migrado con el instalador unificado.
+La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores**:
+**Servidor** y **Estación**. Cada uno incluye los payloads de x64 y x86 y selección automática de la
+arquitectura al instalar. El **servidor 1.3.31 está instalado y corriendo** (tarea programada,
+puerto 5080) en este equipo con la ruta `C:\CyberManager\Servidor`, migrado con el instalador de
+Servidor.
 
 ---
 
@@ -141,15 +141,11 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 ### Instaladores y despliegue
 
-- Inno Setup 6 con **tres instaladores**: dos separados por componente y uno unificado.
-  - `installer/CyberManager.Unificado.iss` → al abrir, el usuario elige **servidor**, **estación** o
-    **ambos** (`[Types]` + `[Components]`), con tareas, iconos, `[Run]` y `[UninstallRun]`
-    filtrados por componente. Instala en `C:\CyberManager\Servidor` y/o
-    `C:\CyberManager\Estacion`, las mismas rutas de los instaladores separados. Usa AppId propio y,
-    en `PrepareToInstall`, desinstala en silencio los AppId anteriores
-    (`{A3B5D8E1-…}` servidor y `{C9D2E4F6-…}` estación) conservando base de datos y configuración.
+- Inno Setup 6 con **dos instaladores**: Servidor y Estación.
   - `installer/CyberManager.Servidor.iss` → servidor + consola de administración.
   - `installer/CyberManager.Estacion.iss` → cliente + agente de Windows.
+  - El instalador unificado (`installer/CyberManager.Unificado.iss`) se eliminó del proyecto en
+    1.3.31; para instalar ambos componentes en el mismo equipo se ejecutan los dos instaladores.
   - Cada instalador incluye los payloads de `dist\x64` y `dist\x86`; `[Files]` usa
     `Check: IsX64InstallMode` / `IsX86InstallMode` para copiar solo el que corresponde.
     `ArchitecturesAllowed=x86compatible` permite x86/x64 y
@@ -158,7 +154,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   - `[InstallDelete]` retira los binarios nativos de la arquitectura opuesta al reinstalar, sin
     tocar la base de datos del servidor ni la configuración local de la estación.
 - `scripts/build-installer.ps1` publica ambos payloads (`dist\x64` y `dist\x86`), el desinstalador
-  independiente y compila los **tres** instaladores (servidor, estación y unificado); `-Architecture`
+  independiente y compila los **dos** instaladores (servidor y estación); `-Architecture`
   acepta `all` (por defecto), `x64` o `x86`, y las dos últimas solo se usan con `-SkipInstaller`
   para publicaciones de diagnóstico.
 - **Versión automática**: `version.props` (`CyberManagerVersion`) es la fuente única.
@@ -1773,6 +1769,18 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   «Sin conexión» de inmediato y que una desconexión sin aviso lo hace en unos 2 s. Las estaciones de
   prueba se eliminaron con `DELETE` (204).
 
+### Eliminación del instalador unificado y release 1.3.31 (2026-11-18)
+
+- Se eliminó `installer/CyberManager.Unificado.iss` y la entrada correspondiente de
+  `scripts/build-installer.ps1`. El script vuelve a generar solo **Servidor** y **Estación**, ambos
+  con los payloads x64/x86. La opción de elegir ambos componentes en un solo ejecutable ya no está
+  disponible: en ese caso se ejecutan los dos instaladores.
+- Se quitó del repositorio el artefacto `artifacts/CyberManager-Unificado-1.3.31.exe` (estaba en
+  Git LFS) y se actualizaron `README.md` y este documento para que dejen de anunciar tres
+  instaladores.
+- La release de GitHub **v1.3.31** se publicó/actualizó con **solo dos assets**:
+  `CyberManager-Servidor-1.3.31.exe` y `CyberManager-Estacion-1.3.31.exe`.
+
 ---
 
 ## Rutas y comandos clave
@@ -1784,7 +1792,7 @@ Repositorio: la carpeta que contiene `CyberManager.sln` (por ejemplo, `C:\CyberM
 $dotnet = "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
 & $dotnet build CyberManager.sln -v q --nologo
 
-# Generar los tres instaladores (unificado, servidor y estación; sube la versión menor)
+# Generar los dos instaladores (servidor y estación; sube la versión menor)
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-installer.ps1
 
 # Fijar una versión concreta o conservar la actual
@@ -1966,13 +1974,12 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   <https://github.com/Kis4r4gi/CyberManager/releases/latest>.
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
-  `gh release create v<versión> --target main artifacts/CyberManager-Unificado-<versión>.exe artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.2.0**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.2.0>) con
-  `CyberManager-Servidor-1.2.0.exe` (396.164.653 bytes),
-  `CyberManager-Estacion-1.2.0.exe` (150.758.922 bytes) y
-  `tightvnc-2.8.90-src-gpl.zip` (3.018.194 bytes), publicada el `2026-11-16T17:48:34Z`. La
-  release anterior publicada es `v1.1.1`
+  `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
+- Release actual: **v1.3.31**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.31>) con
+  `CyberManager-Servidor-1.3.31.exe` (396.386.714 bytes) y
+  `CyberManager-Estacion-1.3.31.exe` (150.851.865 bytes). El instalador unificado quedó fuera del
+  proyecto y de la release. La release anterior publicada es `v1.1.1`
   (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,

@@ -7,9 +7,9 @@ consola y agente de Windows para controlar la energía y el bloqueo de los equip
 Todo el dinero contable se lleva en **USD**, con una **tasa Bs/USD del día** que se guarda como
 foto en cada venta, y facturación con **RIF, IVA 16 % e IGTF 3 %** sobre pagos en divisas.
 
-Incluye **dos instaladores unificados para Windows x64 y x86**: uno para el servidor (servidor +
-consola) y otro para cada estación (cliente + agente), sin necesidad de instalar .NET en los
-equipos de destino. Cada instalador detecta automáticamente la arquitectura del equipo e instala
+Incluye **dos instaladores para Windows x64 y x86**: uno para el servidor (servidor + consola) y
+otro para cada estación (cliente + agente), sin necesidad de instalar .NET en los equipos de
+destino. Cada instalador detecta automáticamente la arquitectura del equipo e instala
 los binarios correspondientes. La interfaz está disponible **solo en español e inglés** y los
 terminales bloqueados pueden reproducir **videos promocionales** sincronizados desde el servidor.
 
@@ -257,7 +257,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Respaldos integrados**: copia manual o automática de la base SQLite, exportación a un archivo,
   restauración con respaldo de seguridad previo, retención configurable y **carpeta de destino
   elegible** desde un desplegable.
-- **Instaladores de Windows** autocontenidos y unificados: **Servidor** (servidor + consola) y
+- **Instaladores de Windows** autocontenidos: **Servidor** (servidor + consola) y
   **Estación** (cliente + agente). Cada instalador incluye los binarios de **x64 y x86** y elige
   la arquitectura adecuada al instalar. Todos los ejecutables y ambos instaladores comparten el
   icono de CyberManager (`assets/CyberManager.ico`).
@@ -384,7 +384,7 @@ dotnet publish src\CyberManager.Admin\CyberManager.Admin.csproj -c Release -r wi
 > El cliente y el agente se publican con los scripts de instalación, que además escriben su
 > configuración.
 
-Para generar los **instaladores unificados** (x64 + x86):
+Para generar los **instaladores** (x64 + x86):
 
 ```powershell
 .\scripts\build-installer.ps1
@@ -482,38 +482,16 @@ datos del negocio** y la configuración local de las estaciones.
 
 ## Instaladores de Windows
 
-Hay **tres instaladores autocontenidos**: el **unificado** (al abrirlo se elige servidor o estación)
-y los dos separados (servidor y estación). Todos incluyen los binarios de **x64 y x86** y detectan
-automáticamente la arquitectura del equipo: en Windows x64 instalan la versión de 64 bits y en
-Windows x86 la de 32 bits. Ninguno requiere .NET instalado en el equipo de destino. Ejecútelos
-**como administrador**. Los instaladores incluyen **español e inglés**: el idioma se elige al
-inicio y puede cambiarse después en la aplicación. Todos los instaladores y ejecutables usan el
-icono de CyberManager.
+Hay **dos instaladores autocontenidos**: **Servidor** y **Estación**. Ambos incluyen los binarios
+de **x64 y x86** y detectan automáticamente la arquitectura del equipo: en Windows x64 instalan la
+versión de 64 bits y en Windows x86 la de 32 bits. Ninguno requiere .NET instalado en el equipo de
+destino. Ejecútelos **como administrador**. Los instaladores incluyen **español e inglés**: el idioma
+se elige al inicio y puede cambiarse después en la aplicación. Ambos ejecutables usan el icono de
+CyberManager.
 
-### Instalador unificado (recomendado)
-
-`CyberManager-Unificado-<versión>.exe` sirve para cualquier equipo. En la página **¿Qué desea
-instalar?** se escoge una de tres opciones:
-
-| Opción | Qué instala | Carpeta |
-|---|---|---|
-| **Servidor (equipo principal con la base de datos)** | API, base de datos y consola de administración | `C:\CyberManager\Servidor` |
-| **Estación / cliente (PC de caja o de juego)** | Cliente, agente de Windows y scripts de configuración | `C:\CyberManager\Estacion` |
-| **Servidor y estación en este mismo equipo** | Ambos componentes | `C:\CyberManager\Servidor` y `C:\CyberManager\Estacion` |
-
-Las tareas, los accesos directos y el arranque automático se ajustan a lo elegido: las tareas del
-servidor (tarea programada, puerto 5080, visor VNC) solo aparecen con el servidor y las de la
-estación (inicio del cliente, agente, servidor VNC) solo con la estación. La carpeta final es la
-misma que usan los instaladores separados, así que los scripts, la base de datos y la configuración
-local siguen funcionando sin cambios.
-
-Si el equipo tiene instalada una versión anterior de los instaladores separados, el unificado la
-desinstala en silencio antes de copiar los archivos, para no dejar dos entradas en **Aplicaciones
-instaladas**. La base de datos (`cybermanager.db`) y la configuración local del cliente se
-conservan.
-
-> Para agregar el otro componente a un equipo ya instalado, vuelva a ejecutar el unificado y elija
-> **Servidor y estación en este mismo equipo**.
+> El instalador unificado que permitía elegir servidor, estación o ambos en un solo ejecutable se
+> eliminó del proyecto. Para instalar los dos componentes en el mismo equipo, ejecute ambos
+> instaladores en orden: primero **Servidor** y luego **Estación**.
 
 ### Servidor
 
@@ -1379,7 +1357,7 @@ guarda una copia local del estado:
 | Script                          | Uso                                                                 |
 |---------------------------------|---------------------------------------------------------------------|
 | `scripts/run-dev.ps1`           | Compila, arranca el servidor, espera `/api/health` y abre la consola.|
-| `scripts/build-installer.ps1`   | Publica x64/x86 y genera los instaladores unificados con Inno Setup. |
+| `scripts/build-installer.ps1`   | Publica x64/x86 y genera los instaladores de Servidor y Estación con Inno Setup. |
 | `scripts/generate-icon.ps1`     | Genera el icono compartido `assets/CyberManager.ico`.               |
 | `scripts/install-agent.ps1`     | Instala el agente como servicio de Windows.                        |
 | `scripts/install-client-startup.ps1` | Instala el cliente y su inicio automático elevado.             |
@@ -1408,7 +1386,7 @@ registro al arrancar.
 `build-installer.ps1` acepta `-Version`, `-Architecture` (`all` por defecto, `x64` o `x86` para
 publicaciones de diagnóstico), `-Configuration`, `-SkipPublish`, `-SkipInstaller`,
 `-InstallInnoSetup` y `-Clean`. Publica en `dist\x64` y `dist\x86` y genera dos instaladores
-unificados que eligen la arquitectura al instalar. La publicación elimina PDB, XML de
+(Servidor y Estación) que eligen la arquitectura al instalar. La publicación elimina PDB, XML de
 documentación y recursos satélite de otros idiomas para reducir el tamaño.
 
 > Ejecute los scripts con `Set-ExecutionPolicy -Scope Process Bypass -Force` si la política de
