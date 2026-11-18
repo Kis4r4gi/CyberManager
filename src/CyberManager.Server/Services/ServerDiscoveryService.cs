@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using CyberManager.Shared;
@@ -13,6 +14,7 @@ public sealed class ServerDiscoveryService : BackgroundService
 {
     private readonly ILogger<ServerDiscoveryService> _log;
     private readonly int _port;
+    private readonly ConcurrentDictionary<string, DateTime> _lastRequestUtc = new();
 
     public ServerDiscoveryService(IConfiguration configuration, ILogger<ServerDiscoveryService> log)
     {
@@ -62,6 +64,16 @@ public sealed class ServerDiscoveryService : BackgroundService
 
             var message = DiscoveryProtocol.Decode(result.Buffer);
             if (message is null || message.Magic != DiscoveryProtocol.FindServerMagic) continue;
+
+            // Un registro por IP y como máximo cada 5 minutos sirve para comprobar
+            // en los logs si una estación está intentando encontrar el servidor.
+            var requester = result.RemoteEndPoint.Address.ToString();
+            if (!_lastRequestUtc.TryGetValue(requester, out var last) ||
+                DateTime.UtcNow - last > TimeSpan.FromMinutes(5))
+            {
+                _lastRequestUtc[requester] = DateTime.UtcNow;
+                _log.LogInformation("Petición de descubrimiento recibida desde {Requester}", requester);
+            }
 
             // Se responde con todas las direcciones locales utilizables: el equipo
             // puede tener adaptadores virtuales (Hyper-V, WSL, VPN) y la estación debe

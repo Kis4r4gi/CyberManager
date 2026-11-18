@@ -92,6 +92,10 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   equipo), el cliente, la consola y el agente lo buscan por difusión UDP (5094) y, si hace falta,
   recorriendo la subred; validan la dirección con el token del equipo y la guardan sin reinstalar ni
   reconfigurar nada.
+- **IP del servidor a la vista**: en *Equipos y zonas* y en la pestaña *Zonas* aparece una tarjeta
+  con la IP/URL real del servidor y un botón **Copiar URL** para pegarla en la configuración de
+  cualquier estación. La obtiene el propio servidor, así que funciona aunque la consola esté en
+  otro equipo.
 - **Desbloqueo de administrador sin conexión**: tras un inicio de sesión correcto, el cliente guarda
   una copia local de la contraseña de administrador (PBKDF2 + DPAPI, con límite de intentos) para
   poder abrir el equipo cuando el servidor no responde. Una contraseña rechazada por el servidor

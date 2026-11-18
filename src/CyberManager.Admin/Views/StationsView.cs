@@ -18,6 +18,7 @@ public sealed class StationsView : UserControl, IRefreshable
     private readonly ComboBox _statusFilter = new();
     private readonly TextBlock _summaryText = Kit.Muted("Cargando equipos...");
     private readonly TextBlock _clientStatusText = Kit.Muted("Consultando el paquete de cliente...");
+    private readonly ServerAddressBar _serverAddressBar = new();
 
     private List<StationDto> _stations = new();
     private List<ZoneDto> _zones = new();
@@ -90,6 +91,8 @@ public sealed class StationsView : UserControl, IRefreshable
         _clientStatusText.VerticalAlignment = VerticalAlignment.Center;
         _clientStatusText.Margin = new Thickness(0, 0, 14, 8);
         clientWrap.Children.Add(_clientStatusText);
+
+        clientWrap.Children.Add(_serverAddressBar);
 
         var updateButton = Kit.Button("Actualizar clientes", "BlueButton", UpdateClients);
         updateButton.Margin = new Thickness(0, 0, 8, 8);
@@ -367,6 +370,12 @@ public sealed class StationsView : UserControl, IRefreshable
         _rates = await ratesTask;
 
         Render();
+
+        // La IP del servidor se consulta aparte: si falla, la barra muestra la
+        // dirección de la configuración y el resto de la pantalla sigue cargando.
+        try { await _serverAddressBar.RefreshAsync(); }
+        catch { /* se reintenta en el próximo refresco */ }
+
         await RefreshClientUpdateAsync();
     }
 

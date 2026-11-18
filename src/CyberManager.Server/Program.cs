@@ -205,12 +205,25 @@ app.MapGet("/", () => Results.Ok(new
     timeUtc = DateTime.UtcNow
 })).AllowAnonymous();
 
-app.MapGet("/api/health", () => Results.Ok(new
+app.MapGet("/api/health", () =>
 {
-    status = "ok",
-    app = "CyberManager",
-    version = AppInfo.Version
-})).AllowAnonymous();
+    // La consola muestra esta IP para que el administrador sepa qué dirección
+    // debe configurar en los clientes. Se anuncian todas las IPv4 con puerta de
+    // enlace: el equipo puede tener adaptadores virtuales además de la LAN.
+    var addresses = NetworkIdentity.LocalIPv4Addresses(onlyWithGateway: true);
+    if (addresses.Count == 0) addresses = NetworkIdentity.LocalIPv4Addresses();
+    var primary = addresses.FirstOrDefault() ?? "127.0.0.1";
+
+    return Results.Ok(new
+    {
+        status = "ok",
+        app = "CyberManager",
+        version = AppInfo.Version,
+        ipAddress = primary,
+        serverUrl = $"http://{primary}:{port}",
+        urls = addresses.Select(ip => $"http://{ip}:{port}").ToArray()
+    });
+}).AllowAnonymous();
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();

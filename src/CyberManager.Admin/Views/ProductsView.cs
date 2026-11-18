@@ -15,6 +15,7 @@ public sealed class ProductsView : UserControl, IRefreshable
     private readonly DataGrid _ratesGrid;
     private readonly DataGrid _packagesGrid;
     private readonly DataGrid _zonesGrid;
+    private readonly ServerAddressBar _zoneServerAddressBar = new();
 
     private List<ProductDto> _products = new();
     private List<CategoryDto> _categories = new();
@@ -119,6 +120,9 @@ public sealed class ProductsView : UserControl, IRefreshable
             .OrderBy(z => z.SortOrder).ThenBy(z => z.Name)
             .Select(z => new ZoneRow(z))
             .ToList();
+
+        try { await _zoneServerAddressBar.RefreshAsync(); }
+        catch { /* se reintenta en el próximo refresco */ }
     }
 
     // ================= Productos =================
@@ -475,7 +479,8 @@ public sealed class ProductsView : UserControl, IRefreshable
         var actions = Kit.HStack(8,
             Kit.Button("Nueva zona", "PrimaryButton", NewZone),
             Kit.Button("Editar", "GhostButton", EditZone),
-            Kit.Button("Eliminar", "DangerButton", DeleteZone));
+            Kit.Button("Eliminar", "DangerButton", DeleteZone),
+            _zoneServerAddressBar);
 
         return ListTab("Las zonas agrupan equipos (VIP, estándar, consolas) y pueden tener tarifas distintas.",
             actions, _zonesGrid);

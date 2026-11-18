@@ -1604,6 +1604,37 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; el agente debe actualizarse a
   mano porque la PC no está accesible por red.
 
+### IP del servidor visible y diagnóstico de conexión (1.3.21, 2026-11-18, sin publicar)
+
+- **Motivo**: el usuario informó que el servidor seguía sin conectar con los clientes. Revisión en
+  vivo: `/api/health` correcto, `0.0.0.0:5080` y UDP `5094` escuchando, firewall con ambas reglas
+  activas y `http://192.168.1.8:5080` respondiendo desde las dos IPv4 de este equipo. No hay ninguna
+  petición de descubrimiento de estaciones en los registros.
+- **Estado real del sistema**: solo hay una estación activa (PC 01, id 11, versión 1.3.18) y su
+  último latido es del 18/11 a las 12:54 UTC; el resto de equipos de la lista están desactivados y
+  las 22 estaciones temporales de prueba se dieron de baja. Un barrido de `192.168.1.1-254` encontró
+  varios equipos encendidos, pero **ningún otro responde en el puerto 5080**. Por tanto, desde el
+  servidor no hay clientes con los que conectar: hay que arrancar/actualizar el cliente en esos PCs.
+- **IP visible**: `/api/health` ahora devuelve `ipAddress`, `serverUrl` y `urls` con las IPv4 del
+  servidor (se priorizan las que tienen puerta de enlace, para no anunciar Hyper-V/WSL). La consola
+  muestra una tarjeta **«IP del servidor» con botón «Copiar URL»** en *Equipos y zonas* y en la
+  pestaña *Zonas*, con la dirección obtenida del propio servidor; si no responde, usa la URL guardada
+  y la marca como «servidor sin conexión».
+- **Diagnóstico futuro**: `ServerDiscoveryService` registra una petición por IP solicitante como
+  máximo cada 5 minutos (`Petición de descubrimiento recibida desde …`). Así se puede comprobar en
+  `Server\Logs\server-*.log` si un cliente está intentando encontrar el servidor.
+- **Versión 1.3.21** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.21 (67.582.118 bytes, SHA-256 `a768be1f…`,
+  `publishedUtc` 2026-11-18T15:04:05.438Z). El código del cliente no cambió: solo servidor y consola.
+- **Despliegue local**: servidor y consola copiados a `C:\CyberManager\Servidor` (sin tocar
+  `cybermanager.db*`, `appsettings.json` ni `web.config`); `/api/health` →
+  `{"status":"ok","app":"CyberManager","version":"1.3.21","ipAddress":"192.168.1.8","serverUrl":"http://192.168.1.8:5080","urls":["http://192.168.1.8:5080"]}`.
+- **Prueba de UI**: con UI Automation se entró a la consola 1.3.21 y se verificó el texto
+  `IP del servidor` / `192.168.1.8  (puerto 5080)` / `Copiar URL` tanto en *Equipos y zonas* como en
+  *Productos y tarifas → Zonas*. Las ventanas de prueba se cerraron al terminar.
+- **Pendiente**: PC 01 (estación 11) sigue en 1.3.18 y sin latido; los demás PCs deben tener el
+  cliente instalado y ejecutándose. El paquete de agente 1.3.20 sigue siendo válido para PC 01.
+
 ---
 
 ## Rutas y comandos clave
