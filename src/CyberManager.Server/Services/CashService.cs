@@ -138,14 +138,56 @@ public class CashService
     }
 
     public async Task<List<CashReportRow>> HistoryAsync(DateTime from, DateTime to)
-        => await _db.CashSessions.AsNoTracking()
+    {
+        var sessions = await _db.CashSessions.AsNoTracking()
+            .Include(x => x.Movements)
             .Where(x => x.OpenedUtc >= from && x.OpenedUtc <= to)
             .OrderByDescending(x => x.OpenedUtc)
-            .Select(x => new CashReportRow(x.Id, x.OpenedUtc, x.ClosedUtc,
-                _db.Users.Where(u => u.Id == x.OpenedByUserId).Select(u => u.FullName).FirstOrDefault(),
-                x.OpeningAmount, x.ExpectedAmount - x.OpeningAmount, 0, x.ExpectedAmount,
-                x.ClosingAmount, x.Difference, x.OpeningExchangeRate, x.ClosingExchangeRate, x.Terminal))
             .ToListAsync();
+
+        var userIds = sessions.Select(x => x.OpenedByUserId).Distinct().ToList();
+        var names = await _db.Users.AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+        return sessions.Select(x =>
+        {
+            // El esperado se calcula con los movimientos: en un turno abierto la
+            // columna persistida todavía no existe y el reporte mostraba cero.
+            var expected = ExpectedAmount(x.OpeningAmount, x.Movements);
+            var expenses = -x.Movements
+                .Where(m => m.Type == CashMovementType.Expense)
+                .Sum(m => m.Amount);
+            return new CashReportRow(x.Id, x.OpenedUtc, x.ClosedUtc,
+                names.GetValueOrDefault(x.OpenedByUserId),
+                x.OpeningAmount, expected - x.OpeningAmount, expenses, expected,
+                x.ClosingAmount, x.Difference, x.OpeningExchangeRate, x.ClosingExchangeRate, x.Terminal);
+        }).ToList();
+    }
+
+    /// <summary>Efectivo que debería haber en el cajón según los movimientos del turno.</summary>
+    private static decimal ExpectedAmount(decimal openingAmount, IEnumerable<CashMovement> movements)
+    {
+        var list = movements as ICollection<CashMovement> ?? movements.ToList();
+
+        decimal Sum(CashMovementType type, params PaymentMethod[] methods) =>
+            list.Where(m => m.Type == type && (methods.Length == 0 || methods.Contains(m.PaymentMethod)))
+                .Sum(m => m.Amount);
+
+        var salesCash = Sum(CashMovementType.Sale, PaymentMethod.Cash)
+                        + Sum(CashMovementType.TimeSale, PaymentMethod.Cash);
+        var salesCashUsd = Sum(CashMovementType.Sale, PaymentMethod.CashUsd)
+                           + Sum(CashMovementType.TimeSale, PaymentMethod.CashUsd);
+        var deposits = Sum(CashMovementType.Deposit);
+        // Retiros, gastos y devoluciones se guardan en negativo.
+        var withdrawals = Sum(CashMovementType.Withdrawal);
+        var expenses = Sum(CashMovementType.Expense);
+        var refunds = Sum(CashMovementType.Refund);
+
+        return Math.Round(openingAmount + salesCash + salesCashUsd + deposits
+                          + withdrawals + expenses + refunds, 2, MidpointRounding.AwayFromZero);
+    }
 
     public async Task<CashSessionDto> ToDtoAsync(CashSession cs)
     {
@@ -169,7 +211,7 @@ public class CashService
         var expenses = -Sum(CashMovementType.Expense);
         var refunds = -Sum(CashMovementType.Refund);
 
-        var expected = Math.Round(cs.OpeningAmount + salesCash + salesCashUsd + deposits - withdrawals - expenses - refunds, 2);
+        var expected = ExpectedAmount(cs.OpeningAmount, movements);
         var openerName = await _db.Users.AsNoTracking().Where(u => u.Id == cs.OpenedByUserId)
             .Select(u => u.FullName).FirstOrDefaultAsync();
 

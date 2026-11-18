@@ -1301,6 +1301,25 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`. PC 01 se actualizó a 1.3.7 y
   reporta en línea.
 
+### Reporte de caja en turno abierto y «Actualizar cliente» en la tabla (1.3.8, 2026-11-18, sin publicar)
+
+- **Reporte de caja con turno abierto**: `CashService.HistoryAsync` devolvía `sales`/`expected` en
+  cero para el turno abierto porque leía `ExpectedAmount` persistido, que solo se calcula al
+  cerrar. Ahora el historial calcula ventas, gastos y esperado a partir de los movimientos con el
+  helper `ExpectedAmount(...)`, el mismo que usa `ToDtoAsync`. Verificado en producción:
+  `/api/reports/cash` devuelve `sales: 3.0`, `expected: 3.0` para el turno abierto #3, igual que
+  `/api/cash/current`.
+- **Actualizar cliente en la tabla de equipos**: el menú **Acciones ▾** de `StationsView` no
+  ofrecía la actualización del cliente que sí estaba en el diálogo de acciones. Se añadió
+  `UpdateClient()` con confirmación, `NotifyClientUpdateAsync(station.Id)` y refresco posterior.
+  El menú queda completo: Subir, Bajar, Editar, Cambiar nombre, Editar conexión,
+  Configuración / token, Ver pantalla, Bloquear, Mensaje, **Actualizar cliente**, Mantenimiento,
+  Activar / desactivar, Eliminar equipo.
+- **Despliegue local 1.3.8**: servidor y consola copiados a `C:\CyberManager\Servidor` (respaldo
+  `_bin-pre-1.3.8-20261117-2257`), tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`.
+  El paquete `ClientUpdate` se mantuvo en 1.3.7 porque el cliente no cambió; PC 01 sigue en 1.3.7
+  y reporta en línea.
+
 ---
 
 ## Rutas y comandos clave

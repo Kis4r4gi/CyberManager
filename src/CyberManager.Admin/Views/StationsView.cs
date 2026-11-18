@@ -312,6 +312,7 @@ public sealed class StationsView : UserControl, IRefreshable
         menu.Items.Add(StationMenuItem("Ver pantalla", ShowScreen));
         menu.Items.Add(StationMenuItem("Bloquear", LockStation));
         menu.Items.Add(StationMenuItem("Mensaje", SendMessage));
+        menu.Items.Add(StationMenuItem("Actualizar cliente", UpdateClient));
         menu.Items.Add(StationMenuItem("Mantenimiento", ToggleMaintenance));
         menu.Items.Add(StationMenuItem("Activar / desactivar", ToggleActive));
         menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
@@ -613,6 +614,28 @@ public sealed class StationsView : UserControl, IRefreshable
             await App.Api.CommandAsync(station.Id, AgentCommandType.Message, dialog.Result);
             Ui.Info($"Mensaje enviado a {station.Name}.", "Orden enviada");
         }, "No se pudo enviar el mensaje");
+    }
+
+    private void UpdateClient()
+    {
+        if (Selected is not { } station)
+        {
+            Ui.Info("Seleccione un equipo de la lista.", "Equipos");
+            return;
+        }
+
+        if (!Ui.Confirm($"¿Actualizar el cliente de {station.Name} a la última versión publicada?",
+                "Actualizar cliente"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.NotifyClientUpdateAsync(station.Id);
+            await RefreshClientUpdateAsync();
+            Ui.Info($"Se envió el aviso de actualización a {station.Name}. " +
+                    "El cliente descargará la versión nueva y se reiniciará al terminar.",
+                "Actualizar cliente");
+        }, "No se pudo actualizar el cliente");
     }
 
     private void ToggleActive()
