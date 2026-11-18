@@ -15,6 +15,8 @@ public sealed class DiscoveryResponder : IDisposable
     private readonly UdpClient _udp;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _loop;
+    private string[] _serverAddresses = Array.Empty<string>();
+    private DateTime _serverAddressesAt = DateTime.MinValue;
 
     /// <summary>Se dispara cuando el servidor envía una configuración nueva.</summary>
     public event Action<DiscoveryMessage>? Configured;
@@ -59,7 +61,7 @@ public sealed class DiscoveryResponder : IDisposable
             }
             else if (message.Magic == DiscoveryProtocol.ConfigureMagic)
             {
-                ApplyConfiguration(message);
+                ApplyConfiguration(message, result.RemoteEndPoint);
             }
         }
     }
@@ -67,11 +69,16 @@ public sealed class DiscoveryResponder : IDisposable
     private async Task RespondAsync(IPEndPoint remote, CancellationToken ct)
     {
         var config = AppConfig.Load("Client");
+
+        // Una estación ya configurada no vuelve a exponer su token por UDP: el
+        // servidor solo lo necesita la primera vez, cuando aún no hay token.
+        var configured = config.StationId > 0 && !string.IsNullOrWhiteSpace(config.StationToken);
+
         var response = new DiscoveryMessage(
             DiscoveryProtocol.ResponseMagic,
             Role: "client",
             StationId: config.StationId,
-            Token: config.StationToken,
+            Token: configured ? null : config.StationToken,
             ServerUrl: config.ServerUrl,
             MachineName: Environment.MachineName,
             IpAddress: NetworkIdentity.LocalIPv4(),
@@ -89,11 +96,18 @@ public sealed class DiscoveryResponder : IDisposable
         }
     }
 
-    private void ApplyConfiguration(DiscoveryMessage message)
+    private void ApplyConfiguration(DiscoveryMessage message, IPEndPoint remote)
     {
         if (message.StationId <= 0 || string.IsNullOrWhiteSpace(message.Token)) return;
 
         var config = AppConfig.Load("Client");
+
+        // Una estación ya configurada solo acepta configuración del servidor que
+        // tiene guardado. Antes cualquier equipo de la red podía reasignarle el
+        // token y el servidor, secuestrando la estación.
+        var configured = config.StationId > 0 && !string.IsNullOrWhiteSpace(config.StationToken);
+        if (configured && !IsConfiguredServer(remote, config)) return;
+
         config.ServerUrl = string.IsNullOrWhiteSpace(message.ServerUrl)
             ? config.ServerUrl
             : message.ServerUrl!;
@@ -104,6 +118,31 @@ public sealed class DiscoveryResponder : IDisposable
         config.Save("Client");
 
         Configured?.Invoke(message);
+    }
+
+    /// <summary>Comprueba que el paquete venga de la IP del servidor configurado.</summary>
+    private bool IsConfiguredServer(IPEndPoint remote, AppConfig config)
+    {
+        if (!Uri.TryCreate(config.ServerUrl, UriKind.Absolute, out var uri)) return false;
+
+        var address = remote.Address.ToString();
+        if (uri.Host.Equals(address, StringComparison.OrdinalIgnoreCase)) return true;
+
+        if (DateTime.UtcNow - _serverAddressesAt > TimeSpan.FromMinutes(5))
+        {
+            try
+            {
+                _serverAddresses = Dns.GetHostAddresses(uri.Host)
+                    .Select(a => a.ToString()).ToArray();
+            }
+            catch
+            {
+                _serverAddresses = Array.Empty<string>();
+            }
+            _serverAddressesAt = DateTime.UtcNow;
+        }
+
+        return _serverAddresses.Contains(address, StringComparer.OrdinalIgnoreCase);
     }
 
     public void Dispose()

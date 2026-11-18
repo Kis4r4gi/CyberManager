@@ -1103,8 +1103,16 @@ Para quitar solo el inicio automático (sin desinstalar el cliente):
   del equipo; con una cuenta estándar Windows pedirá credenciales al abrir el cliente.
 - Configure el inicio de sesión automático de Windows para esa cuenta si el equipo debe quedar
   operativo sin intervención.
-- Active el *Modo kiosco* en *Configuración → Negocio y facturación* para reforzar el bloqueo.
-- Oculte la barra de tareas y las teclas de Windows con las políticas del equipo si lo necesita.
+- El instalador registra **dos** tareas: `CyberManagerClient` (arranca con la sesión) y
+  `CyberManagerClientWatchdog` (revisa cada 2 minutos y vuelve a abrir el cliente si se cerró).
+  Es una red de seguridad, no un kiosco completo.
+- CyberManager **no** implementa un modo kiosco de Windows. Para impedir el acceso al escritorio
+  use las políticas del equipo (shell personalizado, bloqueo de la barra de tareas, del
+  Administrador de tareas y de las teclas Windows). La antigua opción «Modo kiosco» no tenía
+  efecto y se retiró en la versión 1.3.9.
+- `Ctrl+Alt+Del` no se puede interceptar desde el cliente: si el usuario de la estación es
+  administrador local, puede cerrar el cliente o la sesión. Para un kiosco real use una cuenta
+  estándar con políticas restrictivas.
 
 ---
 

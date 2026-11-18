@@ -57,7 +57,9 @@ public partial class LockWindow : Window
         };
         Deactivated += (_, _) =>
         {
-            if (AllowClose || SuppressActivation) return;
+            // No se reactiva encima del menú de login ni de un diálogo modal:
+            // hacerlo robaba el foco y cerraba el menú.
+            if (AllowClose || SuppressActivation || IsLoginMenuOpen) return;
             Topmost = false;
             Topmost = true;
             Activate();
@@ -71,6 +73,9 @@ public partial class LockWindow : Window
             StationText.Text = $"PC-{App.Config.StationId:D2}";
             ZoneText.Text = L.T("Sin conexión");
             RateText.Text = "1 USD = — Bs";
+            BusinessNameText.Text = "CyberManager";
+            FooterText.Text = string.Empty;
+            TitleText.Text = L.T("EQUIPO BLOQUEADO");
             MessageText.Text = L.T("No hay conexión con el servidor. Avise al administrador.");
             LoginPanel.Visibility = Visibility.Visible;
             return;
@@ -107,6 +112,23 @@ public partial class LockWindow : Window
         TitleText.Text = "SISTEMA";
         MessageText.Text = message;
         LoginPanel.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Activa o libera el bloqueo de atajos del sistema. Debe reflejar si la
+    /// pantalla de bloqueo está visible, no el ciclo de vida de la ventana.
+    /// </summary>
+    public void SetKeyboardBlocked(bool blocked)
+    {
+        if (blocked)
+        {
+            _blocker ??= new KeyboardBlocker();
+        }
+        else
+        {
+            _blocker?.Dispose();
+            _blocker = null;
+        }
     }
 
     /// <summary>Muestra el fondo enviado por el servidor con una transición suave.</summary>
@@ -175,8 +197,7 @@ public partial class LockWindow : Window
     public void EnterAdminMode()
     {
         LoginPopup.IsOpen = false;
-        _blocker?.Dispose();
-        _blocker = null;
+        SetKeyboardBlocked(false);
         AllowClose = true;
         Hide();
     }
@@ -187,7 +208,7 @@ public partial class LockWindow : Window
         AllowClose = false;
         Show();
         Activate();
-        _blocker ??= new KeyboardBlocker();
+        SetKeyboardBlocked(true);
     }
 
     private void PromoVideo_MediaEnded(object sender, RoutedEventArgs e)

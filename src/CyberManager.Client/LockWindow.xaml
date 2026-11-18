@@ -95,7 +95,7 @@
                             <TextBlock Text="Elija el tipo de cuenta." Style="{StaticResource Muted}"
                                        Margin="0,0,0,14" />
 
-                            <Button Content="Usuario prepagado" Style="{StaticResource PrimaryButton}"
+                            <Button Content="Cuenta prepago" Style="{StaticResource PrimaryButton}"
                                     HorizontalContentAlignment="Left" Padding="16,11" Click="PrepaidLogin_Click"
                                     ToolTip="Cree una cuenta o use sus minutos prepago." />
                             <TextBlock Text="Cree su cuenta, compre tiempo y juegue sin pasar por caja."

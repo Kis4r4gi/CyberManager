@@ -5,16 +5,30 @@ namespace CyberManager.Server.Services;
 
 public static class SessionCalculator
 {
-    /// <summary>Minutos efectivos transcurridos descontando pausas.</summary>
-    public static int ElapsedMinutes(Session s, DateTime nowUtc)
+    /// <summary>Segundos efectivos transcurridos descontando pausas.</summary>
+    public static double ElapsedSeconds(Session s, DateTime nowUtc)
     {
         var end = s.Status == SessionStatus.Paused && s.PausedAtUtc.HasValue
             ? s.PausedAtUtc.Value
             : s.EndedUtc ?? nowUtc;
 
         var seconds = (end - s.StartedUtc).TotalSeconds - s.PausedSeconds;
-        if (seconds < 0) seconds = 0;
-        return (int)Math.Floor(seconds / 60.0);
+        return seconds < 0 ? 0 : seconds;
+    }
+
+    /// <summary>Minutos efectivos transcurridos descontando pausas.</summary>
+    public static int ElapsedMinutes(Session s, DateTime nowUtc)
+        => (int)Math.Floor(ElapsedSeconds(s, nowUtc) / 60.0);
+
+    /// <summary>
+    /// Minutos consumidos redondeando hacia arriba. Se usa al cerrar el prepago:
+    /// una sesión de 40 segundos consume 1 minuto y no permite devolver el paquete
+    /// completo (evita tiempo gratis repitiendo sesiones cortas).
+    /// </summary>
+    public static int BilledMinutes(Session s, DateTime nowUtc)
+    {
+        var seconds = ElapsedSeconds(s, nowUtc);
+        return seconds <= 0 ? 0 : (int)Math.Ceiling(seconds / 60.0);
     }
 
     /// <summary>Importe del tiempo consumido. En prepago devuelve lo ya cobrado.</summary>

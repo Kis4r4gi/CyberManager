@@ -147,14 +147,18 @@ public static class StationClientEndpoints
         if (station is null)
             throw new AppException("Estación no identificada.", 401);
 
-        // El token es la credencial principal. La IP/MAC se aceptan para equipos
-        // instalados antes de que el escaneo les asignara un token.
+        // El token es la credencial principal. La IP/MAC solo se aceptan en equipos
+        // que todavía no recibieron un token; si ya lo tienen, se exige el token
+        // para que nadie pueda suplantar la estación copiando su IP o MAC.
         if (!string.IsNullOrWhiteSpace(token))
         {
             if (string.IsNullOrWhiteSpace(station.DeviceToken) || station.DeviceToken != token)
                 throw new AppException("Token de estación inválido.", 401);
             return station;
         }
+
+        if (!string.IsNullOrWhiteSpace(station.DeviceToken))
+            throw new AppException("Token de estación requerido.", 401);
 
         var normalizedMac = NormalizeMac(mac);
         if (normalizedMac.Length > 0 &&

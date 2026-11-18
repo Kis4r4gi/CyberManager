@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
 
@@ -25,6 +27,7 @@ public sealed class AdminRealtime : IAsyncDisposable
         _hub = new HubConnectionBuilder()
             .WithUrl($"{baseUrl.TrimEnd('/')}/hubs/admin", options =>
                 options.AccessTokenProvider = () => Task.FromResult<string?>(token))
+            .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
             .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
             .Build();
 
@@ -94,10 +97,7 @@ public sealed class StationRealtime : IAsyncDisposable
         var url = $"{baseUrl.TrimEnd('/')}/hubs/station" +
                   $"?stationId={stationId}&token={Uri.EscapeDataString(token)}";
 
-        _hub = new HubConnectionBuilder()
-            .WithUrl(url)
-            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
-            .Build();
+        _hub = CreateHub(url);
 
         _hub.On<AgentCommand>("Command", c => CommandReceived?.Invoke(c));
         _hub.On<StationStateEvent>("StationState", e => StationStateChanged?.Invoke(e));
@@ -125,10 +125,7 @@ public sealed class StationRealtime : IAsyncDisposable
         var url = $"{baseUrl.TrimEnd('/')}/hubs/station" +
                   $"?stationId={stationId}&ipAddress={Uri.EscapeDataString(ipAddress)}&macAddress={Uri.EscapeDataString(macAddress)}";
 
-        _hub = new HubConnectionBuilder()
-            .WithUrl(url)
-            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
-            .Build();
+        _hub = CreateHub(url);
 
         _hub.On<AgentCommand>("Command", c => CommandReceived?.Invoke(c));
         _hub.On<StationStateEvent>("StationState", e => StationStateChanged?.Invoke(e));
@@ -147,6 +144,18 @@ public sealed class StationRealtime : IAsyncDisposable
         await _hub.StartAsync();
         ConnectionChanged?.Invoke(true);
     }
+
+    /// <summary>
+    /// Crea la conexión con el mismo protocolo JSON que usa el servidor. Sin el
+    /// convertidor de enums, las órdenes llegan con "command":"Lock" y el cliente
+    /// no puede deserializarlas, por lo que el manejador nunca se ejecuta.
+    /// </summary>
+    private static HubConnection CreateHub(string url)
+        => new HubConnectionBuilder()
+            .WithUrl(url)
+            .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+            .Build();
 
     public Task HeartbeatAsync(AgentHeartbeat heartbeat)
         => _hub is { State: HubConnectionState.Connected }

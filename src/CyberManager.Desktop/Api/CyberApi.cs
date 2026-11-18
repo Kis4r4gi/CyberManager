@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CyberManager.Desktop.Api;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
@@ -352,7 +353,21 @@ public class AppConfig
     /// <summary>Nombre de esta caja o terminal; identifica el turno de caja en el servidor.</summary>
     public string TerminalName { get; set; } = Environment.MachineName;
     public int StationId { get; set; }
+
+    /// <summary>
+    /// Token en claro: solo existe en memoria. En disco se guarda cifrado con DPAPI
+    /// para que otro usuario del equipo no pueda leerlo.
+    /// </summary>
+    [JsonIgnore]
     public string StationToken { get; set; } = string.Empty;
+
+    /// <summary>Token cifrado con DPAPI (ámbito del usuario actual).</summary>
+    public string? StationTokenProtected { get; set; }
+
+    /// <summary>Token en claro escrito por versiones anteriores; se migra al guardar.</summary>
+    [JsonPropertyName("StationToken")]
+    public string? LegacyStationToken { get; set; }
+
     public string? StationIpAddress { get; set; }
     public string? StationMacAddress { get; set; }
     /// <summary>Idioma de la estación: "es" o "en".</summary>
@@ -364,7 +379,21 @@ public class AppConfig
         {
             var file = AppPaths.ConfigFile(app);
             if (!File.Exists(file)) return new AppConfig();
-            return JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(file)) ?? new AppConfig();
+            var config = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(file)) ?? new AppConfig();
+            config.StationToken = TokenProtector.Unprotect(config.StationTokenProtected)
+                ?? config.LegacyStationToken
+                ?? string.Empty;
+            config.LegacyStationToken = null;
+
+            // Migración: las versiones anteriores guardaban el token en claro. Se cifra
+            // en la primera carga, aunque el usuario no cambie nada en la configuración.
+            if (config.StationTokenProtected is null && config.StationToken.Length > 0 &&
+                TokenProtector.Protect(config.StationToken) is not null)
+            {
+                try { config.Save(app); } catch { /* carpeta de solo lectura */ }
+            }
+
+            return config;
         }
         catch
         {
@@ -372,5 +401,28 @@ public class AppConfig
         }
     }
 
-    public void Save(string app) => File.WriteAllText(AppPaths.ConfigFile(app), JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+    /// <summary>
+    /// Guarda la configuración de forma atómica: escribe un archivo temporal y lo
+    /// mueve sobre el definitivo. Un corte de luz no deja un JSON a medias.
+    /// </summary>
+    public void Save(string app)
+    {
+        StationTokenProtected = TokenProtector.Protect(StationToken);
+        // Si DPAPI no está disponible, se mantiene el formato anterior para no
+        // dejar la estación sin credencial.
+        LegacyStationToken = StationTokenProtected is null && StationToken.Length > 0
+            ? StationToken
+            : null;
+
+        var file = AppPaths.ConfigFile(app);
+        var temp = file + ".tmp";
+        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+
+        File.WriteAllText(temp, json);
+        File.Move(temp, file, overwrite: true);
+    }
 }

@@ -109,6 +109,10 @@ public class SessionService
         _db.Sessions.Add(session);
 
         station.Status = StationStatus.InUse;
+        // El equipo pudo quedar bloqueado por el cierre de la sesión anterior o por
+        // el bloqueo manual del cajero. Si no se limpia aquí, el cliente vuelve a
+        // bloquearse en el siguiente refresco de estado aunque la sesión esté activa.
+        station.IsLocked = false;
         await _db.SaveChangesAsync();
         station.CurrentSessionId = session.Id;
 
@@ -226,6 +230,7 @@ public class SessionService
 
         station.Status = StationStatus.Available;
         station.CurrentSessionId = null;
+        station.IsLocked = true;
 
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
@@ -266,6 +271,21 @@ public class SessionService
         await tx.CommitAsync();
 
         await NotifyStationAsync(station, session);
+
+        // Si al extender aún le quedan minutos, el equipo se desbloquea solo:
+        // antes el cliente pagaba la extensión y seguía viendo la pantalla de bloqueo.
+        if (session.Type == SessionType.Prepaid)
+        {
+            var elapsed = SessionCalculator.ElapsedMinutes(session, DateTime.UtcNow);
+            if (SessionCalculator.RemainingMinutes(session, elapsed) > 0 && station.IsLocked)
+            {
+                station.IsLocked = false;
+                await _db.SaveChangesAsync();
+                await _realtime.SendAgentCommandAsync(station.Id, AgentCommandType.Unlock);
+                await _realtime.SendStationCommandAsync(station.Id, AgentCommandType.Unlock);
+            }
+        }
+
         var consumption = await ConsumptionAsync(session.Id);
         return Mappers.ToDto(session, consumption, DateTime.UtcNow);
     }
@@ -319,8 +339,10 @@ public class SessionService
         await using var tx = await _db.Database.BeginTransactionAsync();
         origin.Status = StationStatus.Available;
         origin.CurrentSessionId = null;
+        origin.IsLocked = true;
         target.Status = session.Status == SessionStatus.Paused ? StationStatus.Paused : StationStatus.InUse;
         target.CurrentSessionId = session.Id;
+        target.IsLocked = false;
         session.StationId = target.Id;
         await _db.SaveChangesAsync();
         await tx.CommitAsync();

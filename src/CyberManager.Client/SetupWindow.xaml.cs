@@ -28,6 +28,14 @@ public partial class SetupWindow : Window
         StationIdBox.Text = config.StationId > 0 ? config.StationId.ToString() : string.Empty;
         TokenBox.Text = config.StationToken;
 
+        // IP y MAC se autodetectan del adaptador activo si el equipo aún no las tiene.
+        IpAddressBox.Text = string.IsNullOrWhiteSpace(config.StationIpAddress)
+            ? LocalIpv4() ?? string.Empty
+            : config.StationIpAddress!;
+        MacAddressBox.Text = string.IsNullOrWhiteSpace(config.StationMacAddress)
+            ? LocalMac() ?? string.Empty
+            : config.StationMacAddress!;
+
         foreach (ComboBoxItem item in LanguageBox.Items)
         {
             if (string.Equals(item.Tag as string, L.Code, StringComparison.OrdinalIgnoreCase))
@@ -67,28 +75,73 @@ public partial class SetupWindow : Window
 
         stationToken = string.IsNullOrWhiteSpace(TokenBox.Text) ? null : TokenBox.Text.Trim();
 
-        // Parse IP address if provided
-        if (!string.IsNullOrWhiteSpace(IpAddressBox.Text) && !IPAddress.TryParse(IpAddressBox.Text, out var ip))
+        // Se acepta con dos puntos, guiones, puntos o espacios: cada adaptador de
+        // Windows reporta un formato distinto (este equipo usa guiones).
+        var ipText = IpAddressBox.Text.Trim();
+        if (ipText.Length > 0 && !IPAddress.TryParse(ipText, out _))
         {
             ShowStatus(L.T("La dirección IP no tiene un formato válido."), isError: true);
             return false;
         }
-        stationIpAddress = IpAddressBox.Text;
+        stationIpAddress = ipText.Length > 0 ? ipText : null;
 
-        // Parse MAC address if provided
-        if (!string.IsNullOrWhiteSpace(MacAddressBox.Text))
+        var macText = MacAddressBox.Text.Trim();
+        if (macText.Length > 0)
         {
-            // Validate MAC address format (XX:XX:XX:XX:XX:XX or XXXX.XXXX.XXXX or X X X X X X)
-            var macText = MacAddressBox.Text.Trim();
-            if (!Regex.IsMatch(macText, @"^([0-9A-Fa-f]{2}[:]){5}[0-9A-Fa-f]{2}$|^([0-9A-Fa-f]{4}[\.]){2}[0-9A-Fa-f]{4}$|^([0-9A-Fa-f]{2}[ ]{5}[0-9A-Fa-f]{2})$"))
+            var hex = new string(macText.Where(Uri.IsHexDigit).ToArray()).ToUpperInvariant();
+            if (hex.Length != 12)
             {
                 ShowStatus(L.T("La dirección MAC no tiene un formato válido."), isError: true);
                 return false;
             }
+
+            // Se guarda siempre normalizada: AA:BB:CC:DD:EE:FF.
+            stationMacAddress = string.Join(":",
+                Enumerable.Range(0, 6).Select(i => hex.Substring(i * 2, 2)));
         }
-        stationMacAddress = MacAddressBox.Text;
 
         return true;
+    }
+
+    /// <summary>IP local del adaptador activo, para no escribirla a mano.</summary>
+    private static string? LocalIpv4()
+    {
+        try
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == OperationalStatus.Up &&
+                            n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                .Select(a => a.Address)
+                .FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
+                ?.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>MAC del adaptador activo, normalizada con dos puntos.</summary>
+    private static string? LocalMac()
+    {
+        try
+        {
+            var bytes = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(n => n.OperationalStatus == OperationalStatus.Up &&
+                            (n.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                             n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211))
+                .Select(n => n.GetPhysicalAddress().GetAddressBytes())
+                .FirstOrDefault(b => b.Length == 6);
+
+            return bytes is { Length: 6 }
+                ? string.Join(":", bytes.Select(b => b.ToString("X2")))
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private async void Test_Click(object sender, RoutedEventArgs e)

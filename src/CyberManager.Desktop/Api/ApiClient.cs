@@ -12,7 +12,7 @@ public class ApiException : Exception
     public ApiException(string message, HttpStatusCode code) : base(message) => StatusCode = code;
 }
 
-public class ApiClient
+public class ApiClient : IDisposable
 {
     /// <summary>Cabecera que identifica la caja/terminal en el servidor.</summary>
     public const string TerminalHeader = "X-Cash-Terminal";
@@ -34,6 +34,9 @@ public class ApiClient
         BaseUrl = Normalize(baseUrl);
         _http = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = TimeSpan.FromSeconds(30) };
     }
+
+    /// <summary>Libera el HttpClient para no dejar sockets abiertos al reconfigurar el equipo.</summary>
+    public void Dispose() => _http.Dispose();
 
     public static string Normalize(string url)
     {

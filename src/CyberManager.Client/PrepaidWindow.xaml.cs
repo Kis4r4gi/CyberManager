@@ -32,6 +32,10 @@ public partial class PrepaidWindow : Window
     private int _activeSessionRemaining;
     private bool _busy;
 
+    private string CurrencySymbol => string.IsNullOrWhiteSpace(_info?.LocalCurrencySymbol)
+        ? "Bs"
+        : _info!.LocalCurrencySymbol;
+
     /// <summary>La sesión prepago se inició correctamente; la aplicación debe refrescar el estado.</summary>
     public event Action? SessionStarted;
 
@@ -46,6 +50,13 @@ public partial class PrepaidWindow : Window
             Loc.Apply(this);
             ShowLoginPanel();
             await LoadInfoAsync();
+        };
+
+        // La contraseña solo vive mientras la ventana está abierta.
+        Closed += (_, _) =>
+        {
+            _password = null;
+            PasswordBox.Clear();
         };
     }
 
@@ -138,7 +149,7 @@ public partial class PrepaidWindow : Window
         AccountMinutesText.Text = $"{_account.PrepaidMinutes} min";
         AccountBalanceText.Text = $"$ {_account.Balance:N2}";
         var rate = _info?.ExchangeRate ?? 0m;
-        AccountBalanceBsText.Text = $"Bs {_account.Balance * rate:N2}";
+        AccountBalanceBsText.Text = $"{CurrencySymbol} {_account.Balance * rate:N2}";
 
         MinutesBox.Text = Math.Max(_account.PrepaidMinutes, 0).ToString();
 
@@ -196,7 +207,7 @@ public partial class PrepaidWindow : Window
                 Name = p.Name,
                 MinutesText = minutes,
                 PriceText = $"$ {p.Price:N2}",
-                PriceBsText = $"Bs {p.Price * _info.ExchangeRate:N2}",
+                PriceBsText = $"{CurrencySymbol} {p.Price * _info.ExchangeRate:N2}",
                 CanBuy = _account is null || _account.Balance >= p.Price
             };
         }).ToList();

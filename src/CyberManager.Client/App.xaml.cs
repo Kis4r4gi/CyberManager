@@ -41,8 +41,19 @@ public partial class App : Application
     private SetupWindow? _setupWindow;
     private PrepaidWindow? _prepaidWindow;
     private bool _adminMode;
+    private Mutex? _instanceMutex;
+    private DateTime _startedUtc = DateTime.UtcNow;
 
     private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromMinutes(3) };
+
+    /// <summary>Procesos que nunca se deben cerrar por una orden remota.</summary>
+    private static readonly HashSet<string> ProtectedProcesses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "system", "system idle process", "smss", "csrss", "wininit", "winlogon",
+        "services", "lsass", "svchost", "dwm", "explorer", "fontdrvhost",
+        "lsm", "spoolsv", "audiodg", "sihost", "taskhostw", "ctfmon", "conhost",
+        "cybermanager.client", "cybermanager.agent", "cybermanager.server"
+    };
 
     private static bool Configured =>
         Config.StationId > 0 && (!string.IsNullOrWhiteSpace(Config.StationToken) ||
@@ -58,8 +69,23 @@ public partial class App : Application
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        InstallCrashHandlers();
+
+        // Una sola pantalla por sesión de Windows: dos instancias mostrarían dos
+        // bloqueos de teclado y ejecutarían cada comando dos veces. Si venimos de una
+        // actualización, se espera a que el proceso anterior termine de cerrar.
+        var restarting = File.Exists(Path.Combine(AppContext.BaseDirectory,
+            ClientUpdateInstaller.PendingFile));
+        if (!AcquireSingleInstance(restarting ? TimeSpan.FromSeconds(15) : TimeSpan.Zero))
+        {
+            Shutdown();
+            return;
+        }
+
+        _startedUtc = DateTime.UtcNow;
         Config = AppConfig.Load("Client");
         L.SetLanguage(Config.Language);
+        ClientLog.Info($"Cliente {AppInfo.Version} iniciado; equipo {Config.StationId}.");
 
         // El cliente controla la energía del equipo: evita la suspensión, la
         // hibernación y el apagado automático de la pantalla mientras se ejecuta.
@@ -103,6 +129,97 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Toma el mutex de instancia única. Devuelve false si ya hay un cliente
+    /// ejecutándose en esta sesión de Windows.
+    /// </summary>
+    /// <param name="wait">
+    /// Tiempo máximo a esperar a que el proceso anterior libere el mutex. Solo se usa
+    /// tras una actualización, cuando el proceso viejo todavía está cerrando.
+    /// </param>
+    private bool AcquireSingleInstance(TimeSpan? wait = null)
+    {
+        var name = $"Local\\CyberManagerClient-{Environment.MachineName}";
+        var deadline = DateTime.UtcNow + (wait ?? TimeSpan.Zero);
+
+        while (true)
+        {
+            try
+            {
+                _instanceMutex = new Mutex(true, name, out var createdNew);
+                if (createdNew) return true;
+
+                _instanceMutex.Dispose();
+                _instanceMutex = null;
+            }
+            catch
+            {
+                // Si no se puede crear el mutex, se permite arrancar igualmente.
+                return true;
+            }
+
+            if (DateTime.UtcNow >= deadline) return false;
+            Thread.Sleep(500);
+        }
+    }
+
+    private void ReleaseSingleInstance()
+    {
+        try { _instanceMutex?.ReleaseMutex(); } catch { /* no era el dueño */ }
+        try { _instanceMutex?.Dispose(); } catch { /* cerrando */ }
+        _instanceMutex = null;
+    }
+
+    /// <summary>
+    /// Registra los errores no controlados en un archivo del equipo y avisa en
+    /// pantalla. Sin esto, cualquier excepción cerraba el cliente sin rastro.
+    /// </summary>
+    private static void InstallCrashHandlers()
+    {
+        Current.DispatcherUnhandledException += (_, args) =>
+        {
+            LogCrash("UI", args.Exception);
+            args.Handled = true;
+            try
+            {
+                MessageBox.Show(
+                    "Ocurrió un error inesperado en el cliente. El equipo sigue bloqueado.\n" +
+                    "Si el problema se repite, avise al administrador.",
+                    "CyberManager", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch { /* sin interfaz disponible */ }
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args)
+            => LogCrash("AppDomain", args.ExceptionObject as Exception);
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogCrash("Task", args.Exception);
+            args.SetObserved();
+        };
+    }
+
+    private static void LogCrash(string source, Exception? error)
+    {
+        try
+        {
+            var file = Path.Combine(AppPaths.DataDir("Client"), "client-errors.log");
+            var info = new FileInfo(file);
+            if (info.Exists && info.Length > 1_000_000)
+            {
+                try { File.Delete(file); } catch { /* se sigue usando */ }
+            }
+
+            File.AppendAllText(file,
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{source}] {error}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Un fallo al registrar no debe provocar otro fallo.
+        }
+    }
+
     private async Task StartAsync()
     {
         await StopAsync();
@@ -123,6 +240,7 @@ public partial class App : Application
         Realtime.ScreenFrameRequested += OnScreenFrameRequested;
         Realtime.RemoteInputReceived += OnRemoteInputReceived;
         Realtime.ClientUpdateAvailable += OnClientUpdateAvailable;
+        Realtime.ConnectionChanged += OnRealtimeConnectionChanged;
 
         try
         {
@@ -137,10 +255,12 @@ public partial class App : Application
                     Config.StationIpAddress ?? string.Empty, Config.StationMacAddress ?? string.Empty);
             }
             _lastConnectAttempt = DateTime.UtcNow;
+            ClientLog.Info("Conectado al servidor en tiempo real.");
         }
-        catch
+        catch (Exception ex)
         {
             // El servidor puede estar apagado al arrancar; se reintenta en cada refresco.
+            ClientLog.Error("No se pudo conectar al servidor en tiempo real", ex);
         }
 
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
@@ -154,6 +274,11 @@ public partial class App : Application
         await RefreshAsync();
         await CheckClientUpdateAsync();
         _running = true;
+
+        // La actualización ya se aplicó y el proceso nuevo arrancó: se quita la
+        // marca para que no se reinicie en bucle.
+        ClientUpdateInstaller.TryDelete(Path.Combine(AppContext.BaseDirectory,
+            ClientUpdateInstaller.PendingFile));
     }
 
     private void StartDiscovery()
@@ -241,33 +366,52 @@ public partial class App : Application
         }
     }
 
-    /// <summary>Reinicia la pantalla para cargar los binarios nuevos y quita la marca.</summary>
+    /// <summary>
+    /// Relanza el cliente para cargar los binarios nuevos. Lanza un relanzador que
+    /// espera a que este proceso termine; si no se puede lanzar, no se cierra nada
+    /// y el equipo sigue bloqueado.
+    /// </summary>
     private void RestartForUpdate()
     {
         if (_restarting) return;
         _restarting = true;
 
-        ClientUpdateInstaller.TryDelete(Path.Combine(AppContext.BaseDirectory,
-            ClientUpdateInstaller.PendingFile));
+        var exe = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe))
+        {
+            _restarting = false;
+            return;
+        }
 
         try
         {
-            var exe = Environment.ProcessPath;
-            if (!string.IsNullOrWhiteSpace(exe))
+            // Se libera el mutex para que el proceso nuevo pueda arrancar.
+            ReleaseSingleInstance();
+
+            var start = new ProcessStartInfo("cmd.exe")
             {
-                Process.Start(new ProcessStartInfo(exe)
-                {
-                    UseShellExecute = true,
-                    WorkingDirectory = AppContext.BaseDirectory
-                });
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = AppContext.BaseDirectory,
+                Arguments = $"/c ping -n 6 127.0.0.1 >nul & start \"\" \"{exe}\""
+            };
+
+            if (Process.Start(start) is null)
+            {
+                // No se pudo lanzar: se sigue funcionando con la versión actual y
+                // se reintenta en el próximo refresco.
+                _restarting = false;
+                AcquireSingleInstance();
+                return;
             }
+
+            Shutdown();
         }
         catch
         {
-            // Si no se puede reiniciar, el usuario lo hará al abrir el equipo.
+            _restarting = false;
+            AcquireSingleInstance();
         }
-
-        Shutdown();
     }
 
     private async Task StopAsync()
@@ -288,9 +432,15 @@ public partial class App : Application
             Realtime.ScreenFrameRequested -= OnScreenFrameRequested;
             Realtime.RemoteInputReceived -= OnRemoteInputReceived;
             Realtime.ClientUpdateAvailable -= OnClientUpdateAvailable;
+            Realtime.ConnectionChanged -= OnRealtimeConnectionChanged;
             await Realtime.DisposeAsync();
             Realtime = null;
         }
+
+        // Se libera el HttpClient del equipo para no dejar conexiones abiertas
+        // cuando la estación se reconfigura o se cierra.
+        Api?.Dispose();
+        Api = null;
 
         _wallpapers.SetLocked(false);
         _promos.SetLocked(false);
@@ -317,8 +467,10 @@ public partial class App : Application
         if (Api is null) return;
 
         // Si el agente reemplazó los archivos, se reinicia con la versión nueva.
-        if (!_restarting && File.Exists(Path.Combine(AppContext.BaseDirectory,
-                ClientUpdateInstaller.PendingFile)))
+        // Se espera unos segundos tras arrancar: el proceso nuevo borra la marca al
+        // terminar de iniciar y así no se reinicia en bucle.
+        if (!_restarting && DateTime.UtcNow - _startedUtc > TimeSpan.FromSeconds(20) &&
+            File.Exists(Path.Combine(AppContext.BaseDirectory, ClientUpdateInstaller.PendingFile)))
         {
             RestartForUpdate();
             return;
@@ -379,7 +531,7 @@ public partial class App : Application
         var heartbeat = new AgentHeartbeat(
             Config.StationId,
             Environment.MachineName,
-            Environment.UserName,
+            string.Empty,
             AppInfo.Version,
             Environment.OSVersion.VersionString,
             0,
@@ -400,7 +552,13 @@ public partial class App : Application
         }
 
         var sessionActive = state.Session is not null && state.Session.Status != SessionStatus.Paused;
-        SetLocked(_forcedLock || !sessionActive, state);
+
+        // El servidor es la fuente de verdad del bloqueo. Si dice que el equipo está
+        // desbloqueado (por ejemplo tras recargar o extender tiempo), se limpia el
+        // bloqueo forzado local aunque el comando Unlock se haya perdido.
+        if (!state.Locked) _forcedLock = false;
+
+        SetLocked(state.Locked || _forcedLock || !sessionActive, state);
     }
 
     private void SetLocked(bool locked, StationClientStateDto? state)
@@ -439,6 +597,10 @@ public partial class App : Application
         _lockWindow.UpdateState(state);
         if (!_lockWindow.IsVisible) _lockWindow.Show();
 
+        // Los atajos del sistema solo se bloquean mientras la pantalla de bloqueo
+        // está visible, no durante la sesión pagada.
+        _lockWindow.SetKeyboardBlocked(true);
+
         // RefreshAsync se ejecuta cada 5 segundos. Activar la pantalla de bloqueo en
         // cada refresco le robaba el foco a los cuadros de texto del login y cerraba
         // el menú flotante, así que solo se activa cuando no hay un diálogo encima.
@@ -461,6 +623,7 @@ public partial class App : Application
 
         if (_lockWindow is not null)
         {
+            _lockWindow.SetKeyboardBlocked(false);
             _lockWindow.Hide();
         }
 
@@ -480,7 +643,10 @@ public partial class App : Application
     }
 
     private void OnCommandReceived(AgentCommand command)
-        => Dispatcher.BeginInvoke(() => HandleCommand(command));
+    {
+        ClientLog.Info($"Orden recibida: {command.Command} {command.Argument}".TrimEnd());
+        Dispatcher.BeginInvoke(() => HandleCommand(command));
+    }
 
     private async void HandleCommand(AgentCommand command)
     {
@@ -546,7 +712,10 @@ public partial class App : Application
     {
         if (blocked)
         {
-            _inputBlocker ??= new InputBlocker();
+            // Se recrea para reiniciar el tiempo máximo: si el administrador vuelve
+            // a enviar la orden, el bloqueo sigue vigente otros 10 minutos.
+            _inputBlocker?.Dispose();
+            _inputBlocker = new InputBlocker();
         }
         else
         {
@@ -564,6 +733,11 @@ public partial class App : Application
             bare = bare[..^4];
         if (bare.Length == 0) return;
 
+        // Nunca se aceptan rutas ni procesos críticos: una orden mal enviada no
+        // puede tumbar Windows ni el propio CyberManager.
+        if (bare.Contains('\\') || bare.Contains('/') || ProtectedProcesses.Contains(bare))
+            return;
+
         foreach (var process in Process.GetProcessesByName(bare))
         {
             try { process.Kill(true); } catch { /* proceso protegido o ya cerrado */ }
@@ -572,6 +746,17 @@ public partial class App : Application
 
     private void OnStationStateChanged(StationStateEvent state)
         => Dispatcher.BeginInvoke(async () => await RefreshAsync());
+
+    /// <summary>
+    /// Si se pierde la conexión, se libera el bloqueo de entrada para que el equipo
+    /// no quede inutilizable esperando una orden que ya no puede llegar.
+    /// </summary>
+    private void OnRealtimeConnectionChanged(bool connected)
+    {
+        ClientLog.Info(connected ? "Conexión en tiempo real restablecida." : "Conexión en tiempo real perdida.");
+        if (connected) return;
+        Dispatcher.BeginInvoke(() => SetInputBlocked(false));
+    }
 
     private void OnWallpaperChanged(WallpaperPlaylistDto playlist)
         => Dispatcher.BeginInvoke(async () => await _wallpapers.ApplyAsync(playlist));
@@ -830,6 +1015,7 @@ public partial class App : Application
         PowerManagementService.Disable();
         _wallpapers.Dispose();
         _promos.Dispose();
+        ReleaseSingleInstance();
         base.OnExit(e);
     }
 

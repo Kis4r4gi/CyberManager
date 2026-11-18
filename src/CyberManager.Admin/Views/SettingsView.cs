@@ -215,7 +215,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddCheck(checks, "IgtfEnabled", "Cobrar IGTF en pagos con divisas", true);
         AddCheck(checks, "AllowPostpaid", "Permitir sesiones postpago", true);
         AddCheck(checks, "AutoLockOvertime", "Bloquear equipo al agotarse el tiempo", true);
-        AddCheck(checks, "KioskMode", "Modo kiosco en los equipos", true);
         panel.Children.Add(checks);
 
         panel.Children.Add(Kit.Section("Ticket y operación"));

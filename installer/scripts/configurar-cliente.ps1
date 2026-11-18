@@ -67,6 +67,13 @@ if ($Remove) {
     else {
         Write-Host "La tarea $TaskName no estaba registrada." -ForegroundColor DarkGray
     }
+
+    $watchdogName = "$TaskName" + "Watchdog"
+    if (Get-ScheduledTask -TaskName $watchdogName -ErrorAction SilentlyContinue) {
+        Write-Step "Quitando la tarea programada $watchdogName..."
+        Unregister-ScheduledTask -TaskName $watchdogName -Confirm:$false
+        Write-Host "Tarea $watchdogName eliminada." -ForegroundColor Green
+    }
     exit 0
 }
 
@@ -140,6 +147,63 @@ $xml = @"
 Write-Step "Registrando la tarea programada $TaskName..."
 Register-ScheduledTask -TaskName $TaskName -Xml $xml -Force | Out-Null
 
+# Vigilante: si el cliente se cierra (cierre manual, fallo del proceso), lo vuelve a
+# abrir cada dos minutos. Se ejecuta como SYSTEM y arranca la tarea del cliente.
+$watchdogName = "$TaskName" + "Watchdog"
+$watchdogXml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Vuelve a abrir el cliente de CyberManager si deja de estar en ejecución.</Description>
+    <URI>\$watchdogName</URI>
+  </RegistrationInfo>
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT1M</Delay>
+    </BootTrigger>
+    <TimeTrigger>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <Repetition>
+        <Interval>PT2M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>true</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+    <ExecutionTimeLimit>PT2M</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-NoProfile -NonInteractive -WindowStyle Hidden -Command "if (-not (Get-Process -Name 'CyberManager.Client' -ErrorAction SilentlyContinue)) { Start-ScheduledTask -TaskName '$TaskName' }"</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"@
+
+Write-Step "Registrando el vigilante $watchdogName..."
+Register-ScheduledTask -TaskName $watchdogName -Xml $watchdogXml -Force | Out-Null
+
 if ($Start) {
     Write-Step "Iniciando el cliente..."
     Start-ScheduledTask -TaskName $TaskName
@@ -151,6 +215,7 @@ Write-Host ""
 if ($task) {
     Write-Host "Cliente configurado para iniciar con Windows." -ForegroundColor Green
     Write-Host "  Tarea:      $TaskName"
+    Write-Host "  Vigilante:  $watchdogName (cada 2 minutos)"
     Write-Host "  Ejecutable: $ClientExe"
     Write-Host "  Permisos:   nivel más alto disponible (administrador)"
 }

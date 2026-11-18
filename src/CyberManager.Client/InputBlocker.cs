@@ -5,7 +5,9 @@ namespace CyberManager.Client;
 /// <summary>
 /// Bloquea por completo teclado y mouse cuando el administrador envía la orden
 /// <see cref="CyberManager.Shared.AgentCommandType.LockInput"/>. La combinación
-/// Ctrl+Shift+F12 se mantiene disponible para el acceso técnico.
+/// Ctrl+Shift+F12 se mantiene disponible para el acceso técnico. El bloqueo tiene
+/// una duración máxima para que un equipo no quede inutilizable si se pierde la
+/// conexión con el servidor.
 /// </summary>
 public sealed class InputBlocker : IDisposable
 {
@@ -53,8 +55,13 @@ public sealed class InputBlocker : IDisposable
     private readonly LowLevelMouseProc _mouseProc;
     private IntPtr _keyboardHook = IntPtr.Zero;
     private IntPtr _mouseHook = IntPtr.Zero;
+    private readonly Timer? _ttl;
+    private bool _disposed;
 
-    public InputBlocker()
+    /// <summary>Duración máxima del bloqueo; por defecto 10 minutos.</summary>
+    public static readonly TimeSpan DefaultMaxDuration = TimeSpan.FromMinutes(10);
+
+    public InputBlocker(TimeSpan? maxDuration = null)
     {
         _keyboardProc = KeyboardCallback;
         _mouseProc = MouseCallback;
@@ -62,6 +69,10 @@ public sealed class InputBlocker : IDisposable
         var module = GetModuleHandle(null);
         _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, module, 0);
         _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, _mouseProc, module, 0);
+
+        var limit = maxDuration ?? DefaultMaxDuration;
+        if (limit > TimeSpan.Zero)
+            _ttl = new Timer(_ => Dispose(), null, limit, Timeout.InfiniteTimeSpan);
     }
 
     private static bool Down(int key) => (GetKeyState(key) & 0x8000) != 0;
@@ -82,6 +93,11 @@ public sealed class InputBlocker : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
+        _ttl?.Dispose();
+
         if (_keyboardHook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_keyboardHook);

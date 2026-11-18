@@ -70,7 +70,9 @@ public static class SessionBackupService
             if (deltaMinutes == 0)
                 return snapshot.State with { ServerTimeUtc = DateTime.UtcNow };
 
-            var extraAmount = session.Type == SessionType.Free
+            // En prepago el tiempo ya se cobró al iniciar (AmountCharged); sumar
+            // otra vez el tiempo transcurrido inflaba el total en pantalla.
+            var extraAmount = session.Type is SessionType.Free or SessionType.Prepaid
                 ? 0
                 : Math.Round(deltaMinutes / 60m * session.RatePerHour, 2);
             var timeAmount = Math.Round(session.TimeAmount + extraAmount, 2);

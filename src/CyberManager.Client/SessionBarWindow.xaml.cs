@@ -118,8 +118,13 @@ public partial class SessionBarWindow : Window
         _paused = paused;
 
         TimeLabel.Text = _prepaid ? L.T("TIEMPO RESTANTE") : L.T("TIEMPO TRANSCURRIDO");
+
+        var symbol = string.IsNullOrWhiteSpace(state.LocalCurrencySymbol)
+            ? "Bs"
+            : state.LocalCurrencySymbol;
+
         AmountText.Text = $"$ {session.TotalAmount:N2}";
-        AmountBsText.Text = $"Bs {session.TotalAmount * state.ExchangeRate:N2}";
+        AmountBsText.Text = $"{symbol} {session.TotalAmount * state.ExchangeRate:N2}";
 
         AccountTypeText.Text = session.Type switch
         {
@@ -131,12 +136,12 @@ public partial class SessionBarWindow : Window
         };
         AccountStartedText.Text = session.StartedUtc.ToLocalTime().ToString("HH:mm");
         AccountTimeUsdText.Text = $"$ {session.TimeAmount:N2}";
-        AccountTimeBsText.Text = $"Bs {session.TimeAmount * state.ExchangeRate:N2}";
+        AccountTimeBsText.Text = $"{symbol} {session.TimeAmount * state.ExchangeRate:N2}";
         AccountConsumptionUsdText.Text = $"$ {session.ConsumptionAmount:N2}";
-        AccountConsumptionBsText.Text = $"Bs {session.ConsumptionAmount * state.ExchangeRate:N2}";
+        AccountConsumptionBsText.Text = $"{symbol} {session.ConsumptionAmount * state.ExchangeRate:N2}";
         AccountTotalUsdText.Text = $"$ {session.TotalAmount:N2}";
-        AccountTotalBsText.Text = $"Bs {session.TotalAmount * state.ExchangeRate:N2}";
-        AccountRateText.Text = $"1 USD = {state.ExchangeRate:N2} Bs";
+        AccountTotalBsText.Text = $"{symbol} {session.TotalAmount * state.ExchangeRate:N2}";
+        AccountRateText.Text = $"1 USD = {state.ExchangeRate:N2} {symbol}";
 
         if (!string.IsNullOrWhiteSpace(_warningText))
         {
@@ -254,8 +259,10 @@ public partial class SessionBarWindow : Window
     private void PositionTopCenter()
     {
         if (ActualWidth <= 0) return;
-        Left = Math.Max(0, (SystemParameters.PrimaryScreenWidth - ActualWidth) / 2);
-        Top = 8;
+        // Se usa el área de trabajo para no quedar debajo de la barra de tareas.
+        var area = SystemParameters.WorkArea;
+        Left = Math.Max(area.Left, area.Left + (area.Width - ActualWidth) / 2);
+        Top = area.Top + 8;
     }
 
     private void Order_Click(object sender, RoutedEventArgs e) => OrderRequested?.Invoke();

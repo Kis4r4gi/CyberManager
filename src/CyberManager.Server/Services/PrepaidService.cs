@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using CyberManager.Server.Data;
 using CyberManager.Server.Security;
@@ -18,6 +19,13 @@ public class PrepaidService
 {
     private static readonly Regex UsernamePattern =
         new("^[a-z0-9][a-z0-9._-]{2,31}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>Intentos fallidos por usuario: tras 5 fallos se bloquea 60 segundos.</summary>
+    private static readonly ConcurrentDictionary<string, LoginAttempt> LoginAttempts = new();
+    private const int MaxLoginFailures = 5;
+    private static readonly TimeSpan LoginLockout = TimeSpan.FromSeconds(60);
+
+    private readonly record struct LoginAttempt(int Failures, DateTime LockedUntilUtc);
 
     private readonly AppDbContext _db;
     private readonly SettingsService _settings;
@@ -144,6 +152,18 @@ public class PrepaidService
         if (session is not null)
         {
             var station = await _db.Stations.FirstAsync(s => s.Id == stationId);
+
+            // Si al recargar todavía le quedan minutos, el equipo vuelve a quedar
+            // utilizable: sin esto el cliente pagaba y seguía bloqueado.
+            var elapsed = SessionCalculator.ElapsedMinutes(session, DateTime.UtcNow);
+            if (SessionCalculator.RemainingMinutes(session, elapsed) > 0 && station.IsLocked)
+            {
+                station.IsLocked = false;
+                await _db.SaveChangesAsync();
+                await _realtime.SendAgentCommandAsync(station.Id, AgentCommandType.Unlock);
+                await _realtime.SendStationCommandAsync(station.Id, AgentCommandType.Unlock);
+            }
+
             await NotifyStationAsync(station, session);
         }
 
@@ -236,7 +256,7 @@ public class PrepaidService
         if (session.CustomerId is not int customerId)
             throw new AppException("La sesión prepago no tiene una cuenta asociada.", 409);
 
-        var elapsed = SessionCalculator.ElapsedMinutes(session, DateTime.UtcNow);
+        var elapsed = SessionCalculator.BilledMinutes(session, DateTime.UtcNow);
         var refund = Math.Max(session.PlannedMinutes - elapsed, 0);
 
         await _sessions.StopAsync(new StopSessionRequest(
@@ -260,17 +280,46 @@ public class PrepaidService
     private async Task<Customer> AuthenticateAsync(string? username, string? password)
     {
         var normalized = NormalizeUsername(username);
-        var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Username == normalized);
-        if (customer is null || !customer.Active
-            || string.IsNullOrWhiteSpace(customer.PasswordHash)
-            || string.IsNullOrWhiteSpace(customer.PasswordSalt)
-            || !PasswordHasher.Verify(password ?? string.Empty,
-                customer.PasswordHash, customer.PasswordSalt))
+        var key = normalized.Length > 0 ? normalized : "?";
+
+        if (LoginAttempts.TryGetValue(key, out var attempt) && attempt.LockedUntilUtc > DateTime.UtcNow)
         {
+            var seconds = Math.Max(1,
+                (int)Math.Ceiling((attempt.LockedUntilUtc - DateTime.UtcNow).TotalSeconds));
+            throw new AppException($"Demasiados intentos fallidos. Espere {seconds} segundos.", 429);
+        }
+
+        var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Username == normalized);
+        var valid = customer is not null && customer.Active
+            && !string.IsNullOrWhiteSpace(customer.PasswordHash)
+            && !string.IsNullOrWhiteSpace(customer.PasswordSalt)
+            && PasswordHasher.Verify(password ?? string.Empty,
+                customer.PasswordHash, customer.PasswordSalt);
+
+        if (!valid)
+        {
+            RegisterFailure(key);
             throw new AppException("Usuario o contraseña incorrectos.", 401);
         }
 
-        return customer;
+        LoginAttempts.TryRemove(key, out _);
+        return customer!;
+    }
+
+    /// <summary>Cuenta los fallos seguidos y bloquea la cuenta temporalmente al llegar al límite.</summary>
+    private static void RegisterFailure(string key)
+    {
+        var now = DateTime.UtcNow;
+        LoginAttempts.AddOrUpdate(
+            key,
+            _ => new LoginAttempt(1, DateTime.MinValue),
+            (_, current) =>
+            {
+                var failures = current.LockedUntilUtc > now ? current.Failures : current.Failures + 1;
+                return failures >= MaxLoginFailures
+                    ? new LoginAttempt(0, now + LoginLockout)
+                    : new LoginAttempt(failures, DateTime.MinValue);
+            });
     }
 
     private Task<Session?> ActiveSessionAsync(int stationId, int customerId)

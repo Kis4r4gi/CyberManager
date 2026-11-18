@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CyberManager.Agent;
 
@@ -108,6 +110,7 @@ public class AgentWorker : BackgroundService
 
         _hub = new HubConnectionBuilder()
             .WithUrl(url)
+            .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
             .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
             .Build();
 
