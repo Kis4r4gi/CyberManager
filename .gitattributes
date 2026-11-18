@@ -15,4 +15,7 @@
 *.mp4 binary
 *.m4v binary
 *.wmv binary
+
+# Instaladores publicados: se guardan en Git LFS por su tamaño.
+artifacts/*.exe filter=lfs diff=lfs merge=lfs -text
 *.avi binary
