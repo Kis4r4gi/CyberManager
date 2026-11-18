@@ -1432,8 +1432,31 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Prueba en vivo**: estación temporal 17 (desactivada al terminar) con el cliente 1.3.13; la
   captura pasó de brillo medio 44,6 y desviación 33,3 (1.3.11) a **62,9 y 48,0**, señal de que el
   fondo se ve con más luz y contraste. El cliente arrancó sin errores de XAML.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.13-x64.zip` (35.666.368 bytes,
-  SHA-256 `6c81f40d…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.14.
+
+---
+
+### Contorno en los textos del bloqueo (1.3.14, 2026-11-18, sin publicar)
+
+- **Texto con contorno**: WPF no dibuja borde a un `TextBlock`, así que se añadió
+  `OutlinedTextBlock`, un control que construye la geometría de los glifos y pinta primero el trazo
+  y luego el relleno. Se aplicó al nombre del negocio, al equipo y la zona, al título, al mensaje,
+  al saludo y a la versión, con trazo negro `#D9000000` de 3 px (2–2,5 px en los textos pequeños).
+  El texto se lee sobre fondos claros sin volver a oscurecer la imagen; se retiró la sombra
+  `DropShadowEffect` que se había usado en 1.3.13.
+- **Versión 1.3.14** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.14 (67.673.044 bytes, SHA-256 `d9425bfc…`,
+  `publishedUtc` 2026-11-18T12:22:21.766Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.14-20261118-0825`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.14; servidor 1.3.14.
+- **Prueba en vivo**: estación temporal 18 (desactivada al terminar) con el cliente 1.3.14; en la
+  captura, el **100 %** de los píxeles del título y del texto de la versión tienen píxeles oscuros a
+  3 px o menos, es decir, el contorno se dibuja. Brillo medio 63,2 y desviación 48,1; sin reloj, sin
+  fecha y sin tasa. PC 01 ya pasó sola a 1.3.13 y su sesión prepago #4 sigue activa; recibirá 1.3.14
+  en la siguiente comprobación.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.14-x64.zip` (35.666.370 bytes,
+  SHA-256 `719b8de5…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---

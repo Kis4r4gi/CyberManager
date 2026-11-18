@@ -1166,8 +1166,8 @@ En modo **Presentación rotativa** la rotación funciona como un salvapantallas:
 el equipo lleva **2 minutos sin actividad** (teclado o ratón). Cualquier movimiento detiene la
 rotación y mantiene el fondo actual; al volver a quedar inactivo, se reanuda.
 
-> El fondo se muestra con un velo muy suave (0 % arriba, 12 % al centro y 40 % abajo) y una sombra
-> en el texto, para que la imagen se aprecie viva sin perder legibilidad. Al iniciar una sesión,
+> El fondo se muestra con un velo muy suave (0 % arriba, 12 % al centro y 40 % abajo) y un contorno
+> oscuro en el texto, para que la imagen se aprecie viva sin perder legibilidad. Al iniciar una sesión,
 > la pantalla de bloqueo se oculta y la rotación se detiene.
 
 ---
