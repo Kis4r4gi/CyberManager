@@ -1232,6 +1232,26 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (SHA-256 `8ac9532a…`). PC 01 estaba desconectado al momento del aviso; aplicará la versión al
   volver a conectarse.
 
+### Reloj, energía, latido y configuración del cliente (1.3.4, 2026-11-18, sin publicar)
+
+- **Reloj irregular**: el `DispatcherTimer` de `LockWindow` nunca se iniciaba, así que la hora solo
+  cambiaba cuando llegaba un estado del servidor (cada 5 s). Ahora el temporizador arranca en
+  `Loaded` (250 ms, prioridad `Render`), se detiene al cerrar y solo redibuja al cambiar el segundo.
+- **Barra de sesión**: el contador usa un ancla (`_anchorAt`/`_anchorSeconds`) que solo se reajusta
+  al cambiar de sesión, al pausar/reanudar o si la desviación supera 90 s; antes retrocedía hasta
+  59 s con cada aviso del servidor.
+- **Energía**: `PowerManagementService` usa `SetThreadExecutionState` con `ES_CONTINUOUS |
+  ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED` al iniciar y cada 30 s; impide suspensión, hibernación
+  y apagado de pantalla. Se libera en `OnExit`.
+- **Latido**: el cliente envía el latido aunque falle `StateAsync`, y `StationHub` (además de
+  `AgentHub`) devuelve el equipo a **Disponible** y avisa cuando vuelve a reportar.
+- **Configuración del cliente**: las rejillas de **Datos del negocio** y **Apariencia** no tenían
+  filas, por lo que los campos se superponían. Se añadieron `RowDefinitions` y posiciones
+  `Grid.Row` para que cada etiqueta y caja tenga su propia línea.
+- **Despliegue local 1.3.4**: servidor y consola copiados a `C:\CyberManager\Servidor`, tarea
+  `CyberManagerServer` en `Running`, `/api/health` → `ok`, paquete `ClientUpdate` 1.3.4
+  (SHA-256 `6b553ef6…`). PC 01 se actualizó a 1.3.4 y quedó **Disponible/en línea**.
+
 ---
 
 ## Rutas y comandos clave

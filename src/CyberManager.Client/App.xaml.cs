@@ -26,6 +26,7 @@ public partial class App : Application
 
     private DispatcherTimer? _pollTimer;
     private DispatcherTimer? _updateTimer;
+    private DispatcherTimer? _keepAwakeTimer;
     private LockWindow? _lockWindow;
     private SessionBarWindow? _barWindow;
     private OrderWindow? _orderWindow;
@@ -59,6 +60,13 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         Config = AppConfig.Load("Client");
         L.SetLanguage(Config.Language);
+
+        // El cliente controla la energía del equipo: evita la suspensión, la
+        // hibernación y el apagado automático de la pantalla mientras se ejecuta.
+        PowerManagementService.Enable();
+        _keepAwakeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _keepAwakeTimer.Tick += (_, _) => PowerManagementService.Enable();
+        _keepAwakeTimer.Start();
 
         // El descubrimiento debe estar activo incluso antes de configurar el equipo:
         // así el servidor puede encontrarlo y enviarle el ID y el token.
@@ -322,7 +330,6 @@ public partial class App : Application
             State = state;
             ApplyState(state);
             SessionBackupService.Save(state);
-            await SendHeartbeatAsync();
         }
         catch
         {
@@ -339,6 +346,10 @@ public partial class App : Application
                 }
             }
         }
+
+        // El latido se envía aunque falle la consulta de estado, para que el
+        // servidor no marque el equipo como desconectado teniendo el hub activo.
+        await SendHeartbeatAsync();
 
         if (Realtime is not null && !Realtime.IsConnected &&
             DateTime.UtcNow - _lastConnectAttempt > TimeSpan.FromSeconds(20))
@@ -815,6 +826,8 @@ public partial class App : Application
 
         await StopAsync();
         SetInputBlocked(false);
+        _keepAwakeTimer?.Stop();
+        PowerManagementService.Disable();
         _wallpapers.Dispose();
         _promos.Dispose();
         base.OnExit(e);

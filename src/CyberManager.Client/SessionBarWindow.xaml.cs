@@ -9,10 +9,13 @@ namespace CyberManager.Client;
 
 public partial class SessionBarWindow : Window
 {
-    private readonly DispatcherTimer _ticker = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _ticker =
+        new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(250) };
     private StationClientStateDto? _state;
-    private DateTime _baseAt = DateTime.UtcNow;
-    private int _baseSeconds;
+    private DateTime _anchorAt = DateTime.UtcNow;
+    private int _anchorSeconds;
+    private bool _hasAnchor;
+    private bool _paused;
     private bool _prepaid;
     private bool _overtime;
     private int _sessionId;
@@ -42,7 +45,6 @@ public partial class SessionBarWindow : Window
     public void UpdateState(StationClientStateDto state)
     {
         _state = state;
-        _baseAt = DateTime.UtcNow;
 
         StationText.Text = state.Name;
         DescriptionText.Text = string.IsNullOrWhiteSpace(state.SessionBarDescription)
@@ -63,6 +65,7 @@ public partial class SessionBarWindow : Window
             AmountBsText.Text = "Bs 0,00";
             RechargeButton.Visibility = Visibility.Collapsed;
             FinishButton.Visibility = Visibility.Collapsed;
+            _hasAnchor = false;
             return;
         }
 
@@ -70,6 +73,7 @@ public partial class SessionBarWindow : Window
         {
             _sessionId = session.Id;
             _warningText = null;
+            _hasAnchor = false;
         }
 
         if (!session.Overtime && session.RemainingMinutes > 5)
@@ -79,7 +83,22 @@ public partial class SessionBarWindow : Window
         _overtime = session.Overtime;
         RechargeButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
         FinishButton.Visibility = _prepaid ? Visibility.Visible : Visibility.Collapsed;
-        _baseSeconds = _prepaid ? Math.Max(session.RemainingMinutes, 0) * 60 : session.ElapsedMinutes * 60;
+
+        var paused = session.Status == SessionStatus.Paused;
+        var serverSeconds = _prepaid
+            ? (session.Overtime ? session.RemainingMinutes : Math.Max(session.RemainingMinutes, 0)) * 60
+            : session.ElapsedMinutes * 60;
+
+        // El servidor entrega minutos enteros; si se reajustara el ancla en cada
+        // aviso el contador retrocedería hasta 59 s. Solo se reajusta al cambiar
+        // de sesión, al pausar/reanudar o si el reloj local se desvía demasiado.
+        if (!_hasAnchor || paused != _paused || Math.Abs(CurrentSeconds() - serverSeconds) > 90)
+        {
+            _anchorAt = DateTime.UtcNow;
+            _anchorSeconds = serverSeconds;
+            _hasAnchor = true;
+        }
+        _paused = paused;
 
         TimeLabel.Text = _prepaid ? L.T("TIEMPO RESTANTE") : L.T("TIEMPO TRANSCURRIDO");
         AmountText.Text = $"$ {session.TotalAmount:N2}";
@@ -139,28 +158,36 @@ public partial class SessionBarWindow : Window
         WarningText.Visibility = Visibility.Visible;
     }
 
+    private int CurrentSeconds()
+    {
+        if (!_hasAnchor) return 0;
+        if (_paused) return _anchorSeconds;
+
+        var delta = (int)Math.Max(0, (DateTime.UtcNow - _anchorAt).TotalSeconds);
+        return _anchorSeconds + delta;
+    }
+
     private void Tick()
     {
         var session = _state?.Session;
-        if (session is null) return;
+        if (session is null || !_hasAnchor) return;
 
-        var delta = (int)Math.Max(0, (DateTime.UtcNow - _baseAt).TotalSeconds);
+        var seconds = CurrentSeconds();
         var accent = (Brush)FindResource("AccentBrush");
         var danger = (Brush)FindResource("DangerBrush");
         var warning = (Brush)FindResource("WarningBrush");
 
         if (_prepaid && session.Type != SessionType.Free)
         {
-            var remaining = _baseSeconds - delta;
-            if (remaining >= 0)
+            if (seconds >= 0)
             {
-                TimeText.Text = Format(remaining);
-                TimeText.Foreground = remaining <= 300 ? warning : accent;
+                TimeText.Text = Format(seconds);
+                TimeText.Foreground = seconds <= 300 ? warning : accent;
                 WarningText.Visibility = _warningText is null ? Visibility.Collapsed : Visibility.Visible;
             }
             else
             {
-                TimeText.Text = "+" + Format(-remaining);
+                TimeText.Text = "+" + Format(-seconds);
                 TimeText.Foreground = danger;
                 WarningText.Text = L.T("¡Tiempo agotado!");
                 WarningText.Visibility = Visibility.Visible;
@@ -168,7 +195,7 @@ public partial class SessionBarWindow : Window
         }
         else
         {
-            TimeText.Text = Format(_baseSeconds + delta);
+            TimeText.Text = Format(seconds);
             TimeText.Foreground = accent;
             if (_overtime)
             {

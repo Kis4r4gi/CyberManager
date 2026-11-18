@@ -132,6 +132,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **NetFiltroWeb**: bloqueo de sitios y palabras prohibidas con una lista inicial editable por el
   administrador; se aplica en cada equipo mediante el archivo `hosts` y un proxy local opcional.
 - Aviso y bloqueo automático al agotarse el tiempo contratado (configurable).
+- **Equipo siempre despierto y reloj local**: mientras el cliente está en ejecución impide la
+  suspensión, la hibernación y el apagado automático de la pantalla, y la hora de la pantalla de
+  bloqueo se toma del reloj de Windows del propio equipo.
 - Galería de fondos sincronizada: los equipos bloqueados muestran un fondo fijo o una
   presentación rotativa controlada desde la consola; la rotación avanza solo tras 2 minutos sin
   actividad, como un salvapantallas.

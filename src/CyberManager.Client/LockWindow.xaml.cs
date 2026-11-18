@@ -12,7 +12,9 @@ namespace CyberManager.Client;
 
 public partial class LockWindow : Window
 {
-    private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _clockTimer =
+        new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(250) };
+    private int _lastClockSecond = -1;
     private KeyboardBlocker? _blocker;
     private ImageSource? _wallpaper;
     private string? _promoPath;
@@ -41,9 +43,14 @@ public partial class LockWindow : Window
         {
             Loc.Apply(this);
             UpdateClock();
+            _clockTimer.Start();
             _blocker ??= new KeyboardBlocker();
         };
-        Closed += (_, _) => _blocker?.Dispose();
+        Closed += (_, _) =>
+        {
+            _clockTimer.Stop();
+            _blocker?.Dispose();
+        };
         Closing += (_, e) =>
         {
             if (!AllowClose) e.Cancel = true;
@@ -227,7 +234,12 @@ public partial class LockWindow : Window
     private void UpdateClock()
     {
         // Reloj de 12 horas con AM/PM usando la hora local del equipo (Windows).
+        // Se consulta varias veces por segundo para que el segundero no se salte
+        // cuando el hilo de interfaz está ocupado, pero solo se redibuja al cambiar.
         var now = DateTime.Now;
+        if (now.Second == _lastClockSecond) return;
+        _lastClockSecond = now.Second;
+
         var culture = L.IsEnglish ? CultureInfo.GetCultureInfo("en-US") : CultureInfo.GetCultureInfo("es-VE");
         ClockText.Text = now.ToString("h:mm:ss tt", culture);
         DateText.Text = Capitalize(now.ToString("dddd, d 'de' MMMM 'de' yyyy", culture));
