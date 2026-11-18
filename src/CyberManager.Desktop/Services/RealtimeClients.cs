@@ -162,6 +162,12 @@ public sealed class StationRealtime : IAsyncDisposable
             ? _hub.InvokeAsync("Heartbeat", heartbeat)
             : Task.CompletedTask;
 
+    /// <summary>Avisa al servidor de que la pantalla del cliente se está cerrando.</summary>
+    public Task ClosingAsync()
+        => _hub is { State: HubConnectionState.Connected }
+            ? _hub.InvokeAsync("ClientClosing")
+            : Task.CompletedTask;
+
     /// <summary>Envía al servidor la captura de pantalla solicitada por administración.</summary>
     public Task SendScreenFrameAsync(ScreenFrameResult frame)
         => _hub is { State: HubConnectionState.Connected }

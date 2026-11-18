@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using CyberManager.Shared;
 
 namespace CyberManager.Server.Services;
@@ -68,10 +69,78 @@ public sealed class NetworkScanService
             }
         }
 
+        // Respaldo para equipos cuyo firewall bloquea UDP 5092: la tabla ARP del
+        // servidor revela la IP y MAC de cualquier PC que haya hablado en la red.
+        foreach (var neighbor in ScanArp(ct))
+        {
+            var key = $"arp|{neighbor.MacAddress}|{neighbor.IpAddress}";
+            if (results.ContainsKey($"client||{neighbor.MacAddress}|{neighbor.IpAddress}")) continue;
+            results[key] = neighbor;
+        }
+
         return results.Values
             .OrderBy(m => m.MachineName)
             .ThenBy(m => m.Role)
             .ToList();
+    }
+
+    /// <summary>Lee la tabla ARP de Windows para descubrir equipos por IP y MAC.</summary>
+    private static List<DiscoveryMessage> ScanArp(CancellationToken ct)
+    {
+        var result = new List<DiscoveryMessage>();
+
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("arp", "-a")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null) return result;
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            var local = new HashSet<string>(
+                NetworkIdentity.LocalIPv4Addresses().Concat(new[] { NetworkIdentity.LocalIPv4() ?? string.Empty }),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (Match match in Regex.Matches(output,
+                         @"\b(\d{1,3}(?:\.\d{1,3}){3})\s+([0-9a-fA-F]{2}(?:-[0-9a-fA-F]{2}){5})\s+(\w+)"))
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var ip = match.Groups[1].Value;
+                var mac = match.Groups[2].Value.Replace('-', ':').ToUpperInvariant();
+                var kind = match.Groups[3].Value;
+
+                // Windows en español muestra «dinámico» en lugar de «dynamic».
+                if (!kind.StartsWith("dyn", StringComparison.OrdinalIgnoreCase) &&
+                    !kind.StartsWith("din", StringComparison.OrdinalIgnoreCase)) continue;
+                if (local.Contains(ip) || ip.StartsWith("169.254.") ||
+                    ip.StartsWith("224.") || ip.StartsWith("255.") ||
+                    mac.StartsWith("00:00:00:", StringComparison.Ordinal)) continue;
+
+                result.Add(new DiscoveryMessage(
+                    DiscoveryProtocol.ResponseMagic,
+                    // «arp» distinguishes neighbors seen only in the ARP table: they
+                    // can refresh a known station, but must not be auto-created.
+                    Role: "arp",
+                    IpAddress: ip,
+                    MacAddress: mac,
+                    Version: string.Empty,
+                    SentUtc: DateTime.UtcNow));
+            }
+        }
+        catch
+        {
+            // Sin tabla ARP (permisos, sistema no Windows) queda solo el escaneo UDP.
+        }
+
+        return result;
     }
 
     /// <summary>Envía el ID y el token definitivos a la estación que respondió al escaneo.</summary>

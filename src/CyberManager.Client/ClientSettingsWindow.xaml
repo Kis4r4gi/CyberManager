@@ -35,7 +35,8 @@
                 </StackPanel>
 
                 <Button Content="✕" Style="{StaticResource IconButton}" HorizontalAlignment="Right"
-                        VerticalAlignment="Top" Click="Cancel_Click" ToolTip="Cerrar sin guardar" />
+                        VerticalAlignment="Top" Click="Cancel_Click"
+                        ToolTip="Cerrar la ventana de configuración" />
             </Grid>
 
             <!-- ================= Contenido ================= -->
@@ -199,28 +200,26 @@
 
                     <!-- Mantenimiento -->
                     <StackPanel x:Name="MaintenanceSection">
-                    <TextBlock Text="Mantenimiento" Style="{StaticResource H2}" Margin="0,8,0,10" />
-                    <Border Background="#151C2C" BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Margin="0,0,16,0" VerticalAlignment="Center">
-                                <TextBlock Text="Cerrar y desinstalar este cliente" FontWeight="SemiBold" />
-                                <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,4,0,0"
-                                           Text="Quita el cliente de este equipo. La base de datos del negocio y la configuración del servidor se conservan." />
-                            </StackPanel>
-
-                            <Button x:Name="UninstallButton" Grid.Column="1"
-                                    Content="Cerrar y desinstalar"
-                                    Style="{StaticResource DangerButton}" Padding="18,10"
-                                    VerticalAlignment="Center" Click="Uninstall_Click"
-                                    ToolTip="Cierra el cliente y ejecuta el desinstalador de CyberManager." />
-                        </Grid>
-                    </Border>
+                        <TextBlock Text="Mantenimiento" Style="{StaticResource H2}" Margin="0,8,0,10" />
+                        <Border Background="#151C2C" BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,8">
+                            <UniformGrid Columns="3" Margin="0">
+                                <Button x:Name="MinimizeButton" Content="Minimizar"
+                                        Style="{StaticResource GhostButton}" Margin="0,0,6,0" Padding="14,10"
+                                        Click="Minimize_Click"
+                                        ToolTip="Minimiza la ventana de configuración; el cliente sigue ejecutándose." />
+                                <Button x:Name="CloseClientButton" Content="Cerrar"
+                                        Style="{StaticResource WarningButton}" Margin="6,0" Padding="14,10"
+                                        Click="CloseClient_Click"
+                                        ToolTip="Cierra el cliente de CyberManager en este equipo." />
+                                <Button x:Name="UninstallButton" Content="Desinstalar"
+                                        Style="{StaticResource DangerButton}" Margin="6,0,0,0" Padding="14,10"
+                                        Click="Uninstall_Click"
+                                        ToolTip="Cierra el cliente y ejecuta el desinstalador de CyberManager." />
+                            </UniformGrid>
+                        </Border>
+                        <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8" FontSize="11"
+                                   Text="Minimizar deja el cliente en segundo plano. Cerrar lo finaliza. Desinstalar lo quita del equipo; la base de datos del negocio y la configuración del servidor se conservan." />
                     </StackPanel>
                     </StackPanel>
                 </StackPanel>

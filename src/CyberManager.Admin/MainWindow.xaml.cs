@@ -131,6 +131,10 @@ public partial class MainWindow : Window
         // Barra de título nativa de Windows: los iconos de minimizar/cerrar siempre son visibles.
         NativeWindow.ApplyDarkTitleBar(this);
         NativeWindow.RestorePlacement(this, WindowPlacementStore.Load(_placementKey));
+
+        // La consola se abre siempre maximizada tras iniciar sesión, aunque se
+        // hubiera guardado un tamaño normal en un acceso anterior.
+        WindowState = WindowState.Maximized;
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)

@@ -94,7 +94,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   recorriendo la subred; validan la dirección con el token del equipo y la guardan sin reinstalar ni
   reconfigurar nada. El paquete de búsqueda incluye la MAC y el nombre del cliente, de modo que el
   servidor también lo ubica y actualiza su IP aunque el firewall del equipo bloquee el escaneo
-  inverso por UDP 5092/5093.
+  inverso por UDP 5092/5093. Si el firewall bloquea UDP, el servidor usa también la tabla ARP
+  (acepta `dynamic` y `dinámico`); esos equipos sirven para refrescar una fila conocida por MAC,
+  pero nunca se dan de alta solos, para no crear duplicados.
 - **IP del servidor a la vista**: en *Equipos y zonas* y en la pestaña *Zonas* aparece una tarjeta
   con la IP/URL real del servidor y un botón **Copiar URL** para pegarla en la configuración de
   cualquier estación. La obtiene el propio servidor, así que funciona aunque la consola esté en
@@ -125,7 +127,11 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   minutos no usados vuelven al monedero al finalizar.
 - **Acceso de administrador desde el cliente**: el botón de inicio de sesión de la pantalla de
   bloqueo permite entrar con una cuenta con rol *Admin* y editar la configuración del cliente
-  enlazada al servidor (negocio, barra de sesión, fondos, avisos y sesiones).
+  enlazada al servidor (negocio, barra de sesión, fondos, avisos y sesiones). El menú de
+  mantenimiento tiene tres botones independientes: **Minimizar** deja el cliente en segundo plano,
+  **Cerrar** pide confirmación y finaliza la aplicación, y **Desinstalar** ejecuta el desinstalador.
+  Están disponibles incluso sin conexión. La acción **Mantenimiento** de la consola abre además el
+  menú de administrador en la estación para poder manejarla desde allí.
 - **Login cómodo en la pantalla de bloqueo**: el cursor permanece en el campo de usuario mientras
   se escribe, el menú flotante se cierra con **ESC** y los formularios de acceso y registro
   incluyen la casilla **Mostrar contraseña**.
@@ -135,12 +141,14 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   y el nombre del equipo se muestra en blanco y en tamaño grande en la esquina superior derecha.
 - **Acciones por equipo en «Equipos»**: cada fila incluye un menú desplegable **Acciones** con
   subir, bajar, editar, cambiar nombre, editar conexión, configuración/token, ver pantalla,
-  bloquear, enviar mensaje, actualizar cliente, mantenimiento, activar/desactivar y eliminar. La
+  bloquear, enviar mensaje, actualizar cliente, mantenimiento (que también abre el terminal), activar/desactivar y eliminar. La
   barra de botones inferiores se retiró; el clic derecho abre el mismo menú.
-- **Estado en línea confiable**: la presencia se calcula por el último latido (90 s) y no por la
+- **Estado en línea confiable e inmediato**: la presencia se calcula por el último latido (90 s) y no por la
   ocupación del equipo, así que un PC apagado se muestra **Sin conexión** aunque conserve una
-  sesión abierta. La lista de *Equipos* y el tablero se refrescan solos al recibir cambios y cada
-  pocos segundos.
+  sesión abierta. Al cerrar el cliente, avisa al servidor por SignalR y el equipo pasa a **Sin
+  conexión** al instante; el latido del agente ya no puede devolverlo a «Disponible». Si el proceso
+  termina sin avisar, la desconexión del hub lo marca en unos 2 segundos. La lista de *Equipos* y el
+  tablero se refrescan solos al recibir cambios y cada pocos segundos.
 - Consumo de productos cargado a la sesión (se cobra al cerrar) o cobrado directo en caja.
 - Reservas de equipos por fecha y hora, con confirmación y cancelación.
 - Mensajes al cliente y órdenes de bloqueo, apagado, reinicio y cierre de sesión.
@@ -864,9 +872,9 @@ La consola usa la **barra de título nativa de Windows**, de modo que los botone
 se aplica el modo oscuro a esa barra. La barra muestra el nombre del programa y la versión
 instalada (por ejemplo, `CyberManager · Administración · v1.0.11`). La ventana se encuadra
 automáticamente dentro del área de trabajo visible (sin quedar debajo de la barra de tareas) y se
-reajusta al cambiar de monitor o de escala (DPI). La consola **recuerda la posición, el tamaño y el
-estado (normal o maximizado) de la ventana principal y de la pantalla de inicio de sesión** para
-cada usuario de Windows y de la aplicación; se guardan en
+reajusta al cambiar de monitor o de escala (DPI). La consola **se abre siempre maximizada justo después de iniciar sesión**, aunque antes se hubiera
+guardado un tamaño normal. La posición y el tamaño de la ventana principal y de la pantalla de inicio
+de sesión se recuerdan por usuario de Windows y de la aplicación en
 `%LOCALAPPDATA%\CyberManager\Admin\windows.json`.
 
 La apariencia se guarda por usuario en

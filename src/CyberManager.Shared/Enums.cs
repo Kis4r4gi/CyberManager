@@ -151,7 +151,9 @@ public enum AgentCommandType
     UnlockInput = 14,
     /// <summary>Apaga el monitor; se enciende con <see cref="MonitorOn"/> o con cualquier tecla.</summary>
     MonitorOff = 15,
-    MonitorOn = 16
+    MonitorOn = 16,
+    /// <summary>Abre la pantalla de administrador del cliente en la estación.</summary>
+    OpenClient = 17
 }
 
 /// <summary>Tipo de regla del módulo NetFiltroWeb.</summary>

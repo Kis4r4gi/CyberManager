@@ -945,6 +945,12 @@ public sealed class DashboardView : UserControl, IRefreshable
                         break;
 
                     await App.Api.MaintenanceAsync(station.Id, enable);
+
+                    // El mantenimiento también abre el terminal para que el
+                    // administrador pueda manejarlo desde la propia estación.
+                    await App.Api.CommandAsync(station.Id, AgentCommandType.OpenClient);
+                    Ui.Info($"Se abrió el terminal de {station.Name} para su mantenimiento.",
+                        "Mantenimiento");
                     break;
                 }
 

@@ -80,6 +80,14 @@ public sealed class StationDiscoveryService(
         {
             var itemMac = NormalizeMac(item.MacAddress);
 
+            // Los equipos vistos solo en la tabla ARP pueden actualizar una fila
+            // conocida por MAC, pero nunca deben dar de alta equipos nuevos solos.
+            if (automatic && string.Equals(item.Role, "arp", StringComparison.OrdinalIgnoreCase))
+            {
+                messages.Add($"{item.MachineName}: visto en ARP; se omite el alta automática.");
+                continue;
+            }
+
             if (automatic && IsSuppressed(suppressions, item, itemMac))
             {
                 messages.Add($"{item.MachineName}: equipo eliminado; no se vuelve a agregar.");

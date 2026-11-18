@@ -841,6 +841,14 @@ public partial class App : Application
             case AgentCommandType.KillProcess:
                 KillProcess(command.Argument);
                 break;
+
+            case AgentCommandType.OpenClient:
+                // La consola pidió abrir el terminal para mantenimiento: se muestra
+                // el acceso de administrador en la propia estación.
+                ClientLog.Info("Apertura del terminal solicitada desde la consola.");
+                if (_lockWindow is null) ShowLock(State);
+                OnAdminLoginRequested();
+                break;
         }
     }
 
@@ -1010,6 +1018,12 @@ public partial class App : Application
                     Loc.Apply(_lockWindow);
                     if (_barWindow is not null) Loc.Apply(_barWindow);
                 }
+
+                if (addressWindow.ExitRequested || addressWindow.UninstallRequested)
+                {
+                    Shutdown();
+                    return;
+                }
             }
 
             await RefreshAsync();
@@ -1028,9 +1042,9 @@ public partial class App : Application
         {
             _adminMode = false;
 
-            // Si el administrador pidió desinstalar, la aplicación se cierra sin
-            // volver a mostrar la pantalla de bloqueo.
-            if (!settings.UninstallRequested)
+            // Si el administrador cerró o desinstaló el cliente, la aplicación se
+            // cierra sin volver a mostrar la pantalla de bloqueo.
+            if (!settings.ExitRequested && !settings.UninstallRequested)
             {
                 _lockWindow.ExitAdminMode();
 
@@ -1041,7 +1055,7 @@ public partial class App : Application
             }
         }
 
-        if (settings.UninstallRequested)
+        if (settings.ExitRequested || settings.UninstallRequested)
         {
             Shutdown();
             return;
@@ -1180,6 +1194,20 @@ public partial class App : Application
             _discovery.Configured -= OnDiscoveryConfigured;
             _discovery.Dispose();
             _discovery = null;
+        }
+
+        // Aviso explícito antes de soltar SignalR: esperar a que el servidor note
+        // la desconexión dejaba el equipo como «Disponible» varios segundos.
+        if (Realtime is not null)
+        {
+            try
+            {
+                await Realtime.ClosingAsync().WaitAsync(TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+                // Si el servidor no responde, su desconexión del hub marcará el equipo.
+            }
         }
 
         await StopAsync();

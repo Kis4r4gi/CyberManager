@@ -839,6 +839,14 @@ public static class L
             ["IP de este equipo: (obteniendo...)"] = "This station IP: (getting...)",
             ["IP de esta estación en su red; no es la IP del servidor."] =
                 "This station IP on its network; not the server IP.",
+            ["Minimizar"] = "Minimize",
+            ["Cerrar cliente"] = "Close client",
+            ["Desinstalar"] = "Uninstall",
+            ["Cerrar la ventana de configuración"] = "Close the settings window",
+            ["Se cerrará CyberManager en este equipo. ¿Desea continuar?"] =
+                "CyberManager will close on this station. Continue?",
+            ["Minimizar deja el cliente en segundo plano. Cerrar lo finaliza. Desinstalar lo quita del equipo; la base de datos del negocio y la configuración del servidor se conservan."] =
+                "Minimize keeps the client running in the background. Close exits it. Uninstall removes it from the station; the business database and server address are preserved.",
         };
 
         return map;

@@ -86,5 +86,6 @@ public partial class App : Application
 
         MainWindow = new MainWindow();
         MainWindow.Show();
+        MainWindow.WindowState = WindowState.Maximized;
     }
 }

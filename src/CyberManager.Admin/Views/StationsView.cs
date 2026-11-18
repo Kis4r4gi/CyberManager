@@ -570,6 +570,11 @@ public sealed class StationsView : UserControl, IRefreshable
         _ = Ui.Run(async () =>
         {
             await App.Api.MaintenanceAsync(station.Id, enable);
+
+            // Mantener el equipo también abre su terminal para poder configurarlo.
+            await App.Api.CommandAsync(station.Id, AgentCommandType.OpenClient);
+            Ui.Info($"Se abrió el terminal de {station.Name} para su mantenimiento.",
+                "Mantenimiento");
             await RefreshAsync();
         }, "No se pudo cambiar el mantenimiento");
     }

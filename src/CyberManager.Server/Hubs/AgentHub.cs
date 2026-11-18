@@ -49,24 +49,15 @@ public class AgentHub : Hub
         var station = await _db.Stations.FirstOrDefaultAsync(s => s.Id == hb.StationId);
         if (station is null) return;
 
-        var wasOffline = station.Status == StationStatus.Offline;
+        // El agente mantiene el latido del PC, pero el estado «disponible» lo decide
+        // el cliente: si se cierra la pantalla, el equipo debe aparecer sin conexión
+        // aunque el servicio del agente siga reportando.
         station.LastSeenUtc = DateTime.UtcNow;
         station.Version = hb.Version;
         station.CurrentUser = hb.CurrentUser;
         station.IsLocked = string.Equals(hb.AgentState, "locked", StringComparison.OrdinalIgnoreCase);
 
-        // Un equipo conectado sin sesión deja de estar fuera de línea.
-        if (wasOffline && station.CurrentSessionId is null)
-            station.Status = StationStatus.Available;
-
         await _db.SaveChangesAsync();
-
-        if (wasOffline && station.Status == StationStatus.Available)
-        {
-            await _realtime.BroadcastEventAsync("StationOnline", $"{station.Name} en línea");
-            await _realtime.StationChangedAsync(new StationStateEvent(
-                station.Id, station.Status, null, 0, 0, 0, false));
-        }
     }
 
     public Task Report(CommandResult result)

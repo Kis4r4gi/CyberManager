@@ -26,6 +26,9 @@ public partial class ClientSettingsWindow : Window
     /// <summary>Indica que los cambios se guardaron correctamente.</summary>
     public bool Saved { get; private set; }
 
+    /// <summary>El administrador pidió cerrar el cliente sin desinstalarlo.</summary>
+    public bool ExitRequested { get; private set; }
+
     /// <summary>El administrador pidió cerrar el cliente y desinstalarlo del equipo.</summary>
     public bool UninstallRequested { get; private set; }
 
@@ -54,7 +57,6 @@ public partial class ClientSettingsWindow : Window
         {
             SubtitleText.Text = "Establezca la dirección del servidor para reconectar esta estación.";
             RemoteSections.Visibility = Visibility.Collapsed;
-            MaintenanceSection.Visibility = Visibility.Collapsed;
             SaveButton.Content = "Guardar dirección";
             SaveButton.ToolTip = "Guarda la dirección en este equipo y reconecta el cliente.";
         }
@@ -327,6 +329,26 @@ public partial class ClientSettingsWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
+        Close();
+    }
+
+    /// <summary>Minimiza la ventana; el cliente continúa ejecutándose en segundo plano.</summary>
+    private void Minimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    /// <summary>Sale del cliente sin desinstalarlo.</summary>
+    private void CloseClient_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = MessageBox.Show(this,
+            L.T("Se cerrará CyberManager en este equipo. ¿Desea continuar?"),
+            L.T("Cerrar cliente"), MessageBoxButton.YesNo, MessageBoxImage.Question,
+            MessageBoxResult.No);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        ExitRequested = true;
         Close();
     }
 
