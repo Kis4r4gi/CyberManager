@@ -78,7 +78,7 @@
                        HorizontalAlignment="Center" Margin="0,26,0,0" Fill="{StaticResource AccentBrush}"
                        Stroke="#D9000000" StrokeThickness="4" />
             <local:OutlinedTextBlock x:Name="MessageText" Text="Solicite al cajero para iniciar su sesión."
-                       FontSize="18" Fill="{StaticResource MutedBrush}"
+                       FontSize="18" Fill="#FFFFFF"
                        HorizontalAlignment="Center" Margin="0,12,0,0"
                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="620"
                        Stroke="#D9000000" StrokeThickness="3" />
@@ -119,7 +119,7 @@
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12">
             <Grid>
                 <local:OutlinedTextBlock x:Name="FooterText" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           FontSize="15" Fill="{StaticResource MutedBrush}"
+                           FontSize="15" Fill="#FFFFFF"
                            Stroke="#D9000000" StrokeThickness="2.5" />
 
                 <local:OutlinedTextBlock x:Name="VersionText" HorizontalAlignment="Right" VerticalAlignment="Center"

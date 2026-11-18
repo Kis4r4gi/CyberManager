@@ -1477,8 +1477,27 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   del equipo y la versión tienen trazo oscuro a 3 px o menos. Brillo medio 62,5 y desviación 48,1; sin
   reloj, sin fecha y sin tasa. PC 01 seguía en 1.3.13 al cerrar la prueba y recibirá 1.3.15 en su
   siguiente comprobación.
-- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.15-x64.zip` (35.666.392 bytes,
-  SHA-256 `aa12e930…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
+- **Agente para PC 01**: el paquete final se detalla en la sección 1.3.16.
+
+---
+
+### Mensaje y saludo en blanco (1.3.16, 2026-11-18, sin publicar)
+
+- **Color de fuente**: el mensaje «Solicite al cajero o inicie sesión para empezar.» y el saludo
+  «¡Gracias por su visita!» pasaron de gris (`MutedBrush`, `#8FA4C4`) a **blanco** (`#FFFFFF`), con el
+  mismo contorno oscuro. El resto de los textos conserva su color (equipo y título en acento, zona y
+  versión en gris).
+- **Versión 1.3.16** en `version.props`; publicación x64 regenerada y paquete
+  `ClientUpdate\client.zip` 1.3.16 (67.673.034 bytes, SHA-256 `b1f4a3f9…`,
+  `publishedUtc` 2026-11-18T12:32:11.768Z).
+- **Despliegue local**: respaldo `_bin-pre-1.3.16-20261118-0833`; servidor y consola copiados a
+  `C:\CyberManager\Servidor` (sin tocar `cybermanager.db*`, `appsettings.json` ni `web.config`);
+  tarea `CyberManagerServer` en `Running`, `/api/health` → `ok`, manifiesto 1.3.16; servidor 1.3.16.
+- **Prueba en vivo**: estación temporal 20 (desactivada al terminar) con el cliente 1.3.16; el mensaje
+  tiene 967 píxeles blancos y el saludo 221, todos con contorno oscuro a 3 px o menos. La versión sigue
+  en gris. Sin errores en el log del cliente ni en el del servidor.
+- **Agente para PC 01**: `C:\CyberManager\CyberManager-Agente-1.3.16-x64.zip` (35.666.347 bytes,
+  SHA-256 `b2a196a8…`, sin `appsettings.json`). Copiar sobre `C:\CyberManager\Estacion\Agent` y
   reiniciar el servicio `CyberManagerAgent` para que reciba el arreglo de SignalR.
 
 ---
