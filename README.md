@@ -1065,13 +1065,19 @@ sc.exe delete CyberManagerAgent
 ## Actualización automática de los clientes
 
 El instalador del servidor guarda junto a `CyberManager.Server.exe` la carpeta `ClientUpdate`
-con `client.zip` y `manifest.json` (versión, tamaño y SHA-256) del cliente de esa misma versión.
+con `client.zip`, `agent.zip` y `manifest.json` (versión, tamaño y SHA-256 de ambos paquetes).
 
 - Cuando el servidor se actualiza, el paquete cambia y las estaciones lo detectan.
-- El agente (servicio SYSTEM) descarga el ZIP, verifica el SHA-256, reemplaza los archivos de
+- El agente (servicio SYSTEM) descarga `client.zip`, verifica el SHA-256, reemplaza los archivos de
   `..\Client` y deja la marca `update.pending`; el cliente se reinicia con la versión nueva.
 - El cliente también consulta el manifiesto cada 10 minutos y puede aplicarlo si tiene permisos
   de escritura en su carpeta.
+- El cliente se ejecuta elevado y, además, usa `agent.zip` para **instalar o reparar
+  automáticamente el servicio CyberManagerAgent**: reemplaza `..\Agent`, escribe
+  `appsettings.json` con la URL, el ID y el token guardados en `config.json`, registra el servicio
+  con inicio automático y lo inicia. Así se recupera un equipo donde el agente no estaba instalado
+  o no conectaba, sin acceso RPC/WinRM ni intervención manual. El paquete se descarga solo del
+  servidor y se verifica por SHA-256 antes de aplicarse.
 - En **Equipos** el box **Clientes** muestra cuántos equipos están al día y permite forzar el
   aviso con **Actualizar clientes**.
 - Desde el menú **Acciones ▾** de cada equipo, **Actualizar cliente** envía el aviso solo a ese
@@ -1647,6 +1653,10 @@ etc.) cambie `BaseUrl` y `Model`.
 - El servicio debe ejecutarse con permisos suficientes para apagar o reiniciar el equipo.
 - Si el agente no está conectado, la consola muestra un error explícito al apagar, reiniciar o
   cerrar sesión, y el **Solucionador** lo reporta como hallazgo crítico.
+- Con el cliente 1.3.53 o posterior, fuerce **Actualizar clientes** en *Equipos → Clientes*: el
+  cliente instalará/reparará el agente desde `agent.zip` y el hallazgo crítico desaparecerá al
+  volver a conectarse. Si aun así no conecta, revise la cuenta de servicio, el firewall y el
+  `appsettings.json` indicado arriba.
 
 **El control remoto no mueve el mouse ni escribe**
 

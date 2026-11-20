@@ -61,6 +61,41 @@ public static class ClientUpdateInstaller
     }
 
     /// <summary>
+    /// Descarga el paquete opcional del agente y lo extrae en una carpeta temporal.
+    /// Devuelve null cuando el servidor no distribuye agente o el SHA-256 no coincide.
+    /// </summary>
+    public static async Task<string?> DownloadAgentAndExtractAsync(string serverUrl,
+        ClientUpdateManifestDto manifest, string workDir, HttpClient http, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(manifest.AgentSha256)) return null;
+
+        Directory.CreateDirectory(workDir);
+        var zipPath = Path.Combine(workDir, "agent.zip");
+
+        using (var response = await http.GetAsync(
+                   $"{serverUrl.TrimEnd('/')}/api/client-update/agent-download",
+                   HttpCompletionOption.ResponseHeadersRead, ct))
+        {
+            response.EnsureSuccessStatusCode();
+            await using var source = await response.Content.ReadAsStreamAsync(ct);
+            await using var target = File.Create(zipPath);
+            await source.CopyToAsync(target, ct);
+        }
+
+        var hash = ComputeSha256(zipPath);
+        if (!string.Equals(hash, manifest.AgentSha256, StringComparison.OrdinalIgnoreCase))
+        {
+            TryDelete(zipPath);
+            return null;
+        }
+
+        var staging = Path.Combine(workDir, "agent-staging");
+        if (Directory.Exists(staging)) Directory.Delete(staging, true);
+        ZipFile.ExtractToDirectory(zipPath, staging, true);
+        return staging;
+    }
+
+    /// <summary>
     /// Copia los archivos extraídos sobre la instalación. Si un archivo está en uso,
     /// lo renombra a <c>.old</c> y coloca el nuevo; la estación terminará el trabajo
     /// al reiniciarse con el archivo <see cref="PendingFile"/>.

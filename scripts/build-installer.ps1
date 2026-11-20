@@ -173,9 +173,9 @@ function Get-NextMinorVersion([string]$Current) {
 
 <#
     Empaqueta la carpeta Client publicada en dist\<arch>\Client dentro de
-    dist\<arch>\Server\ClientUpdate\client.zip y escribe el manifiesto con la
-    versión y el SHA-256. El servidor distribuye ese paquete a las estaciones
-    para actualizarlas sin reinstalar.
+    dist\<arch>\Server\ClientUpdate\client.zip. También publica agent.zip con el
+    agente para que la estación pueda instalar/reparar el servicio sin acceso
+    remoto. El manifiesto incluye los SHA-256 de ambos paquetes.
 #>
 function New-ClientUpdatePackage([string]$DistArch, [string]$Version) {
     $clientDir = Join-Path $DistArch "Client"
@@ -202,6 +202,23 @@ function New-ClientUpdatePackage([string]$DistArch, [string]$Version) {
         sha256       = $hash
         publishedUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     }
+
+    $agentDir = Join-Path $DistArch "Agent"
+    $agentZip = Join-Path $updateDir "agent.zip"
+    if (Test-Path $agentZip) { Remove-Item $agentZip -Force }
+
+    if (Test-Path $agentDir) {
+        [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            $agentDir, $agentZip,
+            [System.IO.Compression.CompressionLevel]::Optimal, $false)
+
+        $manifest.agentVersion = $Version
+        $manifest.agentFileName = "agent.zip"
+        $manifest.agentSize = (Get-Item $agentZip).Length
+        $manifest.agentSha256 = (Get-FileHash -Path $agentZip -Algorithm SHA256).Hash.ToLowerInvariant()
+        Write-Host "    Paquete del agente: $agentZip ($([Math]::Round($manifest.agentSize / 1MB, 1)) MB)" -ForegroundColor DarkGray
+    }
+
     $manifest | ConvertTo-Json | Set-Content -Path (Join-Path $updateDir "manifest.json") -Encoding UTF8
 
     Write-Host "    Paquete del cliente: $zipPath ($([Math]::Round($size / 1MB, 1)) MB)" -ForegroundColor DarkGray

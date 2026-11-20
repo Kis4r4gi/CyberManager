@@ -43,12 +43,18 @@ public record StationDeleteResult(
     int DeviceRegistrations);
 
 /// <summary>Paquete del cliente que el servidor guarda y distribuye a las estaciones.</summary>
+/// <param name="AgentVersion">Versión del agente incluida en el paquete, si la hay.</param>
+/// <param name="AgentSha256">SHA-256 de <c>agent.zip</c>; vacío cuando no se distribuye agente.</param>
 public record ClientUpdateManifestDto(
     string Version,
     string FileName,
     long Size,
     string Sha256,
-    DateTime? PublishedUtc);
+    DateTime? PublishedUtc,
+    string? AgentVersion = null,
+    string? AgentFileName = null,
+    long AgentSize = 0,
+    string? AgentSha256 = null);
 
 /// <summary>Estado del paquete de actualización y de las versiones reportadas por los equipos.</summary>
 public record ClientUpdateStatusDto(

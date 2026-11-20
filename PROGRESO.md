@@ -2169,6 +2169,45 @@ Sin commit/push ni release.
   configurada» y mantiene los hallazgos locales. Paquete `C:\CyberManager\CyberManager-Agente-1.3.51-x64.zip`
   listo para instalar manualmente en la estación.
 
+### Reparación remota del agente y reinicio verificado (1.3.53, 2026-11-20)
+
+El servicio `CyberManagerAgent` de la Estación 01 no tenía conexión SignalR. Como RPC/WinRM hacia
+`192.168.1.4` están bloqueados (error 1722 y `TrustedHosts`), se aprovechó que el cliente se ejecuta
+elevado (`requireAdministrator`) y ya descarga actualizaciones del servidor:
+
+- `ClientUpdateManifestDto` ahora incluye `agentVersion`, `agentFileName`, `agentSize` y
+  `agentSha256`. `ClientUpdateService` completa esos campos aunque el manifiesto provenga de una
+  versión anterior, y expone `GET /api/client-update/agent-download` (anónimo, igual que
+  `/download`, porque solo entrega binarios).
+- `scripts\build-installer.ps1` genera `agent.zip` junto a `client.zip` y escribe ambos hashes en
+  el manifiesto. `scripts\build-installer.ps1 -Version 1.3.53 -SkipVncDownload -Clean` terminó con
+  0 errores/0 advertencias y produjo los instaladores de servidor (441,8 MB) y estación (143,9 MB).
+- `AgentInstaller` (en `CyberManager.Shared`) descarga y verifica `agent.zip`, detiene/elimina el
+  servicio anterior, copia `..\Agent`, conserva/reescribe `appsettings.json` con `ServerUrl`,
+  `StationId` y `Token` del `config.json` del cliente, registra `CyberManagerAgent` con `sc.exe`,
+  configura reinicio automático ante fallos y lo inicia. Usa un marcador `agent.installed` con la
+  versión y el hash para no reiniciarlo en cada comprobación. En 1.3.53 se corrigió la lectura de
+  ese marcador (antes comparaba solo la primera línea con el hash, así que reinstalaría el servicio
+  cada 10 minutos).
+- `App.xaml.cs` llama a `EnsureAgentInstalledAsync` antes de aplicar la versión nueva, también
+  cuando la versión del cliente ya coincide; por eso la estación 1.3.51 instaló el agente apenas
+  arrancó con el cliente 1.3.52, y 1.3.53 desplegó el marcador corregido.
+
+**Despliegue**: se publicaron primero 1.3.52 (respaldos `_*-pre-1.3.52-20261120-091051`) y luego
+1.3.53 (respaldos `_*-pre-1.3.53-20261120-092620`); en ambos se copiaron servidor, consola,
+`client.zip`, `agent.zip` y manifiesto, conservando `appsettings.json` con su sección
+`Troubleshoot:Ai`. Paquete manual final:
+`C:\CyberManager\CyberManager-Agente-1.3.53-x64.zip`.
+
+**Verificación en vivo**: `/api/health` → `1.3.53 ok`; hashes de cliente y agente coincidentes con
+el manifiesto; `GET /api/client-update/agent-download` → 200 y 35.644.406 bytes; aviso enviado a la
+estación 11; registro `Agente conectado: equipo 11` a las 09:27:08; versión `1.3.53`,
+`upToDate=1`/`outdated=0` y solucionador sin incidencias. Ya con 1.3.53 se envió la orden
+`Restart` (enum 3): respuesta `{"sent":true}`, `Agente desconectado: equipo 11` a las 09:28:20 y
+`Agente conectado: equipo 11` a las 09:29:08; la estación volvió a `Available` y el diagnóstico
+final quedó sin hallazgos (la advertencia transitoria «sin latido» desapareció al arrancar el
+cliente). La orden ahora sí se entrega al servicio de Windows.
+
 ---
 
 ## Pendientes / siguientes pasos
@@ -2208,12 +2247,12 @@ Sin commit/push ni release.
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.3.31**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.31>) con
-  `CyberManager-Servidor-1.3.31.exe` (396.386.714 bytes) y
-  `CyberManager-Estacion-1.3.31.exe` (150.851.865 bytes). El instalador unificado quedó fuera del
-  proyecto y de la release. La release anterior publicada es `v1.1.1`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.1.1>).
+- Release actual: **v1.3.53**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.53>) con
+  `CyberManager-Servidor-1.3.53.exe`, `CyberManager-Estacion-1.3.53.exe` y
+  `CyberManager-Agente-1.3.53-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
+  release. La release anterior publicada es `v1.3.51`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.51>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).

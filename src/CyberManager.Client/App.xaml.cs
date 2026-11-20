@@ -50,6 +50,7 @@ public partial class App : Application
     private DateTime _startedUtc = DateTime.UtcNow;
 
     private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromMinutes(3) };
+    private readonly SemaphoreSlim _agentInstallGate = new(1, 1);
 
     /// <summary>Procesos que nunca se deben cerrar por una orden remota.</summary>
     private static readonly HashSet<string> ProtectedProcesses = new(StringComparer.OrdinalIgnoreCase)
@@ -353,7 +354,11 @@ public partial class App : Application
         });
 
     private void OnClientUpdateAvailable(ClientUpdateManifestDto manifest)
-        => Dispatcher.BeginInvoke(async () => await ApplyClientUpdateAsync(manifest));
+        => Dispatcher.BeginInvoke(async () =>
+        {
+            await EnsureAgentInstalledAsync(manifest);
+            await ApplyClientUpdateAsync(manifest);
+        });
 
     /// <summary>
     /// Consulta el manifiesto del servidor cada 10 minutos. El agente suele aplicar la
@@ -369,11 +374,66 @@ public partial class App : Application
         {
             var manifest = await UpdateHttp.GetFromJsonAsync<ClientUpdateManifestDto>(
                 $"{Api.BaseUrl.TrimEnd('/')}/api/client-update/manifest");
-            if (manifest is not null) await ApplyClientUpdateAsync(manifest);
+            if (manifest is null) return;
+
+            await EnsureAgentInstalledAsync(manifest);
+            await ApplyClientUpdateAsync(manifest);
         }
         catch
         {
             // Sin conexión o sin paquete: se reintenta en la próxima consulta.
+        }
+    }
+
+    /// <summary>
+    /// Instala o repara el agente usando el paquete que publica el servidor.
+    /// El cliente corre elevado, así que puede registrar el servicio aunque
+    /// el agente no esté presente o no haya conectado nunca.
+    /// </summary>
+    private async Task EnsureAgentInstalledAsync(ClientUpdateManifestDto manifest)
+    {
+        if (string.IsNullOrWhiteSpace(manifest.AgentSha256)) return;
+        if (_restarting || Config.StationId <= 0 || string.IsNullOrWhiteSpace(Config.StationToken)) return;
+
+        var clientDir = ClientUpdateInstaller.ResolveClientDir();
+        if (clientDir is null) return;
+        var agentDir = AgentInstaller.ResolveAgentDir(clientDir);
+        if (agentDir is null) return;
+
+        await _agentInstallGate.WaitAsync();
+        try
+        {
+            if (await AgentInstaller.IsInstalledAsync(agentDir, manifest.AgentSha256!)) return;
+
+            var serverUrl = Api?.BaseUrl ?? Config.ServerUrl;
+            var version = string.IsNullOrWhiteSpace(manifest.AgentVersion)
+                ? manifest.Version : manifest.AgentVersion!;
+            var workDir = Path.Combine(Path.GetTempPath(), "CyberManager", "AgentInstall", version);
+
+            ClientLog.Info($"Instalando agente {version} para el equipo {Config.StationId}...");
+            var staging = await ClientUpdateInstaller.DownloadAgentAndExtractAsync(
+                serverUrl, manifest, workDir, UpdateHttp, CancellationToken.None);
+
+            if (staging is null)
+            {
+                ClientLog.Error("El paquete del agente no pasó la verificación SHA-256.");
+                return;
+            }
+
+            var installed = await AgentInstaller.InstallAsync(staging, agentDir, serverUrl,
+                Config.StationId, Config.StationToken, version, manifest.AgentSha256!);
+            if (installed.Ok)
+                ClientLog.Info($"Agente {version} instalado y en ejecución.");
+            else
+                ClientLog.Error($"No se pudo instalar el agente: {installed.Error}");
+        }
+        catch (Exception ex)
+        {
+            ClientLog.Error("Fallo al instalar el agente.", ex);
+        }
+        finally
+        {
+            _agentInstallGate.Release();
         }
     }
 

@@ -22,6 +22,7 @@ public sealed class ClientUpdateService
     private readonly string _folder;
     private readonly string _manifestFile;
     private readonly string _packageFile;
+    private readonly string _agentPackageFile;
     private readonly ILogger<ClientUpdateService> _log;
     private readonly object _gate = new();
 
@@ -34,9 +35,13 @@ public sealed class ClientUpdateService
         _folder = Path.Combine(AppContext.BaseDirectory, "ClientUpdate");
         _manifestFile = Path.Combine(_folder, "manifest.json");
         _packageFile = Path.Combine(_folder, "client.zip");
+        _agentPackageFile = Path.Combine(_folder, "agent.zip");
     }
 
     public string PackagePath => _packageFile;
+
+    /// <summary>Paquete opcional del agente que se instala desde la estación.</summary>
+    public string AgentPackagePath => _agentPackageFile;
 
     /// <summary>Manifiesto vigente o null cuando el servidor no tiene paquete del cliente.</summary>
     public ClientUpdateManifestDto? GetManifest()
@@ -50,6 +55,8 @@ public sealed class ClientUpdateService
             }
 
             var stamp = File.GetLastWriteTimeUtc(_packageFile);
+            if (File.Exists(_agentPackageFile))
+                stamp = Max(stamp, File.GetLastWriteTimeUtc(_agentPackageFile));
             if (File.Exists(_manifestFile))
                 stamp = Max(stamp, File.GetLastWriteTimeUtc(_manifestFile));
 
@@ -76,6 +83,34 @@ public sealed class ClientUpdateService
 
             if (!string.Equals(manifest.FileName, Path.GetFileName(_packageFile), StringComparison.OrdinalIgnoreCase))
                 manifest = manifest with { FileName = Path.GetFileName(_packageFile) };
+
+            // Un manifiesto generado por una versión anterior del instalador no
+            // incluye el agente; se completa desde el archivo distribuido.
+            if (File.Exists(_agentPackageFile))
+            {
+                var info = new FileInfo(_agentPackageFile);
+                manifest = manifest with
+                {
+                    AgentVersion = string.IsNullOrWhiteSpace(manifest.AgentVersion)
+                        ? manifest.Version : manifest.AgentVersion,
+                    AgentFileName = string.IsNullOrWhiteSpace(manifest.AgentFileName)
+                        ? info.Name : manifest.AgentFileName,
+                    AgentSize = manifest.AgentSize > 0 ? manifest.AgentSize : info.Length,
+                    AgentSha256 = string.IsNullOrWhiteSpace(manifest.AgentSha256)
+                        ? ComputeSha256(_agentPackageFile) : manifest.AgentSha256
+                };
+            }
+            else if (manifest.AgentSha256 is not null || manifest.AgentVersion is not null ||
+                     manifest.AgentFileName is not null || manifest.AgentSize > 0)
+            {
+                manifest = manifest with
+                {
+                    AgentVersion = null,
+                    AgentFileName = null,
+                    AgentSize = 0,
+                    AgentSha256 = null
+                };
+            }
 
             _cached = manifest;
             _cachedStamp = stamp;
@@ -154,8 +189,23 @@ public sealed class ClientUpdateService
         {
             var info = new FileInfo(_packageFile);
             var hash = ComputeSha256(_packageFile);
+            string? agentVersion = null;
+            string? agentFileName = null;
+            long agentSize = 0;
+            string? agentHash = null;
+
+            if (File.Exists(_agentPackageFile))
+            {
+                var agentInfo = new FileInfo(_agentPackageFile);
+                agentVersion = version;
+                agentFileName = agentInfo.Name;
+                agentSize = agentInfo.Length;
+                agentHash = ComputeSha256(_agentPackageFile);
+            }
+
             var manifest = new ClientUpdateManifestDto(
-                version, info.Name, info.Length, hash, DateTime.UtcNow);
+                version, info.Name, info.Length, hash, DateTime.UtcNow,
+                agentVersion, agentFileName, agentSize, agentHash);
 
             Directory.CreateDirectory(_folder);
             File.WriteAllText(_manifestFile, JsonSerializer.Serialize(manifest, Json));

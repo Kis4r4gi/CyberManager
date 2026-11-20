@@ -29,6 +29,19 @@ public static class ClientUpdateEndpoints
                 manifest.FileName, enableRangeProcessing: true);
         }).AllowAnonymous();
 
+        // El cliente descarga el agente por este canal cuando el servicio no está
+        // registrado o no conecta. Es el mismo paquete que se adjunta a la release.
+        g.MapGet("/agent-download", (ClientUpdateService updates) =>
+        {
+            var manifest = updates.GetManifest();
+            if (manifest is null || string.IsNullOrWhiteSpace(manifest.AgentSha256) ||
+                !File.Exists(updates.AgentPackagePath))
+                throw AppException.NotFound("Paquete del agente");
+
+            return Results.File(updates.AgentPackagePath, "application/zip",
+                manifest.AgentFileName ?? "agent.zip", enableRangeProcessing: true);
+        }).AllowAnonymous();
+
         g.MapGet("/status", async (AppDbContext db, ClientUpdateService updates, CancellationToken ct) =>
             Results.Ok(await updates.GetStatusAsync(db, ct)))
             .RequireAuthorization("Admin");
