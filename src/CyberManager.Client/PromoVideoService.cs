@@ -24,6 +24,15 @@ public sealed class PromoVideoService : IDisposable
 
     /// <summary>Ruta local del video que debe reproducirse; <c>null</c> oculta el reproductor.</summary>
     public event Action<string?>? VideoChanged;
+    /// <summary>Avisa de si hay videos disponibles para coordinar la alternancia con los fondos.</summary>
+    public event Action? AvailabilityChanged;
+
+    public bool HasVideos => _playlist.Count > 0;
+
+    /// <summary>Carpeta local donde se guardan los videos descargados del servidor.</summary>
+    public string CacheDirectory => _cacheDir;
+
+    private bool _hadVideos;
 
     public PromoVideoService()
     {
@@ -43,6 +52,7 @@ public sealed class PromoVideoService : IDisposable
             _index = 0;
             VideoChanged?.Invoke(null);
             CleanCache();
+            NotifyAvailability();
             return;
         }
 
@@ -51,7 +61,7 @@ public sealed class PromoVideoService : IDisposable
 
         if (!changed && _items.Count == playlist.Items.Count && _playlist.Count > 0)
         {
-            ShowCurrent();
+            // La lista no varió: el coordinador decide cuándo mostrar el video.
             return;
         }
 
@@ -67,22 +77,56 @@ public sealed class PromoVideoService : IDisposable
                 var path = await EnsureFileAsync(item);
                 if (path is not null) _playlist.Add(path);
             }
-            catch
+            catch (Exception ex)
             {
-                // Un video dañado no debe impedir que se reproduzcan los demás.
+                // Un video dañado o una descarga fallida no debe impedir los demás.
+                ClientLog.Error($"No se pudo preparar el video {item.Id}: {ex.Message}", ex);
             }
         }
 
         if (version != _version) return;
-        ShowCurrent();
         CleanCache();
+        NotifyAvailability();
     }
 
     public void SetLocked(bool locked)
     {
         _locked = locked;
-        if (locked) ShowCurrent();
-        else VideoChanged?.Invoke(null);
+        if (!locked) VideoChanged?.Invoke(null);
+    }
+
+    private void NotifyAvailability()
+    {
+        var has = _playlist.Count > 0;
+        if (has == _hadVideos) return;
+        _hadVideos = has;
+        AvailabilityChanged?.Invoke();
+    }
+
+    /// <summary>Reproduce el video actual. Lo llama el coordinador de alternancia.</summary>
+    public void Play() => ShowCurrent();
+
+    /// <summary>Detiene el video sin cambiar el estado de bloqueo de la estación.</summary>
+    public void Stop() => VideoChanged?.Invoke(null);
+
+    /// <summary>Avanza al siguiente video sin reproducirlo todavía.</summary>
+    public void Advance()
+    {
+        if (_playlist.Count > 0) _index = (_index + 1) % _playlist.Count;
+    }
+
+    /// <summary>Descarta el video que falló para no volver a intentarlo en bucle.</summary>
+    public void SkipCurrent()
+    {
+        if (_playlist.Count > 1)
+        {
+            _playlist.RemoveAt(_index);
+            if (_index >= _playlist.Count) _index = 0;
+        }
+        else
+        {
+            _index = 0;
+        }
     }
 
     /// <summary>Avanza al siguiente video. Se llama cuando termina el actual.</summary>
@@ -114,11 +158,11 @@ public sealed class PromoVideoService : IDisposable
 
         if (App.Api is null) return null;
 
-        var data = await App.Api.PromoVideoFileAsync(item.Id);
-        if (data.Length == 0) return null;
-
+        // Descarga en bloques y directo a disco: con videos grandes el timeout
+        // corto de la API y la carga en memoria impedían que arrancara el video.
         var temp = path + ".tmp";
-        await File.WriteAllBytesAsync(temp, data);
+        await App.Api.DownloadPromoVideoAsync(item.Id, temp);
+        if (!File.Exists(temp) || new FileInfo(temp).Length == 0) return null;
 
         try
         {

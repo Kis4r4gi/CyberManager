@@ -293,7 +293,7 @@ public sealed class StartSessionDialog : FormDialog
         _methodBox = AddCombo("Forma de pago del tiempo", new[]
         {
             new Option<PaymentMethod>(PaymentMethod.Cash, "Efectivo en bolívares"),
-            new Option<PaymentMethod>(PaymentMethod.CashUsd, "Efectivo en dólares (IGTF)"),
+            new Option<PaymentMethod>(PaymentMethod.CashUsd, "Efectivo en dólares"),
             new Option<PaymentMethod>(PaymentMethod.Card, "Punto de venta / tarjeta"),
             new Option<PaymentMethod>(PaymentMethod.Transfer, "Transferencia"),
             new Option<PaymentMethod>(PaymentMethod.PagoMovil, "Pago Móvil")
@@ -425,7 +425,7 @@ public sealed class StopSessionDialog : FormDialog
         var methods = new List<Option<PaymentMethod>>
         {
             new(PaymentMethod.Cash, "Efectivo en bolívares"),
-            new(PaymentMethod.CashUsd, "Efectivo en dólares (IGTF)"),
+            new(PaymentMethod.CashUsd, "Efectivo en dólares"),
             new(PaymentMethod.Card, "Punto de venta / tarjeta"),
             new(PaymentMethod.Transfer, "Transferencia"),
             new(PaymentMethod.PagoMovil, "Pago Móvil")
@@ -547,7 +547,7 @@ public sealed class ExtendSessionDialog : FormDialog
         _methodBox = AddCombo("Forma de pago", new[]
         {
             new Option<PaymentMethod>(PaymentMethod.Cash, "Efectivo en bolívares"),
-            new Option<PaymentMethod>(PaymentMethod.CashUsd, "Efectivo en dólares (IGTF)"),
+            new Option<PaymentMethod>(PaymentMethod.CashUsd, "Efectivo en dólares"),
             new Option<PaymentMethod>(PaymentMethod.Card, "Punto de venta / tarjeta"),
             new Option<PaymentMethod>(PaymentMethod.Transfer, "Transferencia"),
             new Option<PaymentMethod>(PaymentMethod.PagoMovil, "Pago Móvil")

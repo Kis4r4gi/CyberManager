@@ -56,13 +56,11 @@ public class Sale
     public decimal Subtotal { get; set; }
     public decimal Discount { get; set; }
     public decimal Tax { get; set; }
-    public decimal IgtfAmount { get; set; }
     public decimal Total { get; set; }
     /// <summary>Tasa Bs/USD aplicada al momento de la venta.</summary>
     public decimal ExchangeRate { get; set; }
     public decimal SubtotalVes { get; set; }
     public decimal TaxVes { get; set; }
-    public decimal IgtfAmountVes { get; set; }
     public decimal TotalVes { get; set; }
     /// <summary>Monto entregado por el cliente en la moneda de pago.</summary>
     public decimal PaidAmount { get; set; }

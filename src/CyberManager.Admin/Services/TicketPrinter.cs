@@ -96,7 +96,6 @@ public static class TicketPrinter
         AddKV(doc, "Subtotal", $"$ {sale.Subtotal:N2}");
         if (sale.Discount > 0) AddKV(doc, "Descuento", $"- $ {sale.Discount:N2}");
         AddKV(doc, "IVA incluido", $"$ {sale.Tax:N2}");
-        if (sale.IgtfAmount > 0) AddKV(doc, "IGTF", $"$ {sale.IgtfAmount:N2}");
         AddKV(doc, "TOTAL USD", $"$ {sale.Total:N2}", bold: true, size: 12);
         AddKV(doc, "TOTAL Bs", $"Bs {sale.TotalVes:N2}", bold: true);
         AddKV(doc, "Tasa", $"1 USD = {sale.ExchangeRate:N2} Bs");
@@ -135,7 +134,6 @@ public static class TicketPrinter
         AddKV(doc, "Ventas tiempo", $"$ {closing.TimeSales:N2}");
         AddKV(doc, "TOTAL USD", $"$ {closing.TotalSales:N2}", bold: true, size: 12);
         AddKV(doc, "TOTAL Bs", $"Bs {closing.TotalSalesVes:N2}", bold: true);
-        AddKV(doc, "IGTF", $"$ {closing.Igtf:N2}");
         AddKV(doc, "Descuentos", $"$ {closing.Discounts:N2}");
         AddKV(doc, "Ticket promedio", $"$ {closing.AverageTicket:N2}");
         AddKV(doc, "Ventas", closing.SaleCount.ToString());

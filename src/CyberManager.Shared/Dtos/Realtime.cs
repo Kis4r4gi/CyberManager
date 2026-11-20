@@ -1,9 +1,15 @@
 namespace CyberManager.Shared.Dtos;
 
 /// <summary>Latido que envía el agente de cada equipo.</summary>
+/// <param name="Hardware">
+/// Resumen de diagnóstico del equipo (GPU, nivel de render de WPF, pantalla y video
+/// en curso). Viaja en el latido para que el servidor lo registre y el soporte pueda
+/// verlo sin acceder a la estación. Los equipos que no lo reportan lo dejan en <c>null</c>.
+/// </param>
 public record AgentHeartbeat(
     int StationId, string MachineName, string? CurrentUser, string Version,
-    string OsVersion, double CpuPercent, double RamPercent, string AgentState);
+    string OsVersion, double CpuPercent, double RamPercent, string AgentState,
+    string? Hardware = null);
 
 public record AgentCommand(Guid CommandId, AgentCommandType Command, string? Argument, int? DurationSeconds);
 

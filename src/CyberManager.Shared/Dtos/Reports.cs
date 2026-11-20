@@ -30,7 +30,7 @@ public record PaymentBreakdownRow(PaymentMethod Method, int Count, decimal Total
 
 public record DailyClosingDto(DateTime Date, string BusinessName, string BusinessTaxId,
     decimal ExchangeRate, decimal ProductSales, decimal TimeSales, decimal TotalSales, decimal TotalSalesVes,
-    decimal Igtf, decimal Discounts, decimal AverageTicket, int SaleCount, int SessionCount, int SessionMinutes,
+    decimal Discounts, decimal AverageTicket, int SaleCount, int SessionCount, int SessionMinutes,
     decimal CashOpening, decimal CashExpected, decimal? CashCounted, decimal CashDifference,
     decimal CashExpenses, decimal SupplierPayments, decimal TotalExpenses,
     List<PaymentBreakdownRow> Payments, List<SupplierPaymentDto> SupplierPaymentsDetail,

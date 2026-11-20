@@ -22,7 +22,7 @@ public partial class MainWindow : Window
     /// <summary>Vistas reservadas a administradores y técnicos.</summary>
     private static readonly HashSet<string> AdministrativeViews = new(StringComparer.Ordinal)
     {
-        "products", "inventory", "purchases", "stations", "wallpapers", "promos", "reports", "settings"
+        "products", "inventory", "purchases", "stations", "media", "reports", "settings"
     };
 
     private readonly Dictionary<string, UserControl> _views = new();
@@ -256,6 +256,9 @@ public partial class MainWindow : Window
 
     private void Navigate(string key)
     {
+        // Las rutas antiguas siguen abriendo la sección unificada.
+        if (key is "wallpapers" or "promos") key = "media";
+
         if (IsCashier && AdministrativeViews.Contains(key))
             key = "dashboard";
 
@@ -271,8 +274,7 @@ public partial class MainWindow : Window
                 "stations" => new StationsView(),
                 "customers" => new CustomersView(),
                 "reservations" => new ReservationsView(),
-                "wallpapers" => new WallpapersView(),
-                "promos" => new PromosView(),
+                "media" => new MediaView(),
                 "reports" => new ReportsView(),
                 "settings" => new SettingsView(),
                 _ => new DashboardView()
@@ -587,7 +589,6 @@ public partial class MainWindow : Window
             "StationMaintenance" => ("Mantenimiento", "#8B5CF6"),
             "CommandSent" => ("Comando enviado", "#22D3EE"),
             "CommandResult" => ("Resultado de comando", "#8FA4C4"),
-            "WallpaperChanged" => ("Fondos actualizados", "#8B5CF6"),
             "SharedNoteAdded" => ("Nota agregada", "#22D3EE"),
             "SharedNoteDeleted" => ("Nota eliminada", "#F59E0B"),
             _ => (e.Type, "#8FA4C4")

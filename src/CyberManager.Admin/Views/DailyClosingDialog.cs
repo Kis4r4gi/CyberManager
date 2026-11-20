@@ -26,7 +26,6 @@ public sealed class DailyClosingDialog : FormDialog
         AddRow("Ventas de tiempo", $"$ {closing.TimeSales:N2}");
         AddRow("Total USD", $"$ {closing.TotalSales:N2}", highlight: true);
         AddRow("Total Bs", $"Bs {closing.TotalSalesVes:N2}");
-        AddRow("IGTF", $"$ {closing.Igtf:N2}");
         AddRow("Descuentos", $"$ {closing.Discounts:N2}");
         AddRow("Ticket promedio", $"$ {closing.AverageTicket:N2}");
         AddRow("Ventas registradas", closing.SaleCount.ToString());

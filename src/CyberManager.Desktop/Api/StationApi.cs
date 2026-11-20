@@ -54,6 +54,10 @@ public class StationApi : ApiClient
     public Task<byte[]> WallpaperFileAsync(int id) => GetBytesAsync($"/api/station/wallpapers/{id}/file");
     public Task<byte[]> PromoVideoFileAsync(int id) => GetBytesAsync($"/api/station/promo-videos/{id}/file");
 
+    /// <summary>Descarga el video a disco en bloques: evita timeouts y picos de RAM en el terminal.</summary>
+    public Task DownloadPromoVideoAsync(int id, string destination)
+        => DownloadToFileAsync($"/api/station/promo-videos/{id}/file", destination);
+
     /// <summary>Lista activa de NetFiltroWeb que el agente o la pantalla deben aplicar.</summary>
     public Task<WebFilterPlaylistDto> WebFilterAsync() => GetAsync<WebFilterPlaylistDto>("/api/station/webfilter");
 

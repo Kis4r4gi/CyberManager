@@ -193,6 +193,35 @@ public static class Kit
         return WithTip(button, content);
     }
 
+    /// <summary>
+    /// Botón con menú desplegable: concentra varias acciones relacionadas en un
+    /// solo lugar para no llenar la cabecera de botones.
+    /// </summary>
+    public static Button MenuButton(string content, string style, params (string Text, Action Click)[] items)
+    {
+        var button = new Button
+        {
+            Content = L.T(content) + " ▾",
+            Style = Style(style)
+        };
+
+        var menu = new ContextMenu();
+        foreach (var (text, click) in items)
+        {
+            var item = new MenuItem { Header = L.T(text) };
+            item.Click += (_, _) => click();
+            menu.Items.Add(item);
+        }
+
+        button.ContextMenu = menu;
+        button.Click += (_, _) =>
+        {
+            menu.PlacementTarget = button;
+            menu.IsOpen = true;
+        };
+        return WithTip(button, content);
+    }
+
     public static Button SmallButton(string content, string style, Action click)
     {
         var button = Button(content, style, click);

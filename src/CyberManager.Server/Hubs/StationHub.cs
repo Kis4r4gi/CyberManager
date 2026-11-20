@@ -6,6 +6,7 @@ using CyberManager.Shared.Dtos;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CyberManager.Server.Hubs;
 
@@ -13,16 +14,21 @@ namespace CyberManager.Server.Hubs;
 public class StationHub : Hub
 {
     private static readonly ConcurrentDictionary<int, int> Connections = new();
+    /// <summary>Último diagnóstico de hardware registrado por equipo, para no repetirlo.</summary>
+    private static readonly ConcurrentDictionary<int, string> HardwareSeen = new();
 
     private readonly AppDbContext _db;
     private readonly RealtimeService _realtime;
     private readonly IServiceScopeFactory _scopes;
+    private readonly ILogger<StationHub> _log;
 
-    public StationHub(AppDbContext db, RealtimeService realtime, IServiceScopeFactory scopes)
+    public StationHub(AppDbContext db, RealtimeService realtime, IServiceScopeFactory scopes,
+        ILogger<StationHub> log)
     {
         _db = db;
         _realtime = realtime;
         _scopes = scopes;
+        _log = log;
     }
 
     public override async Task OnConnectedAsync()
@@ -115,6 +121,16 @@ public class StationHub : Hub
             station.Status = StationStatus.Available;
 
         await _db.SaveChangesAsync();
+
+        // Diagnóstico de la estación (GPU, nivel de render, video). Se registra solo
+        // cuando cambia para no llenar el log; así el soporte puede verlo sin acceso.
+        if (!string.IsNullOrWhiteSpace(hb.Hardware) &&
+            (!HardwareSeen.TryGetValue(hb.StationId, out var previous) || previous != hb.Hardware))
+        {
+            HardwareSeen[hb.StationId] = hb.Hardware!;
+            _log.LogInformation("Diagnóstico de equipo {StationId} ({Name}): {Hardware}",
+                station.Id, station.Name, hb.Hardware);
+        }
 
         if (wasOffline && station.Status == StationStatus.Available)
         {

@@ -52,7 +52,7 @@ public enum PaymentMethod
     Transfer = 2,
     CustomerBalance = 3,
     Mixed = 4,
-    /// <summary>Efectivo en dólares (aplica IGTF si está habilitado).</summary>
+    /// <summary>Efectivo en dólares.</summary>
     CashUsd = 5,
     /// <summary>Cargado a la cuenta de la estación; se cobra al cerrar la sesión.</summary>
     Pending = 6,
@@ -153,7 +153,11 @@ public enum AgentCommandType
     MonitorOff = 15,
     MonitorOn = 16,
     /// <summary>Abre la pantalla de administrador del cliente en la estación.</summary>
-    OpenClient = 17
+    OpenClient = 17,
+    /// <summary>Muestra al instante un fondo aleatorio en la pantalla de bloqueo.</summary>
+    PlayRandomWallpaper = 18,
+    /// <summary>Abre en el terminal la carpeta local donde se cachean los videos promocionales.</summary>
+    OpenPromoCacheFolder = 19
 }
 
 /// <summary>Tipo de regla del módulo NetFiltroWeb.</summary>
@@ -165,15 +169,26 @@ public enum WebFilterRuleKind
     Keyword = 1
 }
 
-/// <summary>Cómo se muestran los fondos de pantalla en los equipos bloqueados.</summary>
-public enum WallpaperMode
+/// <summary>Orden en el que cada estación recorre los fondos activos.</summary>
+public enum WallpaperOrder
 {
-    /// <summary>Sin fondo: se usa el degradado del cliente.</summary>
+    /// <summary>Sigue el orden configurado en la galería.</summary>
+    Ordered = 0,
+    /// <summary>Elige el siguiente fondo al azar en cada equipo.</summary>
+    Random = 1
+}
+
+/// <summary>Efecto aplicado al cambiar de fondo en la pantalla de bloqueo.</summary>
+public enum WallpaperTransition
+{
+    /// <summary>Cambio inmediato, sin animación.</summary>
     None = 0,
-    /// <summary>Un único fondo fijo.</summary>
-    Single = 1,
-    /// <summary>Presentación rotativa con todos los fondos activos.</summary>
-    Slideshow = 2
+    /// <summary>Aparece con un fundido suave.</summary>
+    Fade = 1,
+    /// <summary>Entra deslizándose desde el lateral.</summary>
+    Slide = 2,
+    /// <summary>Entra con un ligero zoom.</summary>
+    Zoom = 3
 }
 
 public enum StationEventType

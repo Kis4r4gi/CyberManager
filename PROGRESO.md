@@ -1,23 +1,41 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-18
+> Última actualización: 2026-11-19
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
 
 Sistema de gestión para cyber cafés y centros de videojuegos en Venezuela: servidor central en
 red local, consola de administración/caja, cliente bloqueado por estación y agente de Windows
-para control remoto. Todo el dinero contable en **USD**, con tasa Bs/USD diaria, IVA 16 % e IGTF
-3 % sobre pagos en divisas, e instaladores separados por componente para Windows (servidor y
-estación), unificados por arquitectura (x86/x64).
+para control remoto. Todo el dinero contable en **USD**, con tasa Bs/USD diaria e IVA 16 %, e
+instaladores separados por componente para Windows (servidor y estación), unificados por
+arquitectura (x86/x64).
 
 ## Estado: COMPLETADO, INSTALADO Y VERIFICADO
 
 La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores**:
 **Servidor** y **Estación**. Cada uno incluye los payloads de x64 y x86 y selección automática de la
-arquitectura al instalar. El **servidor 1.3.31 está instalado y corriendo** (tarea programada,
-puerto 5080) en este equipo con la ruta `C:\CyberManager\Servidor`, migrado con el instalador de
-Servidor.
+arquitectura al instalar. El **servidor 1.3.48 está instalado y corriendo** (tarea programada,
+puerto 5080) en este equipo con la ruta `C:\CyberManager\Servidor`, al igual que la consola. El
+paquete de actualización del cliente también está en 1.3.48. Tras un reinicio del equipo la IP del
+servidor pasó a `192.168.1.10`; los equipos siguen reportando correctamente porque resuelven la
+dirección por descubrimiento. La estación 11 (`14:AB:C5:D4:30:F5`, IP informada `192.168.1.4`)
+estaba offline al verificar y conservaba 1.3.43; se actualizará al reconectarse.
+
+Los fondos y los videos promocionales se administran en una única sección, **Sistema → Fondos y
+videos**, con pestañas independientes. En la pantalla bloqueada ambos se alternan: un fondo durante
+el tiempo configurado, un video y, al terminar, se vuelve al fondo. La subida solo acepta videos
+compatibles (MP4/M4V con H.264, no fragmentados, hasta 1920 × 1080); la consola y el servidor
+validan el archivo antes de publicarlo y muestran las especificaciones si no cumple. El formato
+por defecto recomendado es el preset MP4/H.264 de Format Factory a **30 fps** (1280 × 720,
+≈1,5 Mbps, sin audio): los 60 fps se aceptan, pero el reproductor WPF (`MediaElement`) topa en ~30
+fps por estación con independencia del archivo, así que no aportan fluidez y solo ocupan más espacio.
+El video fragmentado original se eliminó y se sustituyó por una codificación fluida.
+
+La subida y descarga de videos promocionales se hace ahora en bloques (sin cargar el archivo
+completo en memoria) y con un cliente HTTP de larga duración, para que un video de más de 100 MB
+no cuelgue la consola ni impida que arranque automáticamente en el terminal bloqueado. El límite
+por video pasó de 300 MB a 120 MB.
 
 ---
 
@@ -71,8 +89,9 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Consolas de videojuegos**: `StationKind.Pc/Console/Other`, plataforma y cantidad de mandos.
   El tablero muestra tipo, plataforma y mandos; el alta/edición de equipos los persiste.
 - Mensajes y órdenes de energía/bloqueo al cliente y al agente.
-- Galería de fondos de pantalla con modos `None`/`Single`/`Slideshow`, rotación y sincronización
-  en tiempo real; imágenes en SQLite y caché SHA-256 en el cliente.
+- Galería de fondos configurada desde la consola con tiempo por imagen, orden (`Ordered`/`Random`)
+  y transición (`None`/`Fade`/`Slide`/`Zoom`); rotación local en cada equipo, imágenes en SQLite y
+  caché SHA-256 en el cliente.
 - **Videos promocionales** en terminales bloqueados: tabla `PromoVideos` en SQLite, subida
   multipart (`.mp4`, `.m4v`, `.wmv`, `.avi`, máx. 300 MB), orden, activación, reenvío por SignalR
   (`PromoVideosChanged`) y descarga con token de equipo. El cliente los reproduce silenciados y
@@ -87,7 +106,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - Formas de pago: `Cash`, `CashUsd`, `Card`, `Transfer`, `PagoMovil`, `CustomerBalance`, `Mixed`
   y `Pending`.
 - Precios con IVA incluido, RIF del negocio y del cliente, numeración de facturas y notas de
-  entrega. IGTF solo en pagos en efectivo en dólares.
+  entrega.
 - Descuentos, devoluciones y gastos de caja.
 - **Lector de códigos de barras** como teclado: Enter con SKU/nombre exacto agrega al POS.
 - **Tickets de 80 mm** para venta y cierre diario con `FlowDocument`/`PrintDialog`; copias de
@@ -106,7 +125,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 - Reportes de ventas por día, productos, equipos, inventario y cajas, con rango de fechas y CSV.
 - **Cierre diario** (`/api/reports/daily-closing`) con ventas de productos/tiempo, totales USD y
-  Bs, IVA, IGTF, descuentos, ticket promedio, sesiones, caja, gastos, abonos a proveedores,
+  Bs, IVA, descuentos, ticket promedio, sesiones, caja, gastos, abonos a proveedores,
   desglose por forma de pago y productos más vendidos. Se imprime en 80 mm desde
   *Reportes → Cierre diario*.
 - **Apariencia**: seis presets, doce colores, tamaño de iconos/texto de navegación,
@@ -684,7 +703,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
   (rama `main`) en `C:\Users\Justo Lopez\Documents\CyberManager`. Contiene los 7 proyectos, los
   scripts de empaquetado y las funciones de 1.0.9: impresoras separadas de tickets y de trabajo,
   interfaz de cajero sin opciones administrativas, borrado permanente de usuarios, conexión por
-  IP/MAC, control remoto/VNC, IGTF, RIF, tooltips a 2 s y videos promocionales.
+  IP/MAC, control remoto/VNC, RIF, tooltips a 2 s y videos promocionales.
 - **Compilación**: `dotnet build CyberManager.sln -c Release` → **0 errores**. Quedan 8
   advertencias de nulabilidad en `CyberManager.Client` (`App.xaml.cs` y `SetupWindow.xaml.cs`)
   que no bloquean la compilación ni el empaquetado.
@@ -1139,7 +1158,10 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Rotación de fondos tipo salvapantallas**: `WallpaperService` usa `GetLastInputInfo` y un
   temporizador de 1 s. La rotación empieza tras `IdleDelay = 2 min` sin teclado ni ratón, avanza
   con el intervalo configurado y se detiene con cualquier actividad o al desbloquear. Se mantiene
-  el fondo actual y se reanuda al volver la inactividad.
+  el fondo actual y se reanuda al volver la inactividad. El orden `Random` elige el siguiente índice
+  sin repetir el actual; `LockWindow` aplica la transición configurada (fundido, deslizamiento o
+  zoom). Cada equipo avanza de forma independiente: ya no existe el evento SignalR
+  `WallpaperChanged` ni el botón **Reenviar a equipos**.
 - **Cerrar y desinstalar desde el cliente**: `ClientSettingsWindow` agrega la sección
   **Mantenimiento** con el botón `UninstallButton` (estilo `DangerButton`). Pide confirmación,
   lanza `%ProgramData%\CyberManager\CyberManager.Uninstaller.exe` con `Verb="runas"` y expone
@@ -1524,7 +1546,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 
 - **Formulario más simple**: se quitaron del login de la consola los campos **Servidor** y
   **Caja de este equipo**, y los recuadros informativos **MONEDA BASE** (USD $ / Bs) e **IMPUESTOS**
-  (IVA 16 % · IGTF 3 %). Quedan solo **Usuario**, **Contraseña** y el botón **Entrar a la consola**.
+  (IVA 16 %). Quedan solo **Usuario**, **Contraseña** y el botón **Entrar a la consola**.
 - **Configuración automática**: la URL y el nombre de la caja se leen de
   `%LOCALAPPDATA%\CyberManager\Admin\config.json` (`ServerUrl` y `TerminalName`). Si no existen, se
   usan `http://127.0.0.1:5080` y el nombre del equipo; el nombre viaja al servidor en la cabecera
@@ -1851,8 +1873,8 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   solo servidor y cada una abre/cierra su propio turno; nunca se comparte el archivo SQLite por red.
 - La impresión automática solo ocurre con `AutoPrintTicket` y `PrinterName` configurados; el
   botón manual abre `PrintDialog` si no hay impresora.
-- Los precios son con IVA incluido; `Sale.Total` incluye IGTF y `Sale.TotalVes` usa la tasa de la
-  venta. Solo `Cash`, `CashUsd`, `Card` y `Transfer` generan movimientos de caja.
+- Los precios son con IVA incluido; `Sale.Total` es el total final y `Sale.TotalVes` usa la tasa
+  de la venta. Solo `Cash`, `CashUsd`, `Card` y `Transfer` generan movimientos de caja.
 - Respaldos: claves `BackupAutoEnabled` (true), `BackupIntervalHours` (24), `BackupRetention`
   (30) y `BackupFolder` (vacío = `respaldos` junto a la base) en `Settings`; el trabajador revisa
   cada 5 minutos. La carpeta se puede cambiar desde *Configuración → Respaldos* y debe ser una ruta
@@ -1935,6 +1957,181 @@ Compilación directa (requiere ambos payloads en `dist\x64` y `dist\x86`):
   uso se renombran a `.old` y se deja `update.pending` para que la estación se reinicie.
 - **Versiones**: `CyberManager.Shared.VersionUtil` centraliza la comparación numérica usada por el
   servidor, el agente y el cliente.
+
+### Render del video y diagnóstico automático (1.3.39–1.3.42, 2026-11-19)
+
+Se investigó por qué el video promocional se veía lento/a tirones en la estación 11 pese a estar
+codificado a 30 fps. El diagnóstico se hizo sin acceso remoto al equipo: el cliente reporta ahora
+en `AgentHeartbeat.Hardware` el nivel de render de WPF (`RenderCapability.Tier`), la GPU, el DPI,
+la resolución y los Hz del monitor, y `StationHub.Heartbeat` lo escribe en el log del servidor solo
+cuando cambia (sin ruido por latido). `LockWindow` mide además la posición del medio frente al
+reloj y los fps de composición de WPF mientras hay video.
+
+Datos obtenidos de la estación 11: **tier=2** (aceleración por hardware), Intel HD 520 + Radeon
+R7 M360, 1366 × 768 a **60 Hz**, Windows 10; el video avanza a tiempo real (`x≈1.0`). Con un
+archivo de prueba **60 fps real** WPF siguió componiendo a **30 fps**, lo que descarta el códec, la
+GPU y el archivo: el tope es del reproductor `MediaElement`. El archivo de prueba se eliminó y se
+restauró el video activo original (id 5).
+
+Se aplicó también `BitmapCache` al velo y a los textos con contorno/resplandor de la pantalla
+bloqueada, que se rasterizaban en cada fotograma. El usuario confirmó que la imagen mejoró y se
+ve aceptable, por lo que se **conserva el motor actual** (no se sustituye por WebView2 ni LibVLC).
+
+Despliegue verificado: servidor y consola en 1.3.42 con respaldos `_*-pre-1.3.42-*`, estación 11 en
+1.3.42, `/api/client-update/status` → `upToDate=1`, `outdated=0`. Sin commit/push ni release.
+
+### Controles multimedia en la consola (1.3.43, 2026-11-19)
+
+El usuario pidió botones para manejar el contenido multimedia de los videos desde el servidor.
+Se confirmó con él el significado de cada control antes de implementarlos:
+
+- **Abrir carpeta en terminales**: nueva orden `AgentCommandType.OpenPromoCacheFolder = 19`,
+  enrutada solo a la estación (como `PlayRandomWallpaper`) en `StationEndpoints.SendCommand` y
+  `AdminHub.SendCommand`. El cliente abre con `Process.Start` su carpeta
+  `%LOCALAPPDATA%\CyberManager\Client\promos`, expuesta por `PromoVideoService.CacheDirectory`.
+  La consola **no envía rutas**, de modo que una orden malintencionada no puede abrir una carpeta
+  arbitraria. El agente no interviene porque corre como servicio y su sesión no es visible.
+- **Casillas Activo por tarjeta**: `PromosView.BuildCard` añade un `CheckBox` que llama a
+  `PUT /api/promo-videos/{id}` con el estado nuevo; `ToggleActive` revierte la casilla si falla la
+  API, usa `_suppressToggle` para no repetir la llamada y marca `MouseLeftButtonUp` como manejado
+  para no abrir la vista previa. El panel lateral y el contador de la galería se refrescan solos.
+- **Actualizar archivos en clientes**: se renombró el botón «Reenviar a terminales» para que
+  coincida con el lenguaje del usuario. El usuario eligió expresamente que **solo reenvíe la
+  playlist** (`POST /api/promo-videos/refresh`); no se añadió descarga forzada. El mensaje lo dice
+  explícitamente para evitar confusión con una reinstalación de archivos.
+- **Requisitos de codificación**: botón que abre `PromoRequirementsDialog`, un `FormDialog` oscuro
+  con `PromoVideoValidator.Requirements` traducido (incluye el comando `ffmpeg` recomendado).
+
+Se añadieron las claves nuevas en `Localization.cs` (botones, mensaje de reenvío, casilla y texto de
+requisitos). Compilación con **0 errores / 0 advertencias**. Artefactos `dist\x64` 1.3.43 con
+`-Version 1.3.43 -Architecture x64 -SkipInstaller -SkipVncDownload`.
+
+Despliegue verificado: servidor, consola y paquete `ClientUpdate` en 1.3.43 con respaldos
+`_*-pre-1.3.43-20261119-184754`; `/api/health` → `1.3.43`; aviso `POST /api/client-update/notify?stationId=11`
+enviado y estación 11 actualizada a 1.3.43; `/api/client-update/status` → `upToDate=1`, `outdated=0`.
+Consola reabierta (PID 11112). Sin commit/push ni release.
+
+### Menú único y barra compartida multimedia (1.3.44, 2026-11-19)
+
+El usuario pidió unificar el menú de fondos y videos con **todas las opciones compartidas del
+servidor** y menús desplegables visualmente funcionales. Se añadió `Kit.MenuButton` (un `Button`
+con `ContextMenu` que se abre al hacer clic) y se reescribió `MediaView` como centro de mando:
+
+- **Agregar**: subir imágenes, buscar en internet, sincronizar carpeta de fondos, subir videos.
+- **Enviar a terminales**: reproducir fondo aleatorio, actualizar archivos en clientes, abrir
+  carpeta de videos en terminales.
+- **Configuración**: guardar y aplicar cambios, recargar configuración.
+- **Herramientas**: requisitos de codificación, abrir carpeta de fondos (consola), actualizar vista.
+- Barra **CONFIGURACIÓN DEL SERVIDOR** siempre visible con segundos, orden, transición y botón
+  guardar; el estado explica que los equipos aplican los cambios al consultar el estado.
+- `WallpapersView` quedó como galería/edición contextual: se eliminaron su panel de configuración,
+  sus botones de cabecera y los métodos migrados a `MediaView`; sus acciones se expusieron como
+  `internal` para que el menú superior las invoque. `PromosView` ya tenía sus acciones expuestas.
+- `MediaView.RefreshAsync` carga la configuración y recarga la pestaña activa; al cambiar de
+  pestaña se refresca la galería correspondiente.
+
+Se añadieron las claves nuevas en `Localization.cs`. Compilación con **0 errores / 0 advertencias**.
+Artefactos `dist\x64` 1.3.44 con `-Version 1.3.44 -Architecture x64 -SkipInstaller -SkipVncDownload`
+(`client.zip` 67.598.012 bytes, SHA-256 `f19412bb071c09d3dbe7dfadb8f679d1d6481cebec9f1eda1221d582d4540bcd`).
+
+Despliegue verificado: servidor, consola y paquete `ClientUpdate` en 1.3.44 con respaldos
+`_*-pre-1.3.44-20261119-202027`; `/api/health` → `1.3.44`; `/api/client-update/status` →
+`packageVersion=1.3.44`, `outdated=1` (estación 11 offline en 1.3.43). Sin commit/push ni release.
+
+### Menús desplegables oscuros (1.3.45, 2026-11-19)
+
+El usuario informó que los desplegables de **Fondos y videos** se veían como cuadros blancos.
+`Dark.xaml` no definía estilos para `ContextMenu` ni `MenuItem`, así que WPF aplicaba el tema claro
+del sistema. Se añadieron plantillas propias: `ContextMenu` con superficie `SurfaceAltBrush`, borde
+`BorderBrush`, esquinas redondeadas y sombra; `MenuItem` con fondo transparente, resaltado
+`SelectionBrush`/`RowHoverBrush` y texto `TextBrush`. Esto corrige también los menús contextuales
+ya existentes de sesión, productos y equipos.
+
+Compilación con **0 errores / 0 advertencias**. Artefactos y despliegue 1.3.45 con respaldos
+`_*-pre-1.3.45-20261119-231645`. `/api/health` → `1.3.45`. Verificación objetiva de la interfaz:
+el fondo muestreado de un `MenuItem` del menú «Agregar» es `RGB(22,35,58)` = `#16233A`
+(`SurfaceAltBrush`), ya no blanco. Sin commit/push ni release.
+
+### Nombre del terminal al doble de tamaño (1.3.46, 2026-11-19)
+
+El usuario indicó que el número/nombre del terminal mostrado arriba a la derecha de la pantalla
+bloqueada debía ser el doble de grande. En `LockWindow.xaml`, `StationText` (`PC-01`, alineado a la
+derecha en el encabezado) pasó de `FontSize="28"` a `FontSize="56"`. La zona y el nombre del negocio
+se mantuvieron igual. Se descartó y revirtió un cambio previo en el encabezado de la consola al
+aclarar el usuario cuál era el elemento.
+
+Compilación con **0 errores / 0 advertencias**. Artefactos y despliegue 1.3.46; como las carpetas
+ya existían, se conservó la base de datos y se usaron como punto de restauración los respaldos
+`_*-pre-1.3.45-20261119-231645` (el único backup nuevo fue `_admin-pre-1.3.46-20261119-232245`).
+Durante el despliegue se detectó y corrigió una copia anidada `Server\Server` que había dejado el
+servidor en 1.3.45. `/api/health` y `/api/client-update/status` → `1.3.46`; consola reabierta con
+`CyberManager 1.3.46`. La estación 11 sigue offline en 1.3.43 y tomará el paquete al reconectarse.
+Sin commit/push ni release.
+
+### Nombre del terminal en el centro de la pantalla bloqueada (1.3.47, 2026-11-19)
+
+El usuario pidió colocar el mismo nombre del terminal en el centro, entre el candado y el texto
+«EQUIPO BLOQUEADO», y usar una fuente más estilizada acorde al proyecto. En `LockWindow.xaml` se
+añadió `CenterStationText` (`FontSize="40"`) en ese punto, con `FontFamily="Bahnschrift SemiBold,
+Segoe UI"` (la misma tipografía aplicada al nombre superior). En `LockWindow.xaml.cs` se sincronizó
+con `StationText` tanto sin conexión como con estado, y se incluyó en `ApplyRenderCache()`.
+
+Compilación con **0 errores / 0 advertencias**. Artefactos y despliegue 1.3.47 con respaldos
+`_*-pre-1.3.47-20261119-232736`. `/api/health` y `/api/client-update/status` → `1.3.47`; consola
+reabierta con `CyberManager 1.3.47`. Verificado que `client.zip` contiene `CenterStationText` y
+`Bahnschrift` en `CyberManager.Client.dll`. La estación 11 sigue offline en 1.3.43 y tomará el
+paquete al reconectarse. Sin commit/push ni release.
+
+### Nombre del terminal: solo en el centro y más grande (1.3.48, 2026-11-19)
+
+El usuario pidió eliminar el nombre que aparecía arriba a la derecha (`StationText`, `PC-01`) y
+agrandar el nombre central (`CenterStationText`). Se quitó el `OutlinedTextBlock` superior derecho
+(la zona se conserva), se limpiaron sus asignaciones y su entrada en `ApplyRenderCache()` en
+`LockWindow.xaml.cs`, y el texto central pasó de `FontSize="40"` a `FontSize="64"` manteniendo
+`Bahnschrift SemiBold`. Ahora el nombre del terminal aparece una sola vez, bajo el candado.
+
+Compilación con **0 errores / 0 advertencias**. Artefactos y despliegue 1.3.48 con respaldos
+`_*-pre-1.3.48-20261119-233542`. `/api/health` y `/api/client-update/status` → `1.3.48`; consola
+reabierta con `CyberManager 1.3.48`. Verificado en `client.zip`: presente `CenterStationText` y
+`Bahnschrift`, ausente `StationText` en `LockWindow`. La estación 11 sigue offline en 1.3.43 y
+tomará el paquete al reconectarse. Sin commit/push ni release.
+
+### Comprobación de conexión servidor ↔ estación (2026-11-19)
+
+El usuario pidió verificar la conexión. Resultado: **correcta y operativa**.
+
+- Servidor `1.3.48` saludable en `192.168.1.10:5080`, tarea programada `CyberManagerServer` en
+  ejecución, con dos conexiones TCP `ESTABLISHED` desde `192.168.1.4` al puerto 5080 (SignalR).
+- Estación 11 «Estacion 01»: `Available`, alive, MAC ARP `14-AB-C5-D4-30-F5` en estado
+  `Reachable`, diagnóstico recibido vía `StationHub` (Intel HD 520 / R7 M360, 1366×768, 60 Hz).
+- El `ping` ICMP a `192.168.1.4` falla por el firewall del equipo, pero no afecta a SignalR ni al
+  descubrimiento UDP; el servidor sigue recibiendo heartbeats cada 5 s.
+- Se envió `POST /api/client-update/notify?stationId=11` para forzar el aviso pendiente. La estación
+  descargó y aplicó `client.zip` en menos de un minuto: versión reportada `1.3.48` y
+  `/api/client-update/status` → `upToDate=1`, `outdated=0`. La ruta de actualización quedó
+  verificada de extremo a extremo. Sin commit/push ni release.
+
+### Eliminación total del IGTF (1.3.49, 2026-11-20)
+
+El usuario pidió eliminar el IGTF de todo el proyecto. Se quitó el cálculo del 3 % en
+`SaleService.CreateAsync` (ahora `Total = Subtotal - Descuento` sin recargo) y la estimación en el
+POS; se eliminaron `IgtfAmount`/`IgtfAmountVes` de la entidad `Sale`, `IgtfAmount` de `SaleDto`,
+`Igtf`/`IgtfVes` de `InvoiceDto` y `Igtf` de `DailyClosingDto`. Desaparecieron las claves
+`IgtfEnabled`/`IgtfRate`, los controles de configuración, las filas en ticket/recibo/cierre, los
+correos y CSV, las etiquetas «Efectivo USD (IGTF)», las entradas de localización y toda la
+documentación. `SaleService` ya no inyecta `SettingsService` porque no la usaba para otra cosa.
+
+`DbSeeder.EnsureCompatibilityAsync` elimina las columnas heredadas `Sales.IgtfAmount` y
+`Sales.IgtfAmountVes` y las filas de `Settings` en instalaciones existentes; verificado en una copia
+de la base con SQLite 3.50: `DROP COLUMN` funciona, la integridad queda `ok` y se conservan las
+ventas. Las ventas históricas mantienen su total original (con el impuesto que se cobró entonces).
+
+Compilación con **0 errores / 0 advertencias**. Artefactos y despliegue 1.3.49 con respaldos
+`_*-pre-1.3.49-20261120-000014`. `/api/health` y `/api/client-update/status` → `1.3.49`; consola
+reabierta con `CyberManager 1.3.49` y la estación 11 actualizada a 1.3.49 (`upToDate=1`). Verificado
+en la base real: ya no existen las columnas `IgtfAmount`/`IgtfAmountVes` ni las claves de ajustes,
+sin errores en el log. Tampoco aparece la cadena `IGTF` en los DLL publicados ni en `client.zip`.
+Sin commit/push ni release.
 
 ---
 

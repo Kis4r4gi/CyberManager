@@ -204,7 +204,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         AddText(billing, "CurrencySymbol", "Símbolo de moneda base", "$");
         AddText(billing, "LocalCurrencySymbol", "Símbolo de moneda local", "Bs");
         AddText(billing, "DefaultTaxRate", "IVA por defecto (%)", "16");
-        AddText(billing, "IgtfRate", "IGTF (%)", "3");
         AddText(billing, "InvoicePrefix", "Prefijo de factura", "F");
         AddText(billing, "ControlNumberStart", "Número de control inicial", "1");
         AddText(billing, "WarningMinutes", "Aviso antes de terminar (min)", "5");
@@ -212,7 +211,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(billing);
 
         var checks = new UniformGrid { Columns = 2, Margin = new Thickness(0, 4, 0, 8) };
-        AddCheck(checks, "IgtfEnabled", "Cobrar IGTF en pagos con divisas", true);
         AddCheck(checks, "AllowPostpaid", "Permitir sesiones postpago", true);
         AddCheck(checks, "AutoLockOvertime", "Bloquear equipo al agotarse el tiempo", true);
         panel.Children.Add(checks);
@@ -1764,12 +1762,6 @@ public sealed class SettingsView : UserControl, IRefreshable
         panel.Children.Add(Description(
             "admin / admin123 (administrador) · cajero / cajero123 (cajero). " +
             "Cambie estas contraseñas antes de usar el sistema en producción."));
-
-        panel.Children.Add(Kit.Section("Nota sobre IGTF"));
-        panel.Children.Add(Description(
-            "El IGTF (3% por defecto) se aplica solo cuando el pago se registra en efectivo en dólares. " +
-            "Puede desactivarlo o cambiar su porcentaje en la pestaña «Negocio y facturación». " +
-            "Los precios se capturan con IVA incluido y el sistema desglosa el impuesto al facturar."));
 
         return Scroll(panel);
     }

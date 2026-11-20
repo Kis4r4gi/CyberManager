@@ -26,8 +26,6 @@ public sealed class PosView : UserControl, IRefreshable
     private readonly TextBlock _subtotalText = new() { HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _discountText = new() { HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _taxText = new() { HorizontalAlignment = HorizontalAlignment.Right };
-    private readonly TextBlock _igtfText = new() { HorizontalAlignment = HorizontalAlignment.Right, Visibility = Visibility.Collapsed };
-    private readonly TextBlock _igtfLabel = Kit.Muted("IGTF 3%");
     private readonly TextBlock _totalUsdText = new() { FontSize = 22, FontWeight = FontWeights.Bold, Foreground = Kit.Brush("AccentBrush"), HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _totalBsText = new() { HorizontalAlignment = HorizontalAlignment.Right };
     private readonly TextBlock _receivedLabel = Kit.Label("Monto recibido (Bs)");
@@ -38,8 +36,6 @@ public sealed class PosView : UserControl, IRefreshable
     private List<ProductDto> _products = new();
     private List<CustomerDto> _customers = new();
     private decimal _rate;
-    private decimal _igtfRate = 3m;
-    private bool _igtfEnabled = true;
     private bool _suspendReceivedUpdate;
     private bool _autoReceived = true;
     private bool _scannerAutoAdd = true;
@@ -159,11 +155,6 @@ public sealed class PosView : UserControl, IRefreshable
         TotalRow("Subtotal", _subtotalText);
         TotalRow("Descuento", _discountText);
         TotalRow("IVA incluido", _taxText);
-        var igtfRow = TotalRow("IGTF", _igtfText);
-        _igtfLabel.Visibility = Visibility.Collapsed;
-        igtfRow.Children.Clear();
-        igtfRow.Children.Add(_igtfLabel);
-        igtfRow.Children.Add(_igtfText);
 
         totals.Children.Add(new Separator());
 
@@ -195,7 +186,7 @@ public sealed class PosView : UserControl, IRefreshable
         _methodBox.ItemsSource = new List<Option<PaymentMethod>>
         {
             new(PaymentMethod.Cash, "Efectivo Bs"),
-            new(PaymentMethod.CashUsd, "Efectivo USD (IGTF)"),
+            new(PaymentMethod.CashUsd, "Efectivo USD"),
             new(PaymentMethod.Card, "Punto de venta"),
             new(PaymentMethod.Transfer, "Transferencia"),
             new(PaymentMethod.PagoMovil, "Pago Móvil"),
@@ -315,10 +306,6 @@ public sealed class PosView : UserControl, IRefreshable
         _products = bootstrap.Products.Where(p => p.Active).ToList();
         _rate = bootstrap.ExchangeRate?.Rate ?? 0;
 
-        if (bootstrap.Settings.TryGetValue("IgtfEnabled", out var igtfEnabled))
-            _igtfEnabled = bool.TryParse(igtfEnabled, out var enabled) ? enabled : true;
-        if (bootstrap.Settings.TryGetValue("IgtfRate", out var igtf))
-            _igtfRate = decimal.TryParse(igtf, NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 3m;
         if (bootstrap.Settings.TryGetValue("ScannerAutoAdd", out var scanner))
             _scannerAutoAdd = !bool.TryParse(scanner, out var add) || add;
 
@@ -624,10 +611,7 @@ public sealed class PosView : UserControl, IRefreshable
     private decimal Gross => _cart.Sum(l => l.Total);
     private decimal Discount => ParseMoney(_discountBox.Text);
     private decimal FinalAmount => Math.Max(0, Math.Round(Gross - Discount, 2));
-    private decimal Igtf => PaysUsd && _igtfEnabled
-        ? Math.Round(FinalAmount * _igtfRate / 100m, 2)
-        : 0m;
-    private decimal GrandTotal => Math.Round(FinalAmount + Igtf, 2);
+    private decimal GrandTotal => FinalAmount;
     private decimal Due => PaysUsd ? GrandTotal : Math.Round(GrandTotal * _rate, 2);
 
     private static decimal ParseMoney(string? text)
@@ -651,9 +635,6 @@ public sealed class PosView : UserControl, IRefreshable
         _subtotalText.Text = $"$ {gross:N2}";
         _discountText.Text = $"- $ {Discount:N2}";
         _taxText.Text = $"$ {tax:N2}";
-        _igtfText.Text = $"$ {Igtf:N2}";
-        _igtfText.Visibility = PaysUsd && _igtfEnabled ? Visibility.Visible : Visibility.Collapsed;
-        _igtfLabel.Visibility = _igtfText.Visibility;
 
         _totalUsdText.Text = $"$ {GrandTotal:N2}";
         _totalBsText.Text = _rate > 0 ? $"Bs {Math.Round(GrandTotal * _rate, 2):N2}" : "Tasa sin definir";
@@ -774,7 +755,6 @@ public sealed class SaleReceiptDialog : FormDialog
         AddRow("Subtotal", $"$ {sale.Subtotal:N2}");
         if (sale.Discount > 0) AddRow("Descuento", $"- $ {sale.Discount:N2}");
         AddRow("IVA", $"$ {sale.Tax:N2}");
-        if (sale.IgtfAmount > 0) AddRow("IGTF", $"$ {sale.IgtfAmount:N2}");
         AddRow("Total USD", $"$ {sale.Total:N2}", highlight: true);
         AddRow("Total Bs", $"Bs {sale.TotalVes:N2}");
         AddRow("Tasa aplicada", $"1 USD = {sale.ExchangeRate:N2} Bs");

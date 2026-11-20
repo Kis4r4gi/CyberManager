@@ -16,8 +16,10 @@ public record PromoVideoPlaylistDto(List<PromoVideoItemDto> Items, string Revisi
 
 public static class PromoSettings
 {
-    public const long MaxBytes = 300L * 1024 * 1024;
-    public static readonly string[] Extensions = { ".mp4", ".m4v", ".wmv", ".avi" };
+    /// <summary>Límite por video. Se envía y descarga en bloques para no cargarlo en memoria.</summary>
+    public const long MaxBytes = 120L * 1024 * 1024;
+    /// <summary>Solo MP4/M4V: el reproductor del cliente no acepta otros contenedores.</summary>
+    public static readonly string[] Extensions = { ".mp4", ".m4v" };
 
     public static string ContentType(string extension) => extension.ToLowerInvariant() switch
     {

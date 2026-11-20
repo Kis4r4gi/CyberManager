@@ -5,7 +5,7 @@ red local, consola de administración/caja para el negocio, cliente bloqueado pa
 consola y agente de Windows para controlar la energía y el bloqueo de los equipos.
 
 Todo el dinero contable se lleva en **USD**, con una **tasa Bs/USD del día** que se guarda como
-foto en cada venta, y facturación con **RIF, IVA 16 % e IGTF 3 %** sobre pagos en divisas.
+foto en cada venta, y facturación con **RIF e IVA 16 %**.
 
 Incluye **dos instaladores para Windows x64 y x86**: uno para el servidor (servidor + consola) y
 otro para cada estación (cliente + agente), sin necesidad de instalar .NET en los equipos de
@@ -46,7 +46,7 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - [Credenciales de demostración](#credenciales-de-demostración)
 - [Cambiar de usuario y cerrar la consola](#cambiar-de-usuario-y-cerrar-la-consola)
 - [Flujo operativo diario](#flujo-operativo-diario)
-- [Moneda, tasa, IVA e IGTF](#moneda-tasa-iva-e-igtf)
+- [Moneda, tasa e IVA](#moneda-tasa-e-iva)
 - [Tickets, impresión y lector de códigos](#tickets-impresión-y-lector-de-códigos)
 - [Consolas de videojuegos](#consolas-de-videojuegos)
 - [Pagos a proveedores y cierre diario](#pagos-a-proveedores-y-cierre-diario)
@@ -173,11 +173,21 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Equipo siempre despierto y reloj local**: mientras el cliente está en ejecución impide la
   suspensión, la hibernación y el apagado automático de la pantalla, y la hora de la sesión y del
   prepago se toma del reloj de Windows del propio equipo.
-- Galería de fondos sincronizada: los equipos bloqueados muestran un fondo fijo o una
-  presentación rotativa controlada desde la consola; la rotación avanza solo tras 2 minutos sin
-  actividad, como un salvapantallas.
+- Fondos y videos promocionales se administran juntos en **Sistema → Fondos y videos**, con pestañas
+  **Fondos** y **Videos promocionales** y una barra superior de menús desplegables: **Agregar**
+  (subir imágenes, buscar en internet, sincronizar carpeta de fondos, subir videos), **Enviar a
+  terminales** (reproducir fondo aleatorio, actualizar archivos en clientes, abrir carpeta de videos),
+  **Configuración** (guardar/recargar) y **Herramientas** (requisitos, carpetas, actualizar vista).
+  Los segundos, el orden y la transición se configuran en una barra visible en ambas pestañas.
+  En la pantalla bloqueada **se alternan automáticamente**: se muestra un fondo durante el tiempo
+  configurado, después un video y, al terminar, se vuelve al fondo. Cada equipo rota las imágenes
+  de forma local, sin sincronización con el servidor, y solo avanza tras 2 minutos sin actividad,
+  como un salvapantallas. **Reproducir fondo aleatorio** envía una orden inmediata a los equipos
+  activos sin cambiar la configuración guardada.
 - **Videos promocionales** en los terminales bloqueados, con reproducción silenciada, orden
-  configurable y sincronización inmediata desde el servidor.
+  configurable, sincronización inmediata desde el servidor y controles para activar/desactivar cada
+  video, reenviar la lista, abrir la carpeta de caché en los equipos y consultar los requisitos de
+  codificación.
 - **Notas y Registro en vivo**: el panel derecho muestra arriba las **notas** compartidas (con
   autor y hora; se registran al publicar y al borrar) y abajo el **registro** de actividad de los
   terminales (conexión/desconexión, inicio y cierre de sesión, cambios de estado, comandos,
@@ -201,8 +211,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   agrega al POS si coincide exactamente.
 - **Cierre de ventas detallado**: el cierre diario, el ticket y el correo incluyen **todos los
   productos vendidos con sus cantidades**, no solo un resumen de los más vendidos.
-- Facturación venezolana: RIF del negocio y del cliente, IVA desglosado, IGTF sobre divisas,
-  numeración de facturas y notas de entrega.
+- Facturación venezolana: RIF del negocio y del cliente, IVA desglosado, numeración de facturas
+  y notas de entrega.
 
 **Inventario y compras**
 
@@ -237,8 +247,8 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Interfaz de cajero simplificada**: oculta y bloquea catálogo, inventario, compras, equipos,
   fondos, promos, reportes, configuración y registro; solo quedan tablero, caja/POS, clientes y
   reservas.
-- Configuración del negocio, IVA, IGTF, avisos, ticket, **impresora de tickets e impresora de
-  trabajo** y datos de instalación.
+- Configuración del negocio, IVA, avisos, ticket, **impresora de tickets e impresora de trabajo**
+  y datos de instalación.
   Los cambios quedan como borrador y se guardan solo al pulsar **Aplicar y guardar**.
 - **Apariencia personalizable**: seis temas predefinidos, doce colores, tamaño de iconos y texto
   de navegación, y tamaño de los cuadros de artículos y de terminales (80 a 160 %), guardados por
@@ -693,7 +703,7 @@ tiempo; todas comparten la misma base de datos y cada PC abre y cierra su propio
 
 ---
 
-## Moneda, tasa, IVA e IGTF
+## Moneda, tasa e IVA
 
 - **Moneda base: USD.** Todos los montos contables, reportes y arqueos se llevan en dólares.
 - **Tasa Bs/USD diaria.** Se registra por fecha en *Configuración → Tasa de cambio*. Cada venta
@@ -708,16 +718,13 @@ tiempo; todas comparten la misma base de datos y cada PC abre y cierra su propio
   manualmente.
 - **Precios con IVA incluido.** El sistema desglosa el IVA (16 % por defecto) desde el precio de
   venta al facturar; no suma el impuesto encima del precio mostrado.
-- **IGTF (3 % por defecto).** Se aplica **solo** cuando el pago se registra en efectivo en
-  dólares (`CashUsd`). Puede desactivarlo o cambiar el porcentaje en
-  *Configuración → Negocio y facturación*.
 - **Nombre y logo del negocio.** El nombre o razón social y el logo configurados en
   *Configuración → Negocio y facturación* aparecen juntos en una sola línea en la barra superior
   de la consola. El logo se ajusta a un máximo de 512 × 512 px, se guarda en el servidor y se
   comparte con todas las consolas.
 - **Formas de pago y moneda del monto recibido**:
   - `Cash`: el monto recibido y el cambio se expresan en **Bs**.
-  - `CashUsd`: el monto recibido y el cambio se expresan en **USD**; genera IGTF.
+  - `CashUsd`: el monto recibido y el cambio se expresan en **USD**.
   - `Card`, `Transfer`, `CustomerBalance`: se cobra el total exacto.
   - `Mixed`: combina efectivo y otra forma de pago.
   - `Pending`: no cobra ahora; queda cargado a la sesión del equipo y se cobra al cerrarla.
@@ -741,8 +748,7 @@ En *Configuración → Ticket y scanner* puede definir:
 - **Agregar al POS al escanear**: interpreta el lector como teclado.
 
 Los tickets de venta se generan como documento de **80 mm** e incluyen número, fecha, forma de pago,
-cliente, artículos, subtotal, IVA incluido, IGTF, totales en USD y Bs, tasa aplicada, recibido y
-cambio. El **cierre diario** usa el formato elegido en *Configuración → Ticket y operación*:
+cliente, artículos, subtotal, IVA incluido, totales en USD y Bs, tasa aplicada, recibido y cambio. El **cierre diario** usa el formato elegido en *Configuración → Ticket y operación*:
 ticket de 80 mm para impresoras térmicas, **A4** o **Carta** para hojas normales.
 
 **Lector de códigos de barras**
@@ -788,7 +794,7 @@ asociado, puede instalar allí el cliente y el agente para el bloqueo y las órd
 **Cierre diario**
 
 - En *Reportes* seleccione la fecha final del rango y pulse **Cierre diario**.
-- El resumen incluye ventas de productos y tiempo, totales USD/Bs, IVA, IGTF, descuentos, ticket
+- El resumen incluye ventas de productos y tiempo, totales USD/Bs, IVA, descuentos, ticket
   promedio, sesiones, fondo y arqueo de caja, gastos, abonos a proveedores, desglose por forma de
   pago y **todos los productos vendidos con sus cantidades**.
 - Pulse **Imprimir cierre** para emitirlo en el formato configurado: ticket de 80 mm, A4 o Carta.
@@ -1134,8 +1140,8 @@ Para quitar solo el inicio automático (sin desinstalar el cliente):
 
 ## Galería de fondos de pantalla
 
-La consola incluye **Sistema → Fondos de pantalla** para administrar las imágenes que ven los
-clientes mientras el equipo está bloqueado.
+La consola incluye **Sistema → Fondos y videos → Fondos** para administrar las imágenes que ven
+los clientes mientras el equipo está bloqueado.
 
 El servidor incluye de fábrica **30 fondos 4K (3840 × 2160)** con los logos de los juegos más
 populares (League of Legends, Free Fire, Valorant, Counter-Strike 2, GTA V/VI, Minecraft, Roblox,
@@ -1160,27 +1166,30 @@ versión del paquete en `DbSeeder` y se reconstruye el instalador.
    detecta los archivos nuevos o modificados (por hash SHA-256) y los sube al servidor: el número
    al inicio del nombre define el orden y las imágenes nuevas se agregan con su nombre de archivo.
    Para eliminar un fondo siga usando **Eliminar** en la consola.
-4. Elija el modo de presentación:
-   - **Sin fondos**: se mantiene el degradado original del cliente.
-   - **Fondo fijo**: un único fondo seleccionado.
-   - **Presentación rotativa**: todos los fondos activos, con rotación entre **5 y 3600**
-     segundos.
-5. Use **Guardar y aplicar** para publicar los cambios. También puede activar/desactivar fondos,
+4. Configure la presentación en el panel derecho:
+   - **Segundos entre imágenes**: entre **5 y 3600** segundos.
+   - **Orden**: **Ordenado** respeta el orden de la galería; **Aleatorio** elige el siguiente fondo
+     al azar en cada equipo.
+   - **Transición**: **Sin transición**, **Fundido**, **Deslizamiento** o **Zoom**.
+5. Use **Guardar y aplicar** para guardar la configuración. También puede activar/desactivar fondos,
    cambiar su nombre y orden, o eliminarlos desde el panel derecho. El buscador **Buscar fondo**
    filtra la galería por nombre o estado.
-6. **Reenviar a equipos** vuelve a publicar la galería sin cambiar la configuración (útil si un
-   equipo estuvo desconectado).
+6. **Reproducir aleatoriamente** envía una orden inmediata a todos los equipos activos para que
+   muestren un fondo aleatorio en ese momento. Es una acción puntual: no cambia el tiempo, el orden
+   ni la transición guardados.
 
-La lista se envía por SignalR (`WallpaperChanged`) en cuanto se guarda, de modo que los clientes
-bloqueados cambian de fondo sin reiniciar. Cada cliente descarga las imágenes por la LAN con su
-token de equipo y las cachea en
+La configuración no se empuja por SignalR: cada estación la obtiene cuando consulta
+`/api/station/state` (cada 5 segundos). Por eso no hay botón **Reenviar a equipos**; un equipo que
+estuvo desconectado la recoge automáticamente al volver a consultar el estado. Cada cliente
+descarga las imágenes por la LAN con su token de equipo y las cachea en
 `%LOCALAPPDATA%\CyberManager\Client\wallpapers` usando el hash SHA-256 como nombre; así los
 reinicios posteriores no vuelven a descargarlas. Si una imagen no se puede descargar, el cliente
 continúa con las demás.
 
-En modo **Presentación rotativa** la rotación funciona como un salvapantallas: solo avanza cuando
-el equipo lleva **2 minutos sin actividad** (teclado o ratón). Cualquier movimiento detiene la
-rotación y mantiene el fondo actual; al volver a quedar inactivo, se reanuda.
+La rotación funciona como un salvapantallas: solo avanza cuando el equipo lleva **2 minutos sin
+actividad** (teclado o ratón). Cualquier movimiento detiene la rotación y mantiene el fondo actual;
+al volver a quedar inactivo, se reanuda. Cada estación avanza por su cuenta, por lo que dos equipos
+pueden mostrar imágenes distintas.
 
 > El fondo se muestra con un velo muy suave (0 % arriba, 12 % al centro y 40 % abajo) y un contorno
 > fino con resplandor oscuro en el texto, para que la imagen se aprecie viva sin perder legibilidad.
@@ -1190,28 +1199,51 @@ rotación y mantiene el fondo actual; al volver a quedar inactivo, se reanuda.
 
 ## Videos promocionales
 
-La consola incluye **Sistema → Videos promocionales** para reproducir publicidad o promociones en
-los equipos que están bloqueados.
+La consola incluye **Sistema → Fondos y videos → Videos promocionales** para reproducir publicidad
+o promociones en los equipos que están bloqueados, alternándose con los fondos de pantalla.
 
-1. Pulse **Subir videos** y seleccione archivos **MP4, M4V, WMV o AVI** (máximo **300 MB** por
-   video). Cada video se guarda como BLOB en la tabla `PromoVideos` de SQLite, igual que los
-   fondos, por lo que no depende de carpetas compartidas.
+1. Pulse **Subir videos** y seleccione archivos **MP4 o M4V** (máximo **120 MB** por video). Solo
+   se aceptan videos compatibles: **H.264 (AVC), no fragmentados, hasta 1920 × 1080**. El formato
+   por defecto recomendado es el preset **MP4/H.264 de Format Factory** a **1280 × 720, 30 fps,
+   ~1,5 Mbps y sin audio** (≈10 MB por minuto). Se admiten 60 fps, pero el reproductor de WPF
+   (`MediaElement`) compone como máximo unos **30 fps** por estación, con independencia del archivo:
+   subir a 60 fps no mejora la fluidez y solo gasta disco y ancho de banda. La consola y el servidor
+   validan el archivo antes de publicarlo y muestran las especificaciones si no cumple; los MP4 fragmentados
+   (grabaciones de pantalla o descargas de streaming) se rechazan porque se reproducen entrecortados.
+   Cada video se guarda como BLOB en la tabla
+   `PromoVideos` de SQLite, igual que los fondos, por lo que no depende de carpetas compartidas.
+   La subida y la descarga se hacen en bloques, sin cargar el archivo completo en memoria.
 2. Edite el **nombre**, el **orden** y el estado **activo** de cada video. Solo se reproducen los
-   videos activos, en orden ascendente.
-3. Use **Guardar y aplicar** o **Reenviar a terminales** para publicar la lista. Los clientes
+   videos activos, en orden ascendente. Puede usar la casilla **Activo** de cada tarjeta para
+   cambiar el estado al instante, o editar el **nombre** y el **orden** en el panel lateral con
+   **Guardar cambios**.
+3. Use **Actualizar archivos en clientes** para publicar la lista. Los clientes
    conectados reciben el evento `PromoVideosChanged` por SignalR y actualizan la cola sin
-   reiniciarse.
+   reiniciarse. Esta orden solo redistribuye la lista: si la revisión y el archivo no cambiaron, se
+   reutiliza la copia ya descargada en lugar de volver a bajar el video.
 
-Los videos se reproducen **silenciados** sobre la pantalla de bloqueo, en bucle continuo, y se
-detienen al iniciar una sesión. Cada cliente descarga los archivos por la LAN con su token de
-equipo y los cachea por hash SHA-256 en
+4. **Abrir carpeta en terminales** envía una orden a los equipos activos para que abran en el
+   Explorador su carpeta local `%LOCALAPPDATA%\CyberManager\Client\promos`. No se envía ninguna ruta
+   desde la consola: cada terminal abre siempre su propia caché. **Requisitos de codificación**
+   muestra en un diálogo los formatos admitidos y el comando `ffmpeg` recomendado.
+
+Los videos se reproducen **silenciados** sobre la pantalla de bloqueo y se detienen al iniciar una
+sesión. Se alternan con los fondos: el cliente muestra un fondo durante el tiempo configurado en la
+pestaña **Fondos**, reproduce el video y, cuando termina, vuelve al fondo y reinicia el ciclo. Si no
+hay videos publicados, se muestran solo los fondos; si no hay fondos, el video se reproduce en bucle.
+Cada cliente descarga los archivos por la LAN con su token de equipo y los cachea por hash SHA-256 en
 `%LOCALAPPDATA%\CyberManager\Client\promos`; los archivos que ya no pertenecen a la lista activa se
 eliminan para no acumular datos. Si un códec no está disponible en el equipo, el cliente omite ese
 video y continúa con el siguiente.
 
-> Para reducir el tamaño del servidor, suba videos ya comprimidos (H.264/MP4 es la opción más
-> compatible). La base de datos crecerá con cada video; use la papelera de la galería para eliminar
-> los que ya no necesite.
+> **Diagnóstico automático de video**: cada equipo reporta en su latido el nivel de render de WPF,
+> la GPU, los Hz del monitor y la tasa real de composición del video. El servidor lo escribe en su
+> log (`Diagnóstico de equipo …`) solo cuando cambia, de modo que se puede comprobar desde el
+> servidor si un video va a tiempo real y a cuántos fps se está mostrando, sin acceder a la estación.
+
+> Para reducir el tamaño del servidor, suba videos ya comprimidos con el perfil indicado (el preset
+> MP4/H.264 de Format Factory es el recomendado). La base de datos crecerá con cada video; use la
+> papelera de la galería para eliminar los que ya no necesite.
 
 ---
 

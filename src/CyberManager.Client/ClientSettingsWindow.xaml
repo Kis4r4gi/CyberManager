@@ -140,24 +140,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Fondos -->
-                    <TextBlock Text="Fondos de la pantalla de bloqueo" Style="{StaticResource H2}" Margin="0,8,0,10" />
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Margin="0,0,10,12">
-                            <TextBlock Text="Modo de los fondos" Style="{StaticResource Label}" />
-                            <ComboBox x:Name="WallpaperModeBox" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="10,0,0,12">
-                            <TextBlock Text="Segundos entre fondos" Style="{StaticResource Label}" />
-                            <TextBox x:Name="WallpaperRotationBox" MaxLength="4" />
-                        </StackPanel>
-                    </Grid>
-
                     <!-- Sesiones -->
                     <TextBlock Text="Control de las sesiones" Style="{StaticResource H2}" Margin="0,8,0,10" />
                     <Grid Margin="0,0,0,4">

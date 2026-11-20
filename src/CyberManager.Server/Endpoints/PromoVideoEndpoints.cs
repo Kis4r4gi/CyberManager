@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
+using CyberManager.Shared;
 using CyberManager.Shared.Dtos;
 using CyberManager.Shared.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -51,11 +52,17 @@ public static class PromoVideoEndpoints
 
             var extension = Path.GetExtension(file.FileName);
             if (!PromoSettings.IsSupported(file.FileName))
-                throw new AppException("Formato no válido. Use MP4, M4V, WMV o AVI.");
+                throw new AppException($"Formato no válido. {PromoVideoValidator.Requirements}");
 
-            await using var stream = new MemoryStream();
+            await using var stream = new MemoryStream((int)file.Length);
             await file.CopyToAsync(stream);
             var data = stream.ToArray();
+
+            // Solo se publican videos que el reproductor del cliente puede mostrar
+            // sin entrecortes: MP4/M4V no fragmentado, H.264 y hasta 1080p.
+            using var check = new MemoryStream(data, writable: false);
+            var problem = PromoVideoValidator.Validate(check, file.FileName);
+            if (problem is not null) throw new AppException(problem);
 
             var name = form["name"].ToString().Trim();
             if (string.IsNullOrWhiteSpace(name))

@@ -36,8 +36,8 @@ public class InvoiceService
             s.CustomerName ?? s.Customer?.Name, s.CustomerTaxId,
             s.ExchangeRate,
             s.Items.Select(i => new InvoiceLineDto(i.Description, i.Quantity, i.UnitPrice, i.Total)).ToList(),
-            s.Subtotal, s.Discount, s.Tax, s.IgtfAmount, s.Total,
-            s.SubtotalVes, s.TaxVes, s.IgtfAmountVes, s.TotalVes,
+            s.Subtotal, s.Discount, s.Tax, s.Total,
+            s.SubtotalVes, s.TaxVes, s.TotalVes,
             s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod,
             cashier, Get(SettingsKeys.TicketFooter, "¡Gracias por su visita!"));
     }

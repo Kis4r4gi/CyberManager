@@ -80,7 +80,6 @@ public sealed class StationRealtime : IAsyncDisposable
     public event Action<AgentCommand>? CommandReceived;
     public event Action<StationStateEvent>? StationStateChanged;
     public event Action<SessionWarningEvent>? SessionWarning;
-    public event Action<WallpaperPlaylistDto>? WallpaperChanged;
     public event Action<PromoVideoPlaylistDto>? PromoVideosChanged;
     public event Action<ScreenFrameRequest>? ScreenFrameRequested;
     public event Action<RemoteInputEvent>? RemoteInputReceived;
@@ -102,7 +101,6 @@ public sealed class StationRealtime : IAsyncDisposable
         _hub.On<AgentCommand>("Command", c => CommandReceived?.Invoke(c));
         _hub.On<StationStateEvent>("StationState", e => StationStateChanged?.Invoke(e));
         _hub.On<SessionWarningEvent>("SessionWarning", e => SessionWarning?.Invoke(e));
-        _hub.On<WallpaperPlaylistDto>("WallpaperChanged", p => WallpaperChanged?.Invoke(p));
         _hub.On<PromoVideoPlaylistDto>("PromoVideosChanged", p => PromoVideosChanged?.Invoke(p));
         _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
         _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));
@@ -130,7 +128,6 @@ public sealed class StationRealtime : IAsyncDisposable
         _hub.On<AgentCommand>("Command", c => CommandReceived?.Invoke(c));
         _hub.On<StationStateEvent>("StationState", e => StationStateChanged?.Invoke(e));
         _hub.On<SessionWarningEvent>("SessionWarning", e => SessionWarning?.Invoke(e));
-        _hub.On<WallpaperPlaylistDto>("WallpaperChanged", p => WallpaperChanged?.Invoke(p));
         _hub.On<PromoVideoPlaylistDto>("PromoVideosChanged", p => PromoVideosChanged?.Invoke(p));
         _hub.On<ScreenFrameRequest>("CaptureScreen", r => ScreenFrameRequested?.Invoke(r));
         _hub.On<RemoteInputEvent>("RemoteInput", e => RemoteInputReceived?.Invoke(e));

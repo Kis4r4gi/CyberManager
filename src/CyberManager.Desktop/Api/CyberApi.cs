@@ -247,23 +247,30 @@ public class CyberApi : ApiClient
 
     public Task<WallpaperPlaylistDto> ApplyWallpaperAsync(ApplyWallpaperSettingsRequest req) => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/apply", req);
 
-    public Task<WallpaperPlaylistDto> RefreshWallpapersAsync() => PostAsync<WallpaperPlaylistDto>("/api/wallpapers/refresh", new { });
-
     // ---- videos promocionales ----
     public Task<List<PromoVideoDto>> PromoVideosAsync() => GetAsync<List<PromoVideoDto>>("/api/promo-videos");
     public Task<PromoVideoPlaylistDto> PromoVideoPlaylistAsync() => GetAsync<PromoVideoPlaylistDto>("/api/promo-videos/playlist");
 
-    public Task<PromoVideoDto> UploadPromoVideoAsync(string fileName, byte[] data, string contentType,
-        string? name = null, int? sortOrder = null)
+    /// <summary>Sube un video leyéndolo del disco en bloques, sin cargarlo en memoria.</summary>
+    public Task<PromoVideoDto> UploadPromoVideoAsync(string filePath, string? name = null, int? sortOrder = null)
     {
-        var fields = new List<KeyValuePair<string, string>>();
-        if (!string.IsNullOrWhiteSpace(name))
-            fields.Add(new KeyValuePair<string, string>("name", name));
+        var fileName = Path.GetFileName(filePath);
+        var fields = new List<KeyValuePair<string, string>>
+        {
+            new("name", string.IsNullOrWhiteSpace(name)
+                ? Path.GetFileNameWithoutExtension(filePath)
+                : name.Trim())
+        };
         if (sortOrder is int order)
             fields.Add(new KeyValuePair<string, string>("sortOrder", order.ToString()));
 
-        return PostFileAsync<PromoVideoDto>("/api/promo-videos", "file", fileName, contentType, data, fields);
+        return PostFileStreamAsync<PromoVideoDto>("/api/promo-videos", "file", fileName,
+            PromoSettings.ContentType(Path.GetExtension(filePath)), File.OpenRead(filePath), fields);
     }
+
+    /// <summary>Descarga un video a un archivo local sin cargarlo entero en memoria.</summary>
+    public Task DownloadPromoVideoAsync(int id, string destination)
+        => DownloadToFileAsync($"/api/promo-videos/{id}/file", destination);
 
     public Task<PromoVideoDto> UpdatePromoVideoAsync(int id, SavePromoVideoRequest req) => PutAsync<PromoVideoDto>($"/api/promo-videos/{id}", req);
 

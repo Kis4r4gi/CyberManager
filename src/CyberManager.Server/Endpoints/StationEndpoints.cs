@@ -151,7 +151,8 @@ public static class StationEndpoints
             else if (req.Command is AgentCommandType.SetVolume or AgentCommandType.Mute
                      or AgentCommandType.Unmute or AgentCommandType.LockInput
                      or AgentCommandType.UnlockInput or AgentCommandType.MonitorOff
-                     or AgentCommandType.MonitorOn)
+                     or AgentCommandType.MonitorOn or AgentCommandType.PlayRandomWallpaper
+                      or AgentCommandType.OpenPromoCacheFolder)
             {
                 // Audio, monitor y bloqueo de entrada se ejecutan en la sesión interactiva
                 // del cliente, donde vive la pantalla del equipo.

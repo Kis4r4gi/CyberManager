@@ -14,35 +14,48 @@ public record WallpaperItemDto(
     int Id, string Name, string ContentType, string Extension, string Sha256,
     int Width, int Height, long SizeBytes, DateTime UpdatedUtc);
 
-/// <summary>Lista reproducible que el servidor envía a las estaciones.</summary>
+/// <summary>Configuración de fondos que el servidor entrega a cada estación.</summary>
 public record WallpaperPlaylistDto(
-    WallpaperMode Mode, int RotationSeconds, int? ActiveId,
+    int RotationSeconds, WallpaperOrder Order, WallpaperTransition Transition,
     List<WallpaperItemDto> Items, string Revision);
 
+/// <summary>Configuración de fondos que se guarda desde la consola de administración.</summary>
 public record ApplyWallpaperSettingsRequest(
-    WallpaperMode Mode, int? ActiveId, int RotationSeconds);
+    int RotationSeconds, WallpaperOrder Order, WallpaperTransition Transition);
 
 /// <summary>Claves de configuración compartidas por el servidor y la consola.</summary>
 public static class WallpaperSettings
 {
-    public const string Mode = "WallpaperMode";
     public const string RotationSeconds = "WallpaperRotationSeconds";
-    public const string ActiveId = "WallpaperActiveId";
+    public const string Order = "WallpaperOrder";
+    public const string Transition = "WallpaperTransition";
 
     public const int DefaultRotationSeconds = 30;
     public const int MinRotationSeconds = 5;
     public const int MaxRotationSeconds = 3600;
 
-    public static WallpaperMode ParseMode(string? value)
-        => Enum.TryParse<WallpaperMode>(value, ignoreCase: true, out var mode)
-            ? mode
-            : WallpaperMode.None;
+    public static WallpaperOrder ParseOrder(string? value)
+        => Enum.TryParse<WallpaperOrder>(value, ignoreCase: true, out var order)
+            ? order
+            : WallpaperOrder.Ordered;
 
-    public static string ModeText(WallpaperMode mode) => mode switch
+    public static WallpaperTransition ParseTransition(string? value)
+        => Enum.TryParse<WallpaperTransition>(value, ignoreCase: true, out var transition)
+            ? transition
+            : WallpaperTransition.Fade;
+
+    public static string OrderText(WallpaperOrder order) => order switch
     {
-        WallpaperMode.Single => "Fondo fijo",
-        WallpaperMode.Slideshow => "Presentación rotativa",
-        _ => "Sin fondos"
+        WallpaperOrder.Random => "Aleatorio",
+        _ => "Ordenado"
+    };
+
+    public static string TransitionText(WallpaperTransition transition) => transition switch
+    {
+        WallpaperTransition.None => "Sin transición",
+        WallpaperTransition.Slide => "Deslizamiento",
+        WallpaperTransition.Zoom => "Zoom",
+        _ => "Fundido"
     };
 
     public static string Invariant(int value)

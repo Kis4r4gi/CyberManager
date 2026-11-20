@@ -10,7 +10,7 @@ using CyberManager.Shared.Dtos;
 namespace CyberManager.Client;
 
 /// <summary>
-/// Descarga, cachea y rota los fondos que el servidor asigna a la pantalla de bloqueo.
+/// Descarga, cachea y rota localmente los fondos publicados por el servidor.
 /// Las imágenes se guardan en %LOCALAPPDATA%\CyberManager\Client\wallpapers usando el
 /// hash SHA-256 como nombre, de modo que se reutilizan entre reinicios.
 /// La rotación funciona como un salvapantallas: empieza tras dos minutos sin actividad.
@@ -30,11 +30,16 @@ public sealed class WallpaperService : IDisposable
     private string _revision = string.Empty;
     private int _index;
     private int _seconds = WallpaperSettings.DefaultRotationSeconds;
+    private WallpaperOrder _order = WallpaperOrder.Ordered;
+    private WallpaperTransition _transition = WallpaperTransition.Fade;
     private bool _locked;
     private int _version;
 
-    /// <summary>Imagen que debe mostrarse; <c>null</c> significa ocultar el fondo.</summary>
-    public event Action<ImageSource?>? ImageChanged;
+    /// <summary>Imagen que debe mostrarse y transición con la que debe aparecer.</summary>
+    public event Action<ImageSource?, WallpaperTransition>? ImageChanged;
+
+    public bool HasImages => _items.Count > 0;
+    public int RotationSeconds => _seconds;
 
     public WallpaperService()
     {
@@ -44,18 +49,19 @@ public sealed class WallpaperService : IDisposable
         _idleTimer.Tick += (_, _) => CheckIdle();
     }
 
-    /// <summary>Aplica la lista recibida del servidor y descarga las imágenes que falten.</summary>
+    /// <summary>Aplica la configuración recibida del servidor y descarga las imágenes que falten.</summary>
     public async Task ApplyAsync(WallpaperPlaylistDto? playlist)
     {
         var version = ++_version;
 
-        if (playlist is null || playlist.Mode == WallpaperMode.None || playlist.Items.Count == 0)
+        if (playlist is null || playlist.Items.Count == 0)
         {
             _revision = playlist?.Revision ?? string.Empty;
             _items = Array.Empty<WallpaperItemDto>();
             _index = 0;
+            if (playlist is not null) _transition = playlist.Transition;
             StopRotation();
-            ImageChanged?.Invoke(null);
+            ImageChanged?.Invoke(null, _transition);
             return;
         }
 
@@ -63,8 +69,10 @@ public sealed class WallpaperService : IDisposable
         _revision = playlist.Revision;
         _seconds = Math.Clamp(playlist.RotationSeconds,
             WallpaperSettings.MinRotationSeconds, WallpaperSettings.MaxRotationSeconds);
+        _order = playlist.Order;
+        _transition = playlist.Transition;
 
-        // Si la lista no cambió y la imagen actual ya está en disco, no hay nada que descargar.
+        // Si la configuración no cambió y la imagen actual ya está en disco, no hay nada que descargar.
         if (!changed && _images.Count > 0 && _items.Count == playlist.Items.Count)
         {
             ShowCurrent();
@@ -148,13 +156,13 @@ public sealed class WallpaperService : IDisposable
     {
         if (!_locked)
         {
-            ImageChanged?.Invoke(null);
+            ImageChanged?.Invoke(null, _transition);
             return;
         }
 
         if (_items.Count == 0)
         {
-            ImageChanged?.Invoke(null);
+            ImageChanged?.Invoke(null, _transition);
             return;
         }
 
@@ -164,7 +172,7 @@ public sealed class WallpaperService : IDisposable
             var item = _items[_index % _items.Count];
             if (_images.TryGetValue(item.Id, out var cached))
             {
-                ImageChanged?.Invoke(cached);
+                ImageChanged?.Invoke(cached, _transition);
                 return;
             }
 
@@ -178,7 +186,7 @@ public sealed class WallpaperService : IDisposable
             {
                 var image = Load(path);
                 _images[item.Id] = image;
-                ImageChanged?.Invoke(image);
+                ImageChanged?.Invoke(image, _transition);
                 return;
             }
             catch
@@ -187,14 +195,45 @@ public sealed class WallpaperService : IDisposable
             }
         }
 
-        ImageChanged?.Invoke(null);
+        ImageChanged?.Invoke(null, _transition);
     }
+
+    /// <summary>
+    /// Muestra un fondo aleatorio distinto del actual sin cambiar la configuración
+    /// guardada. Lo usa la consola al enviar «Reproducir aleatoriamente».
+    /// </summary>
+    public void PlayRandom()
+    {
+        if (_items.Count < 2) return;
+        _index = PickRandomIndex();
+        ShowCurrent();
+    }
+
+    /// <summary>Muestra el fondo actual. Lo usa el coordinador al volver del video.</summary>
+    public void Show() => ShowCurrent();
+
+    /// <summary>Pausa la rotación de imágenes mientras se reproduce un video.</summary>
+    public void PauseRotation() => StopRotation();
+
+    /// <summary>Reanuda la rotación de imágenes cuando termina el video.</summary>
+    public void ResumeRotation() => ConfigureRotation();
 
     private void Next()
     {
         if (_items.Count == 0) return;
-        _index = (_index + 1) % _items.Count;
+
+        _index = _order == WallpaperOrder.Random && _items.Count > 1
+            ? PickRandomIndex()
+            : (_index + 1) % _items.Count;
+
         ShowCurrent();
+    }
+
+    private int PickRandomIndex()
+    {
+        // Evita repetir la imagen actual.
+        var next = Random.Shared.Next(_items.Count - 1);
+        return next >= _index ? next + 1 : next;
     }
 
     private void ConfigureRotation()

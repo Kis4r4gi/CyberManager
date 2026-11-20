@@ -16,8 +16,6 @@ public static class SettingsKeys
     public const string CurrencySymbol = "CurrencySymbol";
     public const string LocalCurrencySymbol = "LocalCurrencySymbol";
     public const string DefaultTaxRate = "DefaultTaxRate";
-    public const string IgtfEnabled = "IgtfEnabled";
-    public const string IgtfRate = "IgtfRate";
     public const string TicketHeader = "TicketHeader";
     public const string TicketFooter = "TicketFooter";
     public const string AutoPrintTicket = "AutoPrintTicket";
@@ -53,9 +51,9 @@ public static class SettingsKeys
     public const string SmtpPassword = "SmtpPassword";
     public const string SmtpFromAddress = "SmtpFromAddress";
     public const string SmtpFromName = "SmtpFromName";
-    public const string WallpaperMode = WallpaperSettings.Mode;
     public const string WallpaperRotationSeconds = WallpaperSettings.RotationSeconds;
-    public const string WallpaperActiveId = WallpaperSettings.ActiveId;
+    public const string WallpaperOrder = WallpaperSettings.Order;
+    public const string WallpaperTransition = WallpaperSettings.Transition;
     /// <summary>Versión del paquete de fondos incluido con el instalador.</summary>
     public const string BundledWallpapersVersion = "BundledWallpapersVersion";
     /// <summary>Texto descriptivo que muestra la barra flotante del cliente.</summary>

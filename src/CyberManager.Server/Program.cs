@@ -163,9 +163,13 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
 
 var port = builder.Configuration.GetValue<int?>("Server:Port") ?? 5080;
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 512L * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 128L * 1024 * 1024);
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
-    o.MultipartBodyLengthLimit = 512L * 1024 * 1024);
+{
+    o.MultipartBodyLengthLimit = 120L * 1024 * 1024;
+    // Los videos grandes pasan a disco en lugar de acumularse en memoria.
+    o.MemoryBufferThreshold = 64 * 1024;
+});
 
 var app = builder.Build();
 

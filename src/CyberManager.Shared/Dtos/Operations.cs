@@ -39,7 +39,7 @@ public record SaleItemDto(long Id, int? ProductId, string Description, decimal Q
 public record SaleDto(
     long Id, string Number, int? StationId, string? StationName, int? SessionId,
     int? CustomerId, string? CustomerName, decimal Subtotal, decimal Discount, decimal Tax,
-    decimal IgtfAmount, decimal Total, decimal ExchangeRate, decimal TotalVes,
+    decimal Total, decimal ExchangeRate, decimal TotalVes,
     decimal PaidAmount, Currency PaidCurrency, decimal Change, PaymentMethod Method,
     InvoiceType InvoiceType, string? ControlNumber, SaleStatus Status,
     DateTime CreatedUtc, string? Notes, List<SaleItemDto> Items);

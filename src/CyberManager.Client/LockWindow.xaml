@@ -26,14 +26,15 @@
         <MediaElement x:Name="PromoVideo" Grid.RowSpan="3" Stretch="UniformToFill"
                      Visibility="Collapsed" IsHitTestVisible="False"
                      LoadedBehavior="Manual" UnloadedBehavior="Manual" Volume="0"
-                     MediaEnded="PromoVideo_MediaEnded" MediaFailed="PromoVideo_MediaFailed" />
+                     MediaOpened="PromoVideo_MediaOpened" MediaEnded="PromoVideo_MediaEnded"
+                     MediaFailed="PromoVideo_MediaFailed" />
 
-        <!-- ================= Fondo sincronizado ================= -->
+        <!-- ================= Fondo de la galería ================= -->
         <Image x:Name="WallpaperImage" Grid.RowSpan="3" Stretch="UniformToFill"
                Visibility="Collapsed" Opacity="0" IsHitTestVisible="False" />
 
         <!-- Velo muy suave: el fondo se ve vivo y el texto se apoya en su contorno. -->
-        <Border Grid.RowSpan="3" IsHitTestVisible="False">
+        <Border x:Name="OverlayVeil" Grid.RowSpan="3" IsHitTestVisible="False">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                     <GradientStop Color="#00070B14" Offset="0" />
@@ -53,10 +54,6 @@
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                <local:OutlinedTextBlock x:Name="StationText" Text="PC-01" FontSize="28" FontWeight="SemiBold"
-                           HorizontalAlignment="Right" Fill="#FFFFFF"
-                           Stroke="#E6000000" StrokeThickness="1.6"
-                           Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
                 <local:OutlinedTextBlock x:Name="ZoneText" Text="Zona estándar" FontSize="15"
                            HorizontalAlignment="Right" Fill="{StaticResource MutedBrush}"
                            Stroke="#E6000000" StrokeThickness="1.2"
@@ -72,6 +69,12 @@
                            Foreground="{StaticResource AccentBrush}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
+
+            <local:OutlinedTextBlock x:Name="CenterStationText" Text="PC-01" FontSize="64"
+                       FontFamily="Bahnschrift SemiBold, Segoe UI" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" Margin="0,18,0,0" Fill="#FFFFFF"
+                       Stroke="#E6000000" StrokeThickness="1.6"
+                       Glow="#FF000000" GlowOpacity="0.9" GlowRadius="7" />
 
             <local:OutlinedTextBlock x:Name="TitleText" Text="EQUIPO BLOQUEADO" FontSize="30" FontWeight="Bold"
                        HorizontalAlignment="Center" Margin="0,26,0,0" Fill="{StaticResource AccentBrush}"

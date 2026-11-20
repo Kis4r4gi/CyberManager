@@ -7,7 +7,6 @@ using System.Windows.Media;
 using CyberManager.Desktop.Api;
 using CyberManager.Desktop.Services;
 using CyberManager.Shared;
-using CyberManager.Shared.Dtos;
 
 namespace CyberManager.Client;
 
@@ -71,14 +70,6 @@ public partial class ClientSettingsWindow : Window
 
     private void BuildCombos()
     {
-        WallpaperModeBox.ItemsSource = new List<Option>
-        {
-            new(nameof(WallpaperMode.None), L.T("Sin fondos")),
-            new(nameof(WallpaperMode.Single), L.T("Fondo fijo")),
-            new(nameof(WallpaperMode.Slideshow), L.T("Presentación rotativa"))
-        };
-        WallpaperModeBox.SelectedIndex = 0;
-
         LanguageBox.ItemsSource = new List<Option>
         {
             new("es", "Español"),
@@ -114,17 +105,10 @@ public partial class ClientSettingsWindow : Window
             SessionBarDescriptionBox.Text = Get("SessionBarDescription");
             SessionBarScaleBox.Text = string.IsNullOrWhiteSpace(Get("SessionBarScale"))
                 ? "100" : Get("SessionBarScale");
-            WallpaperRotationBox.Text = string.IsNullOrWhiteSpace(Get("WallpaperRotationSeconds"))
-                ? WallpaperSettings.DefaultRotationSeconds.ToString(CultureInfo.InvariantCulture)
-                : Get("WallpaperRotationSeconds");
             WarningMinutesBox.Text = string.IsNullOrWhiteSpace(Get("WarningMinutes")) ? "5" : Get("WarningMinutes");
             GraceMinutesBox.Text = string.IsNullOrWhiteSpace(Get("GraceMinutes")) ? "0" : Get("GraceMinutes");
             AllowPostpaidCheck.IsChecked = GetBool(Get("AllowPostpaid"), true);
             AutoLockOvertimeCheck.IsChecked = GetBool(Get("AutoLockOvertime"), true);
-
-            var mode = WallpaperSettings.ParseMode(Get("WallpaperMode"));
-            WallpaperModeBox.SelectedItem = WallpaperModeBox.Items.Cast<Option>()
-                .FirstOrDefault(o => o.Value == mode.ToString()) ?? WallpaperModeBox.Items[0];
 
             LanguageBox.SelectedIndex = L.IsEnglish ? 1 : 0;
             _remoteLoaded = true;
@@ -164,11 +148,8 @@ public partial class ClientSettingsWindow : Window
             if (_api is not null && _remoteLoaded)
             {
                 var scale = ParseInt(SessionBarScaleBox.Text, "La escala de la barra", 70, 160);
-                var rotation = ParseInt(WallpaperRotationBox.Text, "Los segundos entre fondos",
-                    WallpaperSettings.MinRotationSeconds, WallpaperSettings.MaxRotationSeconds);
                 var warning = ParseInt(WarningMinutesBox.Text, "Los minutos de aviso", 0, 120);
                 var grace = ParseInt(GraceMinutesBox.Text, "Los minutos de gracia", 0, 120);
-                var mode = (WallpaperModeBox.SelectedItem as Option)?.Value ?? nameof(WallpaperMode.None);
 
                 values = new Dictionary<string, string>
                 {
@@ -180,8 +161,6 @@ public partial class ClientSettingsWindow : Window
                     ["TicketFooter"] = TicketFooterBox.Text.Trim(),
                     ["SessionBarDescription"] = SessionBarDescriptionBox.Text.Trim(),
                     ["SessionBarScale"] = scale.ToString(CultureInfo.InvariantCulture),
-                    ["WallpaperMode"] = mode,
-                    ["WallpaperRotationSeconds"] = rotation.ToString(CultureInfo.InvariantCulture),
                     ["WarningMinutes"] = warning.ToString(CultureInfo.InvariantCulture),
                     ["GraceMinutes"] = grace.ToString(CultureInfo.InvariantCulture),
                     ["AllowPostpaid"] = (AllowPostpaidCheck.IsChecked == true).ToString(),

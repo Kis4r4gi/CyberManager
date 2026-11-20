@@ -213,7 +213,6 @@ public class ReportService
         return new DailyClosingDto(
             day, businessName, businessTaxId, rate,
             productSales, timeSales, totalSales, Money.ToVes(totalSales, rate),
-            Math.Round(sales.Sum(s => s.IgtfAmount), 2),
             Math.Round(sales.Sum(s => s.Discount), 2),
             sales.Count > 0 ? Math.Round(productSales / sales.Count, 2) : 0,
             sales.Count, sessions.Count,

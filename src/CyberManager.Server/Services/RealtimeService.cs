@@ -33,14 +33,6 @@ public class RealtimeService
         await _station.Clients.Group($"station-{warning.StationId}").SendAsync("SessionWarning", warning);
     }
 
-    /// <summary>Envía la nueva galería a todas las estaciones y a la consola de administración.</summary>
-    public async Task WallpaperChangedAsync(WallpaperPlaylistDto playlist)
-    {
-        await _station.Clients.All.SendAsync("WallpaperChanged", playlist);
-        await _admin.Clients.All.SendAsync("Event",
-            new RealtimeEvent("WallpaperChanged", "Galería de fondos actualizada", playlist));
-    }
-
     /// <summary>Envía la nueva lista de videos promocionales a todas las estaciones.</summary>
     public async Task PromoVideosChangedAsync(PromoVideoPlaylistDto playlist)
     {

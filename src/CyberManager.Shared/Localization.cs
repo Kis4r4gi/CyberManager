@@ -150,6 +150,22 @@ public static class L
             ["Reenviar a terminales"] = "Resend to terminals",
             ["Subir imágenes"] = "Upload images",
             ["Subir videos"] = "Upload videos",
+            ["Actualizar archivos en clientes"] = "Update files on clients",
+            ["Abrir carpeta en terminales"] = "Open folder on terminals",
+            ["Requisitos de codificación"] = "Encoding requirements",
+            ["Activo"] = "Active",
+            ["Enviar a terminales"] = "Send to terminals",
+            ["Herramientas"] = "Tools",
+            ["Buscar en internet"] = "Search online",
+            ["Sincronizar carpeta de fondos"] = "Sync wallpaper folder",
+            ["Reproducir fondo aleatorio"] = "Play random wallpaper",
+            ["Abrir carpeta de videos en terminales"] = "Open video folder on terminals",
+            ["Abrir carpeta de fondos (consola)"] = "Open wallpaper folder (console)",
+            ["Guardar y aplicar cambios"] = "Save and apply changes",
+            ["Recargar configuración"] = "Reload settings",
+            ["Actualizar vista"] = "Refresh view",
+            ["CONFIGURACIÓN DEL SERVIDOR"] = "SERVER SETTINGS",
+            ["Segundos entre imágenes"] = "Seconds between images",
             ["Crear respaldo ahora"] = "Create backup now",
             ["Exportar copia"] = "Export copy",
             ["Restaurar seleccionado"] = "Restore selected",
@@ -307,8 +323,6 @@ public static class L
             ["Zona"] = "Zone",
             ["Zona estándar"] = "Standard zone",
             ["IMPUESTOS"] = "TAXES",
-            ["IGTF 3%"] = "IGTF 3%",
-            ["IVA 16% · IGTF 3%"] = "VAT 16% · IGTF 3%",
             ["EQUIPO BLOQUEADO"] = "STATION LOCKED",
             ["PC-01"] = "PC-01",
             ["Consumos"] = "Consumptions",
@@ -425,8 +439,8 @@ public static class L
                 "Click a video in the gallery to edit its details.",
             ["Suba una imagen PNG, JPG, GIF o BMP (máximo 20 MB)."] =
                 "Upload a PNG, JPG, GIF or BMP image (maximum 20 MB).",
-            ["Suba un video MP4, M4V, WMV o AVI (máximo 300 MB)."] =
-                "Upload an MP4, M4V, WMV or AVI video (maximum 300 MB).",
+            ["Suba un video MP4/M4V con H.264, no fragmentado (máximo 120 MB). Recomendado: preset MP4/H.264 de Format Factory a 30 fps."] =
+                "Upload a non-fragmented H.264 MP4/M4V video (maximum 120 MB). Recommended: Format Factory MP4/H.264 preset at 30 fps.",
             ["Los cambios se guardan automáticamente en este equipo."] =
                 "Changes are saved automatically on this computer.",
             ["Los cambios se guardan automáticamente unos instantes después de editarlos. "] =
@@ -438,6 +452,15 @@ public static class L
                 "The gallery was resent to all connected stations.",
             ["La lista de videos se reenvió a todos los terminales conectados."] =
                 "The video list was resent to all connected terminals.",
+            ["La lista de videos se reenvió a todos los terminales conectados. Los archivos ya descargados se reutilizan si no cambiaron."] =
+                "The video list was resent to all connected terminals. Already downloaded files are reused if unchanged.",
+            ["Los videos se reproducen en los terminales bloqueados."] =
+                "Videos play on locked terminals.",
+            ["Activa o desactiva este video en los terminales."] =
+                "Activates or deactivates this video on terminals.",
+            ["No hay equipos activos."] = "No active stations.",
+            ["Use MP4/M4V con H.264 (AVC), no fragmentado, hasta 1920x1080 y 120 MB. Formato por defecto recomendado: preset MP4/H.264 de Format Factory a 1280x720, 30 fps, unos 1.5 Mbps y sin audio (60 fps se acepta, pero puede ir lento en equipos modestos). Ejemplo con ffmpeg: ffmpeg -i entrada.mp4 -c:v libx264 -profile:v main -pix_fmt yuv420p -r 30 -b:v 1500k -g 60 -an -movflags +faststart salida.mp4"] =
+                "Use MP4/M4V with H.264 (AVC), non-fragmented, up to 1920x1080 and 120 MB. Recommended default: Format Factory MP4/H.264 preset at 1280x720, 30 fps, about 1.5 Mbps and no audio (60 fps is accepted but may be slow on modest PCs). ffmpeg example: ffmpeg -i input.mp4 -c:v libx264 -profile:v main -pix_fmt yuv420p -r 30 -b:v 1500k -g 60 -an -movflags +faststart output.mp4",
             ["La carpeta de respaldos aún no está disponible."] = "The backup folder is not available yet.",
             ["No se seleccionó una impresora."] = "No printer was selected.",
             ["Texto copiado al portapapeles."] = "Text copied to clipboard.",
@@ -467,8 +490,6 @@ public static class L
             ["Actualización automática desde el BCV disponible."] =
                 "Automatic update from BCV is available.",
             ["Credenciales de demostración"] = "Demo credentials",
-            ["El IGTF (3% por defecto) se aplica solo cuando el pago se registra en efectivo en dólares. "] =
-                "IGTF (3% by default) applies only when payment is recorded as cash in dollars. ",
             ["El saldo se descuenta cuando el cliente paga con «Saldo del cliente»."] =
                 "The balance is deducted when the customer pays with “Customer balance”.",
             ["Elija un tema predefinido o escriba colores hexadecimales (por ejemplo #22D3EE). "] =
@@ -805,9 +826,15 @@ public static class L
             ["Escala de la barra (%)"] = "Session bar scale (%)",
             ["Texto descriptivo de la barra de sesión"] = "Session bar description",
             ["Pie de los tickets"] = "Ticket footer",
-            ["Fondos de la pantalla de bloqueo"] = "Lock screen wallpapers",
-            ["Modo de los fondos"] = "Wallpaper mode",
-            ["Segundos entre fondos"] = "Seconds between wallpapers",
+            ["Segundos entre imágenes (5 a 3600)"] = "Seconds between images (5 to 3600)",
+            ["Orden"] = "Order",
+            ["Transición"] = "Transition",
+            ["Ordenado"] = "Ordered",
+            ["Aleatorio"] = "Random",
+            ["Sin transición"] = "No transition",
+            ["Fundido"] = "Fade",
+            ["Deslizamiento"] = "Slide",
+            ["Zoom"] = "Zoom",
             ["Control de las sesiones"] = "Session control",
             ["Minutos de aviso antes de terminar"] = "Warning minutes before the end",
             ["Minutos de gracia al terminar"] = "Grace minutes at the end",
@@ -819,9 +846,6 @@ public static class L
             ["Idioma"] = "Language",
             ["El idioma se guarda solo en este equipo y se aplica al guardar."] =
                 "The language is saved only on this station and applied when you save.",
-            ["Sin fondos"] = "No wallpapers",
-            ["Fondo fijo"] = "Fixed wallpaper",
-            ["Presentación rotativa"] = "Slideshow",
             ["Cargando la configuración del servidor..."] =
                 "Loading the server settings...",
             ["Revisa los datos y pulsa «Guardar cambios»."] =

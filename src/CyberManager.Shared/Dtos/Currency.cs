@@ -17,8 +17,8 @@ public record InvoiceDto(
     string Number, string? ControlNumber, InvoiceType Type, DateTime CreatedUtc,
     string? CustomerName, string? CustomerTaxId, decimal ExchangeRate,
     List<InvoiceLineDto> Lines,
-    decimal Subtotal, decimal Discount, decimal Tax, decimal Igtf, decimal Total,
-    decimal SubtotalVes, decimal TaxVes, decimal IgtfVes, decimal TotalVes,
+    decimal Subtotal, decimal Discount, decimal Tax, decimal Total,
+    decimal SubtotalVes, decimal TaxVes, decimal TotalVes,
     decimal PaidAmount, Currency PaidCurrency, decimal Change, PaymentMethod Method,
     string? CashierName, string? Footer);
 

@@ -1,6 +1,8 @@
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -23,6 +25,8 @@ public class ApiClient : IDisposable
     };
 
     private readonly HttpClient _http;
+    /// <summary>Cliente aparte para archivos grandes: no comparte el timeout corto de la API.</summary>
+    private readonly HttpClient _transfer;
 
     public string BaseUrl { get; }
     public string? Token { get; set; }
@@ -33,10 +37,15 @@ public class ApiClient : IDisposable
     {
         BaseUrl = Normalize(baseUrl);
         _http = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = timeout ?? TimeSpan.FromSeconds(30) };
+        _transfer = new HttpClient { BaseAddress = new Uri(BaseUrl), Timeout = TimeSpan.FromMinutes(10) };
     }
 
-    /// <summary>Libera el HttpClient para no dejar sockets abiertos al reconfigurar el equipo.</summary>
-    public void Dispose() => _http.Dispose();
+    /// <summary>Libera los HttpClient para no dejar sockets abiertos al reconfigurar el equipo.</summary>
+    public void Dispose()
+    {
+        _http.Dispose();
+        _transfer.Dispose();
+    }
 
     public static string Normalize(string url)
     {
@@ -67,11 +76,16 @@ public class ApiClient : IDisposable
     private HttpRequestMessage Build(HttpMethod method, string path, object? body)
     {
         var request = new HttpRequestMessage(method, path.TrimStart('/'));
+        AddHeaders(request);
+        if (body is not null) request.Content = JsonContent.Create(body, options: JsonOptions);
+        return request;
+    }
+
+    private void AddHeaders(HttpRequestMessage request)
+    {
         if (Token is not null) request.Headers.Authorization = new("Bearer", Token);
         foreach (var header in Headers)
             request.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        if (body is not null) request.Content = JsonContent.Create(body, options: JsonOptions);
-        return request;
     }
 
     private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body)
@@ -147,11 +161,57 @@ public class ApiClient : IDisposable
         }
 
         using var request = new HttpRequestMessage(method, path.TrimStart('/')) { Content = content };
-        if (Token is not null) request.Headers.Authorization = new("Bearer", Token);
-        foreach (var header in Headers)
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        AddHeaders(request);
 
         using var response = await _http.SendAsync(request);
+        await EnsureSuccessAsync(response);
+        var result = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
+        return result ?? throw new ApiException("Respuesta vacía del servidor.", response.StatusCode);
+    }
+
+    /// <summary>
+    /// Descarga un recurso binario directamente a disco en bloques, sin cargarlo entero
+    /// en memoria. Pensado para videos y respaldos grandes.
+    /// </summary>
+    public async Task DownloadToFileAsync(string path, string destination)
+    {
+        using var request = Build(HttpMethod.Get, path, null);
+        using var response = await _transfer.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        await EnsureSuccessAsync(response);
+
+        var folder = Path.GetDirectoryName(destination);
+        if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+
+        await using var file = new FileStream(destination, FileMode.Create, FileAccess.Write,
+            FileShare.None, 81920, useAsync: true);
+        await using var source = await response.Content.ReadAsStreamAsync();
+        await source.CopyToAsync(file, 81920);
+    }
+
+    /// <summary>
+    /// Envía un archivo como formulario multipart leyéndolo del disco en bloques. Evita
+    /// mantener el archivo completo en memoria, algo crítico con videos promocionales.
+    /// </summary>
+    public async Task<T> PostFileStreamAsync<T>(string path, string fieldName, string fileName,
+        string contentType, Stream data, IEnumerable<KeyValuePair<string, string>>? fields = null)
+    {
+        if (data.CanSeek) data.Position = 0;
+
+        using var content = new MultipartFormDataContent();
+        using var file = new StreamContent(data);
+        file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        content.Add(file, fieldName, fileName);
+
+        if (fields is not null)
+        {
+            foreach (var field in fields)
+                content.Add(new StringContent(field.Value ?? string.Empty), field.Key);
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, path.TrimStart('/')) { Content = content };
+        AddHeaders(request);
+
+        using var response = await _transfer.SendAsync(request);
         await EnsureSuccessAsync(response);
         var result = await response.Content.ReadFromJsonAsync<T>(JsonOptions);
         return result ?? throw new ApiException("Respuesta vacía del servidor.", response.StatusCode);

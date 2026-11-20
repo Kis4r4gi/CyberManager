@@ -9,16 +9,14 @@ public class SaleService
 {
     private readonly Data.AppDbContext _db;
     private readonly ExchangeRateService _rates;
-    private readonly SettingsService _settings;
     private readonly CashService _cash;
     private readonly StockService _stock;
 
-    public SaleService(Data.AppDbContext db, ExchangeRateService rates, SettingsService settings,
+    public SaleService(Data.AppDbContext db, ExchangeRateService rates,
         CashService cash, StockService stock)
     {
         _db = db;
         _rates = rates;
-        _settings = settings;
         _cash = cash;
         _stock = stock;
     }
@@ -31,10 +29,6 @@ public class SaleService
         var rate = req.ExchangeRate ?? await _rates.GetRateAsync();
         if (rate <= 0)
             throw new AppException("Debe registrar la tasa de cambio del día antes de vender.");
-
-        var igtfRate = await _settings.GetBoolAsync(SettingsKeys.IgtfEnabled, true)
-            ? await _settings.GetDecimalAsync(SettingsKeys.IgtfRate, 3m)
-            : 0m;
 
         // ---- líneas e importes (precios con IVA incluido) ----
         decimal gross = 0, net = 0, tax = 0;
@@ -90,11 +84,7 @@ public class SaleService
         if (paidCurrency == Currency.Usd && req.Method != PaymentMethod.CashUsd)
             paidCurrency = Currency.Ves;
 
-        var igtf = paidCurrency == Currency.Usd
-            ? Math.Round(finalTotal * igtfRate / 100m, 2, MidpointRounding.AwayFromZero)
-            : 0m;
-
-        var grandTotal = Math.Round(finalTotal + igtf, 2, MidpointRounding.AwayFromZero);
+        var grandTotal = finalTotal;
         var due = paidCurrency == Currency.Usd ? grandTotal : Money.ToVes(grandTotal, rate);
 
         // ---- validaciones de stock e inventario ----
@@ -147,12 +137,10 @@ public class SaleService
             Subtotal = net,
             Discount = Math.Round(orderDiscount, 2),
             Tax = tax,
-            IgtfAmount = igtf,
             Total = grandTotal,
             ExchangeRate = rate,
             SubtotalVes = Money.ToVes(net, rate),
             TaxVes = Money.ToVes(tax, rate),
-            IgtfAmountVes = Money.ToVes(igtf, rate),
             TotalVes = Money.ToVes(grandTotal, rate),
             PaidAmount = Math.Round(paid, 2),
             PaidCurrency = paidCurrency,
@@ -276,7 +264,7 @@ public class SaleService
 
         return new SaleDto(s.Id, s.Number, s.StationId, s.Station?.Name, s.SessionId,
             s.CustomerId, s.CustomerName ?? s.Customer?.Name,
-            s.Subtotal, s.Discount, s.Tax, s.IgtfAmount, s.Total, s.ExchangeRate, s.TotalVes,
+            s.Subtotal, s.Discount, s.Tax, s.Total, s.ExchangeRate, s.TotalVes,
             s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
             s.Status, s.CreatedUtc, s.Notes,
             s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,
@@ -294,7 +282,7 @@ public class SaleService
         var list = await q.OrderByDescending(x => x.CreatedUtc).Take(take ?? 200).ToListAsync();
         return list.Select(s => new SaleDto(s.Id, s.Number, s.StationId, s.Station?.Name, s.SessionId,
             s.CustomerId, s.CustomerName ?? s.Customer?.Name,
-            s.Subtotal, s.Discount, s.Tax, s.IgtfAmount, s.Total, s.ExchangeRate, s.TotalVes,
+            s.Subtotal, s.Discount, s.Tax, s.Total, s.ExchangeRate, s.TotalVes,
             s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
             s.Status, s.CreatedUtc, s.Notes,
             s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,

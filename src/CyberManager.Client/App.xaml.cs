@@ -23,6 +23,9 @@ public partial class App : Application
 
     private readonly WallpaperService _wallpapers = new();
     private readonly PromoVideoService _promos = new();
+    /// <summary>Alterna fondos y videos en la pantalla bloqueada.</summary>
+    private readonly DispatcherTimer _mediaSwitchTimer = new();
+    private bool _mediaVideoActive;
 
     private DispatcherTimer? _pollTimer;
     private DispatcherTimer? _updateTimer;
@@ -63,8 +66,22 @@ public partial class App : Application
 
     public App()
     {
-        _wallpapers.ImageChanged += source => _lockWindow?.SetWallpaper(source);
-        _promos.VideoChanged += path => _lockWindow?.SetPromoVideo(path);
+        _wallpapers.ImageChanged += (source, transition) => _lockWindow?.SetWallpaper(source, transition);
+        _promos.VideoChanged += path =>
+        {
+            if (path is null)
+            {
+                _mediaVideoActive = false;
+                _lockWindow?.SetPromoVideo(null);
+                return;
+            }
+
+            _mediaVideoActive = true;
+            _wallpapers.PauseRotation();
+            _lockWindow?.SetPromoVideo(path);
+        };
+        _promos.AvailabilityChanged += () => Dispatcher.BeginInvoke(UpdateMediaMode);
+        _mediaSwitchTimer.Tick += (_, _) => SwitchToVideo();
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -284,7 +301,6 @@ public partial class App : Application
         realtime.CommandReceived += OnCommandReceived;
         realtime.StationStateChanged += OnStationStateChanged;
         realtime.SessionWarning += OnSessionWarning;
-        realtime.WallpaperChanged += OnWallpaperChanged;
         realtime.PromoVideosChanged += OnPromoVideosChanged;
         realtime.ScreenFrameRequested += OnScreenFrameRequested;
         realtime.RemoteInputReceived += OnRemoteInputReceived;
@@ -449,7 +465,6 @@ public partial class App : Application
             Realtime.CommandReceived -= OnCommandReceived;
             Realtime.StationStateChanged -= OnStationStateChanged;
             Realtime.SessionWarning -= OnSessionWarning;
-            Realtime.WallpaperChanged -= OnWallpaperChanged;
             Realtime.PromoVideosChanged -= OnPromoVideosChanged;
             Realtime.ScreenFrameRequested -= OnScreenFrameRequested;
             Realtime.RemoteInputReceived -= OnRemoteInputReceived;
@@ -672,7 +687,8 @@ public partial class App : Application
             Environment.OSVersion.VersionString,
             0,
             0,
-            IsLocked ? "locked" : "unlocked");
+            IsLocked ? "locked" : "unlocked",
+            ClientDiagnostics.Snapshot());
 
         return Realtime.HeartbeatAsync(heartbeat);
     }
@@ -726,8 +742,16 @@ public partial class App : Application
             _lockWindow = new LockWindow();
             _lockWindow.PrepaidLoginRequested += OnPrepaidLoginRequested;
             _lockWindow.AdminLoginRequested += OnAdminLoginRequested;
-            _lockWindow.PromoVideoEnded += () => _promos.Next();
-            _lockWindow.PromoVideoFailed += () => _promos.Next();
+            _lockWindow.PromoVideoEnded += () =>
+            {
+                _promos.Advance();
+                SwitchToWallpaper();
+            };
+            _lockWindow.PromoVideoFailed += () =>
+            {
+                _promos.SkipCurrent();
+                SwitchToWallpaper();
+            };
         }
 
         _lockWindow.UpdateState(state);
@@ -750,10 +774,12 @@ public partial class App : Application
         _ = _wallpapers.ApplyAsync(state?.Wallpaper);
         _promos.SetLocked(true);
         _ = _promos.ApplyAsync(state?.Promos);
+        UpdateMediaMode();
     }
 
     private void ShowBar(StationClientStateDto? state)
     {
+        _mediaSwitchTimer.Stop();
         _wallpapers.SetLocked(false);
         _promos.SetLocked(false);
 
@@ -849,6 +875,37 @@ public partial class App : Application
                 if (_lockWindow is null) ShowLock(State);
                 OnAdminLoginRequested();
                 break;
+
+            case AgentCommandType.PlayRandomWallpaper:
+                SwitchToWallpaper();
+                _wallpapers.PlayRandom();
+                break;
+
+            case AgentCommandType.OpenPromoCacheFolder:
+                OpenPromoCacheFolder();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Abre en la sesión interactiva la carpeta con los videos ya descargados.
+    /// La ruta se deriva del propio cliente: la consola no puede enviar una ruta arbitraria.
+    /// </summary>
+    private void OpenPromoCacheFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(_promos.CacheDirectory);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = _promos.CacheDirectory,
+                UseShellExecute = true
+            });
+            ClientLog.Info($"Carpeta de videos abierta en el terminal: {_promos.CacheDirectory}");
+        }
+        catch (Exception ex)
+        {
+            ClientLog.Error($"No se pudo abrir la carpeta de videos: {ex.Message}", ex);
         }
     }
 
@@ -902,11 +959,50 @@ public partial class App : Application
         Dispatcher.BeginInvoke(() => SetInputBlocked(false));
     }
 
-    private void OnWallpaperChanged(WallpaperPlaylistDto playlist)
-        => Dispatcher.BeginInvoke(async () => await _wallpapers.ApplyAsync(playlist));
-
     private void OnPromoVideosChanged(PromoVideoPlaylistDto playlist)
         => Dispatcher.BeginInvoke(async () => await _promos.ApplyAsync(playlist));
+
+    /// <summary>
+    /// Coordina la alternancia: mientras haya videos, se muestra un fondo durante el
+    /// tiempo configurado y después el video; al terminar se vuelve al fondo.
+    /// </summary>
+    private void UpdateMediaMode()
+    {
+        if (!IsLocked || _lockWindow is null) return;
+
+        if (!_promos.HasVideos)
+        {
+            _mediaSwitchTimer.Stop();
+            if (_mediaVideoActive) SwitchToWallpaper();
+            return;
+        }
+
+        // No reinicia el contador en cada refresco de estado (cada 5 s).
+        if (_mediaVideoActive || _mediaSwitchTimer.IsEnabled) return;
+        SwitchToWallpaper();
+    }
+
+    private void SwitchToVideo()
+    {
+        if (!IsLocked || _lockWindow is null || _mediaVideoActive || !_promos.HasVideos) return;
+        _promos.Play();
+    }
+
+    private void SwitchToWallpaper()
+    {
+        if (!IsLocked || _lockWindow is null) return;
+
+        _promos.Stop();
+        _wallpapers.Show();
+        _wallpapers.ResumeRotation();
+
+        _mediaSwitchTimer.Stop();
+        if (!_promos.HasVideos) return;
+
+        _mediaSwitchTimer.Interval =
+            TimeSpan.FromSeconds(Math.Clamp(_wallpapers.RotationSeconds, 5, 3600));
+        _mediaSwitchTimer.Start();
+    }
 
     /// <summary>Responde a la solicitud de captura del visualizador remoto de administración.</summary>
     private void OnScreenFrameRequested(ScreenFrameRequest request)
@@ -1216,6 +1312,7 @@ public partial class App : Application
 
         await StopAsync();
         SetInputBlocked(false);
+        _mediaSwitchTimer.Stop();
         _keepAwakeTimer?.Stop();
         PowerManagementService.Disable();
         _wallpapers.Dispose();

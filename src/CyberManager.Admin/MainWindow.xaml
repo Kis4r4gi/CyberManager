@@ -150,18 +150,11 @@
                             </Button>
 
                             <TextBlock x:Name="SystemLabel" Text="SISTEMA" Style="{StaticResource Label}" Margin="12,16,0,6" />
-                            <Button Style="{StaticResource NavButton}" CommandParameter="wallpapers" Click="Nav_Click"
-                                    ToolTip="Gestiona los fondos de pantalla.">
+                            <Button Style="{StaticResource NavButton}" CommandParameter="media" Click="Nav_Click"
+                                    ToolTip="Fondos y videos promocionales que se alternan en los equipos bloqueados.">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE91B;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
-                                    <TextBlock Text="Fondos de pantalla" />
-                                </StackPanel>
-                            </Button>
-                            <Button Style="{StaticResource NavButton}" CommandParameter="promos" Click="Nav_Click"
-                                    ToolTip="Gestiona los videos promocionales.">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE786;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
-                                    <TextBlock Text="Videos promocionales" />
+                                    <TextBlock Text="Fondos y videos" />
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource NavButton}" CommandParameter="reports" Click="Nav_Click"

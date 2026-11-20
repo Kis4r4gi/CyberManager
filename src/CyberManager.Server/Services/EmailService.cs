@@ -238,7 +238,6 @@ public class EmailService
         Row("Ventas de tiempo", $"$ {Money(c.TimeSales)}");
         Row("Total USD", $"$ {Money(c.TotalSales)}", true);
         Row("Total Bs", $"Bs {Money(c.TotalSalesVes)}");
-        Row("IGTF", $"$ {Money(c.Igtf)}");
         Row("Descuentos", $"$ {Money(c.Discounts)}");
         Row("Ticket promedio", $"$ {Money(c.AverageTicket)}");
         Row("Ventas registradas", c.SaleCount.ToString(CultureInfo.InvariantCulture));
@@ -305,7 +304,6 @@ public class EmailService
         csv.AppendLine($"{Q("Ventas de tiempo USD")};{N(c.TimeSales)}");
         csv.AppendLine($"{Q("Total USD")};{N(c.TotalSales)}");
         csv.AppendLine($"{Q("Total Bs")};{N(c.TotalSalesVes)}");
-        csv.AppendLine($"{Q("IGTF USD")};{N(c.Igtf)}");
         csv.AppendLine($"{Q("Descuentos USD")};{N(c.Discounts)}");
         csv.AppendLine($"{Q("Ticket promedio USD")};{N(c.AverageTicket)}");
         csv.AppendLine($"{Q("Ventas registradas")};{c.SaleCount}");

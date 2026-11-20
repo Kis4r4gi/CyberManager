@@ -26,6 +26,11 @@ public class AdminHub : Hub
             or AgentCommandType.KillProcess or AgentCommandType.Screenshot)
             return _realtime.SendAgentCommandAsync(stationId, command, argument);
 
+        // La reproducción aleatoria y la apertura de la caché son acciones visuales
+        // que deben ejecutarse en la sesión interactiva de la estación.
+        if (command is AgentCommandType.PlayRandomWallpaper or AgentCommandType.OpenPromoCacheFolder)
+            return _realtime.SendStationCommandAsync(stationId, command, argument);
+
         // Bloqueo/desbloqueo y mensajes se envían a ambos (estación y agente).
         return Task.WhenAll(
             _realtime.SendAgentCommandAsync(stationId, command, argument),

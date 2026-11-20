@@ -125,6 +125,14 @@ public static class DbSeeder
         await DropColumnIfExistsAsync(db, "Products", "Icon", log);
         await DropColumnIfExistsAsync(db, "Products", "IconUpdatedUtc", log);
         await DropColumnIfExistsAsync(db, "Products", "ImagePath", log);
+
+        // El IGTF se eliminó del proyecto. Se limpian las columnas heredadas de las ventas
+        // y las opciones de configuración para que no queden rastros en instalaciones
+        // creadas antes de este cambio (EnsureCreated no modifica esquemas existentes).
+        await DropColumnIfExistsAsync(db, "Sales", "IgtfAmount", log);
+        await DropColumnIfExistsAsync(db, "Sales", "IgtfAmountVes", log);
+        await db.Database.ExecuteSqlRawAsync(
+            "DELETE FROM \"Settings\" WHERE \"Key\" IN ('IgtfEnabled', 'IgtfRate');");
     }
 
     /// <summary>
@@ -440,8 +448,6 @@ public static class DbSeeder
             [SettingsKeys.CurrencySymbol] = "$",
             [SettingsKeys.LocalCurrencySymbol] = "Bs",
             [SettingsKeys.DefaultTaxRate] = "16",
-            [SettingsKeys.IgtfEnabled] = "true",
-            [SettingsKeys.IgtfRate] = "3",
             [SettingsKeys.TicketHeader] = "CyberManager",
             [SettingsKeys.TicketFooter] = "¡Gracias por su visita!",
             [SettingsKeys.AutoPrintTicket] = "false",
@@ -462,10 +468,10 @@ public static class DbSeeder
             [SettingsKeys.UpdateReminderEnabled] = "true",
             [SettingsKeys.UpdateReminderDelayHours] = "2",
             [SettingsKeys.UpdateReminderDismissedVersion] = string.Empty,
-            [SettingsKeys.WallpaperMode] = nameof(WallpaperMode.None),
             [SettingsKeys.WallpaperRotationSeconds] = WallpaperSettings.Invariant(
                 WallpaperSettings.DefaultRotationSeconds),
-            [SettingsKeys.WallpaperActiveId] = string.Empty,
+            [SettingsKeys.WallpaperOrder] = nameof(WallpaperOrder.Ordered),
+            [SettingsKeys.WallpaperTransition] = nameof(WallpaperTransition.Fade),
             [SettingsKeys.BundledWallpapersVersion] = string.Empty,
             [SettingsKeys.SessionBarDescription] = string.Empty,
             [SettingsKeys.SessionBarScale] = "100",

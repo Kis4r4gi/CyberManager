@@ -38,6 +38,8 @@ public sealed class PromosView : UserControl, IRefreshable
     private List<PromoVideoDto> _videos = new();
     private PromoVideoPlaylistDto? _playlist;
     private int? _selectedId;
+    /// <summary>Evita que al revertir una casilla se vuelva a llamar a la API.</summary>
+    private bool _suppressToggle;
     private string? _previewFile;
 
     public PromosView()
@@ -58,10 +60,8 @@ public sealed class PromosView : UserControl, IRefreshable
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         root.Children.Add(Kit.PageHeader("Videos promocionales",
-            "Videos que verán los clientes mientras el equipo está bloqueado. Se sincronizan con todos los terminales.",
-            Kit.Button("Subir videos", "PrimaryButton", Upload),
-            Kit.Button("Reenviar a terminales", "GhostButton", RefreshClients),
-            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync())));
+            "Videos que verán los clientes mientras el equipo está bloqueado. " +
+            "Use los menús de la barra superior para subir, publicar o abrir la caché."));
 
         var body = new Grid { Margin = new Thickness(0, 4, 0, 0) };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -155,7 +155,7 @@ public sealed class PromosView : UserControl, IRefreshable
                 Style = Kit.Style("Panel"),
                 Padding = new Thickness(20),
                 Margin = new Thickness(0, 4, 8, 8),
-                Child = Kit.Muted("Suba un video MP4, M4V, WMV o AVI (máximo 300 MB).")
+                Child = Kit.Muted("Suba un video MP4/M4V con H.264, no fragmentado (máximo 120 MB). Recomendado: preset MP4/H.264 de Format Factory a 30 fps.")
             });
             return;
         }
@@ -225,6 +225,21 @@ public sealed class PromosView : UserControl, IRefreshable
             Children = { statusBorder }
         });
 
+        // Casilla rápida: permite activar o desactivar cada video sin abrir el panel.
+        var toggle = new CheckBox
+        {
+            Content = L.T("Activo"),
+            IsChecked = video.Active,
+            FontSize = 11,
+            Margin = new Thickness(0, 2, 0, 0),
+            ToolTip = L.T("Activa o desactiva este video en los terminales.")
+        };
+        toggle.Checked += (_, _) => ToggleActive(video, true, toggle);
+        toggle.Unchecked += (_, _) => ToggleActive(video, false, toggle);
+        // El clic de la casilla no debe seleccionar la tarjeta ni abrir la vista previa.
+        toggle.MouseLeftButtonUp += (_, e) => e.Handled = true;
+        texts.Children.Add(toggle);
+
         var body = new StackPanel();
         body.Children.Add(icon);
         body.Children.Add(texts);
@@ -281,12 +296,12 @@ public sealed class PromosView : UserControl, IRefreshable
     {
         try
         {
-            var data = await App.Api.GetBytesAsync($"/api/promo-videos/{id}/file");
-            if (data.Length == 0) return;
-
             var file = Path.Combine(Path.GetTempPath(),
                 $"cybermanager-promo-{id}{extension}");
-            await File.WriteAllBytesAsync(file, data);
+            var part = file + ".part";
+            await App.Api.DownloadPromoVideoAsync(id, part);
+            if (File.Exists(file)) File.Delete(file);
+            File.Move(part, file, overwrite: true);
             _previewFile = file;
 
             if (_selectedId != id) return;
@@ -328,12 +343,12 @@ public sealed class PromosView : UserControl, IRefreshable
         }
     }
 
-    private void Upload()
+    internal void Upload()
     {
         var dialog = new OpenFileDialog
         {
             Title = "Seleccione videos para los terminales",
-            Filter = "Videos|*.mp4;*.m4v;*.wmv;*.avi|Todos los archivos|*.*",
+            Filter = "Videos compatibles (MP4 H.264)|*.mp4;*.m4v",
             Multiselect = true
         };
 
@@ -356,20 +371,32 @@ public sealed class PromosView : UserControl, IRefreshable
                 var info = new FileInfo(file);
                 if (info.Length > PromoSettings.MaxBytes)
                 {
-                    errors.Add($"{info.Name}: supera el máximo de 300 MB.");
+                    errors.Add($"{info.Name}: supera el máximo de " +
+                               $"{PromoSettings.MaxBytes / 1024 / 1024} MB.");
                     continue;
                 }
 
                 if (!PromoSettings.IsSupported(file))
                 {
-                    errors.Add($"{info.Name}: formato no compatible.");
+                    errors.Add($"{info.Name}: formato no compatible. {PromoVideoValidator.Requirements}");
                     continue;
                 }
 
-                var bytes = await File.ReadAllBytesAsync(file);
-                await App.Api.UploadPromoVideoAsync(info.Name, bytes,
-                    PromoSettings.ContentType(info.Extension),
-                    Path.GetFileNameWithoutExtension(info.Name));
+                // Validación local en bloques: evita subir un video que luego no se
+                // reproducirá y muestra las especificaciones admitidas.
+                using (var stream = File.OpenRead(file))
+                {
+                    var problem = PromoVideoValidator.Validate(stream, info.Name);
+                    if (problem is not null)
+                    {
+                        errors.Add($"{info.Name}: {problem}");
+                        continue;
+                    }
+                }
+
+                // El archivo se envía en bloques desde disco: un video grande no debe
+                // cargarse en memoria ni dejar la consola sin responder.
+                await App.Api.UploadPromoVideoAsync(file);
                 uploaded++;
             }
             catch (Exception ex)
@@ -386,15 +413,64 @@ public sealed class PromosView : UserControl, IRefreshable
             Ui.Info($"{uploaded} video(s) agregados a la galería.", "Videos promocionales");
     }
 
-    private async void RefreshClients()
+    internal async void RefreshClients()
     {
         await Ui.Run(async () =>
         {
             _playlist = await App.Api.RefreshPromoVideosAsync();
             await RefreshAsync();
-            Ui.Info("La lista de videos se reenvió a todos los terminales conectados.",
-                "Videos promocionales");
+            Ui.Info(L.T("La lista de videos se reenvió a todos los terminales conectados. Los archivos ya descargados se reutilizan si no cambiaron."),
+                L.T("Actualizar archivos en clientes"));
         }, "No se pudo reenviar la lista de videos");
+    }
+
+    /// <summary>
+    /// Pide a los equipos activos que abran su carpeta local de videos. No envía
+    /// rutas: cada terminal abre su propia caché.
+    /// </summary>
+    internal async void OpenCacheFolder()
+    {
+        if (!Ui.Confirm("¿Abrir la carpeta de videos en todos los equipos activos?\n\n" +
+                        "Se abrirá el Explorador en cada terminal con los archivos descargados.",
+                        "Abrir carpeta en terminales")) return;
+
+        await Ui.Run(async () =>
+        {
+            var stations = (await App.Api.StationsAsync()).Where(s => s.Active).ToList();
+            foreach (var station in stations)
+                await App.Api.CommandAsync(station.Id, AgentCommandType.OpenPromoCacheFolder);
+
+            Ui.Info(stations.Count > 0
+                    ? $"Se abrió la carpeta de videos en {stations.Count} equipo(s) activo(s)."
+                    : L.T("No hay equipos activos."),
+                L.T("Abrir carpeta en terminales"));
+        }, "No se pudo abrir la carpeta en los terminales");
+    }
+
+    internal static void ShowRequirements() => new PromoRequirementsDialog().ShowDialog();
+
+    /// <summary>Activa o desactiva un video desde la casilla de su tarjeta.</summary>
+    private async void ToggleActive(PromoVideoDto video, bool active, CheckBox check)
+    {
+        if (_suppressToggle) return;
+
+        check.IsEnabled = false;
+        try
+        {
+            await App.Api.UpdatePromoVideoAsync(video.Id,
+                new SavePromoVideoRequest(video.Name, active, video.SortOrder));
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            // La tarjeta se reconstruye al recargar; si falla, devolvemos la casilla
+            // a su estado anterior sin volver a llamar a la API.
+            _suppressToggle = true;
+            check.IsChecked = !active;
+            check.IsEnabled = true;
+            _suppressToggle = false;
+            Ui.Error(ex.Message, "No se pudo cambiar el estado del video");
+        }
     }
 
     private async void SaveDetail()
@@ -457,4 +533,16 @@ public sealed class PromosView : UserControl, IRefreshable
         => bytes >= 1024 * 1024
             ? $"{bytes / 1024d / 1024d:N1} MB"
             : $"{Math.Max(1, bytes / 1024d):N0} KB";
+}
+
+/// <summary>Muestra las especificaciones que debe cumplir un video promocional.</summary>
+public sealed class PromoRequirementsDialog : FormDialog
+{
+    public PromoRequirementsDialog()
+        : base(L.T("Requisitos de codificación"), L.T("Los videos se reproducen en los terminales bloqueados."),
+               "Aceptar", 560)
+    {
+        HideCancel();
+        AddNote(L.T(PromoVideoValidator.Requirements), "TextBrush");
+    }
 }

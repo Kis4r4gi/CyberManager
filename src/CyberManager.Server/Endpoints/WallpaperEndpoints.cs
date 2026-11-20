@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
@@ -9,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CyberManager.Server.Endpoints;
 
-/// <summary>Galería de fondos de pantalla y su sincronización con los equipos.</summary>
+/// <summary>Galería de fondos y configuración de reproducción de las estaciones.</summary>
 public static class WallpaperEndpoints
 {
     public static IEndpointRouteBuilder MapWallpaperEndpoints(this IEndpointRouteBuilder app)
@@ -38,8 +37,7 @@ public static class WallpaperEndpoints
         });
 
         // Subida multipart: campo "file" y, opcionalmente, "name" y "sortOrder".
-        g.MapPost("/", async (HttpRequest request, AppDbContext db, WallpaperService wallpapers,
-            RealtimeService realtime) =>
+        g.MapPost("/", async (HttpRequest request, AppDbContext db) =>
         {
             if (!request.HasFormContentType)
                 throw new AppException("Debe enviar la imagen como formulario multipart.");
@@ -86,13 +84,11 @@ public static class WallpaperEndpoints
             db.Wallpapers.Add(wallpaper);
             await db.SaveChangesAsync();
 
-            await realtime.WallpaperChangedAsync(await wallpapers.PlaylistAsync());
             return Results.Ok(ToDto(wallpaper));
         }).DisableAntiforgery();
 
         // Reemplazo del archivo de un fondo existente (sincronización desde la carpeta local).
-        g.MapPut("/{id:int}/file", async (int id, HttpRequest request, AppDbContext db,
-            WallpaperService wallpapers, RealtimeService realtime) =>
+        g.MapPut("/{id:int}/file", async (int id, HttpRequest request, AppDbContext db) =>
         {
             if (!request.HasFormContentType)
                 throw new AppException("Debe enviar la imagen como formulario multipart.");
@@ -135,12 +131,10 @@ public static class WallpaperEndpoints
             wallpaper.UpdatedUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            await realtime.WallpaperChangedAsync(await wallpapers.PlaylistAsync());
             return Results.Ok(ToDto(wallpaper));
         }).DisableAntiforgery();
 
-        g.MapPut("/{id:int}", async (int id, SaveWallpaperRequest req, AppDbContext db,
-            WallpaperService wallpapers, RealtimeService realtime) =>
+        g.MapPut("/{id:int}", async (int id, SaveWallpaperRequest req, AppDbContext db) =>
         {
             var wallpaper = await db.Wallpapers.FirstOrDefaultAsync(w => w.Id == id)
                             ?? throw AppException.NotFound("Fondo de pantalla");
@@ -154,12 +148,10 @@ public static class WallpaperEndpoints
             wallpaper.UpdatedUtc = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            await realtime.WallpaperChangedAsync(await wallpapers.PlaylistAsync());
             return Results.Ok(ToDto(wallpaper));
         });
 
-        g.MapDelete("/{id:int}", async (int id, AppDbContext db,
-            WallpaperService wallpapers, RealtimeService realtime) =>
+        g.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
         {
             var wallpaper = await db.Wallpapers.FirstOrDefaultAsync(w => w.Id == id)
                             ?? throw AppException.NotFound("Fondo de pantalla");
@@ -167,50 +159,26 @@ public static class WallpaperEndpoints
             db.Wallpapers.Remove(wallpaper);
             await db.SaveChangesAsync();
 
-            await realtime.WallpaperChangedAsync(await wallpapers.PlaylistAsync());
             return Results.NoContent();
         });
 
-        // Guarda el modo, el fondo fijo y la velocidad de rotación en una sola operación.
-        g.MapPost("/apply", async (ApplyWallpaperSettingsRequest req, AppDbContext db,
-            SettingsService settings, WallpaperService wallpapers, RealtimeService realtime) =>
+        // Guarda tiempo, orden y transición en una sola operación. Los equipos
+        // tomarán los valores cuando consulten /api/station/state.
+        g.MapPost("/apply", async (ApplyWallpaperSettingsRequest req, SettingsService settings,
+            WallpaperService wallpapers) =>
         {
             var seconds = Math.Clamp(req.RotationSeconds, WallpaperSettings.MinRotationSeconds,
                 WallpaperSettings.MaxRotationSeconds);
 
-            if (req.Mode == WallpaperMode.Single)
-            {
-                if (req.ActiveId is not int activeId)
-                    throw new AppException("Seleccione el fondo que se mostrará de forma fija.");
-
-                var selected = await db.Wallpapers.AsNoTracking()
-                                   .FirstOrDefaultAsync(w => w.Id == activeId)
-                               ?? throw AppException.NotFound("Fondo de pantalla");
-
-                if (!selected.Active)
-                    throw new AppException("El fondo seleccionado está inactivo. Actívelo primero.");
-            }
-
             await settings.SetManyAsync(new[]
             {
-                new KeyValuePair<string, string>(WallpaperSettings.Mode, req.Mode.ToString()),
                 new KeyValuePair<string, string>(WallpaperSettings.RotationSeconds,
                     WallpaperSettings.Invariant(seconds)),
-                new KeyValuePair<string, string>(WallpaperSettings.ActiveId,
-                    req.ActiveId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)
+                new KeyValuePair<string, string>(WallpaperSettings.Order, req.Order.ToString()),
+                new KeyValuePair<string, string>(WallpaperSettings.Transition, req.Transition.ToString())
             });
 
-            var playlist = await wallpapers.PlaylistAsync();
-            await realtime.WallpaperChangedAsync(playlist);
-            return Results.Ok(playlist);
-        });
-
-        // Permite reenviar la galería a los equipos sin cambiar la configuración.
-        g.MapPost("/refresh", async (WallpaperService wallpapers, RealtimeService realtime) =>
-        {
-            var playlist = await wallpapers.PlaylistAsync();
-            await realtime.WallpaperChangedAsync(playlist);
-            return Results.Ok(playlist);
+            return Results.Ok(await wallpapers.PlaylistAsync());
         });
 
         return app;

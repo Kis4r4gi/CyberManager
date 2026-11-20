@@ -18,13 +18,6 @@ namespace CyberManager.Admin.Views;
 /// <summary>Galería de fondos que se muestran en la pantalla de bloqueo de los equipos.</summary>
 public sealed class WallpapersView : UserControl, IRefreshable
 {
-    private static readonly Option<WallpaperMode>[] Modes =
-    {
-        new(WallpaperMode.None, "Sin fondos (degradado del cliente)"),
-        new(WallpaperMode.Single, "Fondo fijo"),
-        new(WallpaperMode.Slideshow, "Presentación rotativa")
-    };
-
     /// <summary>Carpeta de intercambio para administrar los fondos como archivos.</summary>
     private static readonly string ExchangeFolder = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -37,10 +30,6 @@ public sealed class WallpapersView : UserControl, IRefreshable
     private readonly WrapPanel _gallery = new() { Margin = new Thickness(0, 4, 0, 0) };
     private readonly TextBox _searchBox = new();
     private readonly TextBlock _galleryStatus = Kit.Muted("Cargando galería...");
-    private readonly ComboBox _modeCombo = Kit.Combo(Modes);
-    private readonly ComboBox _singleCombo = new() { DisplayMemberPath = nameof(Option<object>.DisplayText) };
-    private readonly TextBox _secondsBox = Kit.Input("30");
-    private readonly TextBlock _applyStatus = Kit.Muted("Sin cambios pendientes.");
     private readonly Image _preview = new()
     {
         Height = 170,
@@ -59,16 +48,12 @@ public sealed class WallpapersView : UserControl, IRefreshable
     private readonly Dictionary<int, TextBlock> _cardStatuses = new();
 
     private List<WallpaperDto> _wallpapers = new();
-    private WallpaperPlaylistDto? _playlist;
     private int? _selectedId;
-    private bool _loading;
 
     public WallpapersView()
     {
         BuildLayout();
 
-        _modeCombo.SelectionChanged += (_, _) => UpdateModeState();
-        _secondsBox.LostFocus += (_, _) => NormalizeSeconds();
         Loaded += async (_, _) => await Ui.Run(RefreshAsync, "No se pudo cargar la galería");
     }
 
@@ -79,9 +64,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         root.Children.Add(Kit.PageHeader("Fondos de pantalla",
-            "Imágenes que verán los clientes mientras el equipo está bloqueado. Los cambios se envían al instante.",
-            Kit.Button("Subir imágenes", "PrimaryButton", Upload),
-            Kit.Button("Buscar en internet", "GhostButton", SearchOnInternet)));
+            "Galería de imágenes. Use el menú «Agregar» de la barra superior para incorporar fondos."));
 
         var body = new Grid { Margin = new Thickness(0, 4, 0, 0) };
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -118,27 +101,9 @@ public sealed class WallpapersView : UserControl, IRefreshable
         Grid.SetColumn(_galleryStatus, 1);
         galleryHeader.Children.Add(_galleryStatus);
 
-        var toolbarRight = Kit.HStack(8,
-            Kit.Button("Reenviar a equipos", "GhostButton", RefreshClients),
-            Kit.Button("Actualizar", "GhostButton", () => _ = RefreshAsync()));
-        toolbarRight.HorizontalAlignment = HorizontalAlignment.Right;
-        toolbarRight.VerticalAlignment = VerticalAlignment.Center;
-
-        var galleryToolbar = new Grid { Margin = new Thickness(0, 0, 0, 8) };
-        galleryToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        galleryToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        galleryToolbar.Children.Add(Kit.HStack(8,
-            Kit.Button("Abrir carpeta", "GhostButton", OpenExchangeFolder),
-            Kit.Button("Sincronizar carpeta", "GhostButton", () => _ = SyncExchangeFolderAsync())));
-        Grid.SetColumn(toolbarRight, 1);
-        galleryToolbar.Children.Add(toolbarRight);
-
         var galleryContent = new Grid();
         galleryContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        galleryContent.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         galleryContent.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        galleryContent.Children.Add(galleryToolbar);
-        Grid.SetRow(galleryHeader, 1);
         galleryContent.Children.Add(galleryHeader);
 
         var scroll = new ScrollViewer
@@ -147,7 +112,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
-        Grid.SetRow(scroll, 2);
+        Grid.SetRow(scroll, 1);
         galleryContent.Children.Add(scroll);
 
         var galleryCard = Kit.Card(galleryContent, 16);
@@ -171,17 +136,6 @@ public sealed class WallpapersView : UserControl, IRefreshable
 
     private StackPanel BuildSidePanel()
     {
-        _singleCombo.IsEnabled = false;
-        _secondsBox.Width = 110;
-
-        var applyPanel = Kit.VStack(8,
-            Kit.Section("Presentación"),
-            Kit.Field("Modo", _modeCombo),
-            Kit.Field("Fondo fijo", _singleCombo),
-            Kit.Field("Segundos entre imágenes (5 a 3600)", _secondsBox),
-            Kit.Button("Guardar y aplicar", "PrimaryButton", ApplySettings),
-            _applyStatus);
-
         var detailBody = Kit.VStack(8,
             _detailTitle,
             _detailInfo,
@@ -198,32 +152,20 @@ public sealed class WallpapersView : UserControl, IRefreshable
             _detailActions,
             _detailEmpty);
 
-        var side = Kit.VStack(14, Kit.Card(applyPanel, 16), Kit.Card(detailBody, 16));
+        var side = Kit.VStack(14, Kit.Card(detailBody, 16));
         side.Margin = new Thickness(0, 0, 4, 4);
-        UpdateModeState();
         return side;
     }
 
     public async Task RefreshAsync()
     {
-        _loading = true;
-        try
-        {
-            _wallpapers = await App.Api.WallpapersAsync();
-            _playlist = await App.Api.WallpaperPlaylistAsync();
+        _wallpapers = await App.Api.WallpapersAsync();
 
-            if (_selectedId is not int id || _wallpapers.All(w => w.Id != id))
-                _selectedId = _wallpapers.FirstOrDefault()?.Id;
+        if (_selectedId is not int id || _wallpapers.All(w => w.Id != id))
+            _selectedId = _wallpapers.FirstOrDefault()?.Id;
 
-            BuildGallery();
-            UpdateSettingsPanel();
-            UpdateDetail();
-        }
-        finally
-        {
-            _loading = false;
-            UpdateModeState();
-        }
+        BuildGallery();
+        UpdateDetail();
     }
 
     private void BuildGallery()
@@ -381,43 +323,6 @@ public sealed class WallpapersView : UserControl, IRefreshable
         }
     }
 
-    private void UpdateSettingsPanel()
-    {
-        var mode = _playlist?.Mode ?? WallpaperMode.None;
-        _modeCombo.SelectedIndex = Array.FindIndex(Modes, m => m.Value == mode);
-
-        var active = _wallpapers.Where(w => w.Active)
-            .OrderBy(w => w.SortOrder).ThenBy(w => w.Name)
-            .Select(w => new Option<int?>(w.Id, w.Name))
-            .ToList();
-        _singleCombo.ItemsSource = active;
-
-        var activeId = _playlist?.ActiveId ?? active.FirstOrDefault()?.Value;
-        _singleCombo.SelectedIndex = active.FindIndex(o => o.Value == activeId);
-        if (_singleCombo.SelectedIndex < 0 && active.Count > 0) _singleCombo.SelectedIndex = 0;
-
-        _secondsBox.Text = (_playlist?.RotationSeconds ?? WallpaperSettings.DefaultRotationSeconds)
-            .ToString();
-
-        _applyStatus.Text = mode switch
-        {
-            WallpaperMode.Single => "Se muestra un único fondo fijo en los equipos bloqueados.",
-            WallpaperMode.Slideshow => $"Rotación activa cada {_playlist?.RotationSeconds ?? 30} segundo(s).",
-            _ => "Los equipos usan el degradado original como fondo."
-        };
-
-        UpdateModeState();
-    }
-
-    private void UpdateModeState()
-    {
-        if (_loading) return;
-        var mode = SelectedMode();
-        _singleCombo.IsEnabled = mode == WallpaperMode.Single;
-        _secondsBox.IsEnabled = mode == WallpaperMode.Slideshow;
-        _secondsBox.Opacity = mode == WallpaperMode.Slideshow ? 1 : 0.55;
-    }
-
     private void UpdateDetail()
     {
         var wallpaper = Current;
@@ -503,7 +408,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
         }
     }
 
-    private void Upload()
+    internal void Upload()
     {
         var dialog = new OpenFileDialog
         {
@@ -517,7 +422,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
     }
 
     /// <summary>Abre el buscador de fondos en internet y refresca la galería si se agregó alguno.</summary>
-    private void SearchOnInternet()
+    internal void SearchOnInternet()
     {
         var window = new InternetWallpapersWindow();
         var owner = Window.GetWindow(this);
@@ -566,7 +471,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
     // ============================================================
 
     /// <summary>Exporta la galería a una carpeta local y la abre en el Explorador.</summary>
-    private async void OpenExchangeFolder()
+    internal async void OpenExchangeFolder()
     {
         await Ui.Run(async () =>
         {
@@ -622,7 +527,7 @@ public sealed class WallpapersView : UserControl, IRefreshable
     /// Importa las imágenes nuevas y reemplaza las que cambiaron en la carpeta de intercambio.
     /// La comparación se hace con el hash guardado en el manifiesto.
     /// </summary>
-    private async Task SyncExchangeFolderAsync()
+    internal async Task SyncExchangeFolderAsync()
     {
         if (!Directory.Exists(ExchangeFolder))
         {
@@ -799,44 +704,6 @@ public sealed class WallpapersView : UserControl, IRefreshable
         public string Sha256 { get; set; } = string.Empty;
     }
 
-    private async void ApplySettings()
-    {
-        if (_loading) return;
-
-        var mode = SelectedMode();
-        var seconds = ParseSeconds();
-        if (seconds is null) return;
-
-        int? activeId = null;
-        if (mode == WallpaperMode.Single)
-        {
-            if (_singleCombo.SelectedItem is not Option<int?> option)
-            {
-                Ui.Error("Seleccione el fondo que se mostrará de forma fija.");
-                return;
-            }
-            activeId = option.Value;
-        }
-
-        await Ui.Run(async () =>
-        {
-            _playlist = await App.Api.ApplyWallpaperAsync(
-                new ApplyWallpaperSettingsRequest(mode, activeId, seconds.Value));
-            await RefreshAsync();
-            Ui.Info($"Presentación actualizada: {WallpaperSettings.ModeText(mode)}.", "Fondos de pantalla");
-        }, "No se pudo aplicar la presentación");
-    }
-
-    private async void RefreshClients()
-    {
-        await Ui.Run(async () =>
-        {
-            _playlist = await App.Api.RefreshWallpapersAsync();
-            await RefreshAsync();
-            Ui.Info("La galería se reenvió a todos los equipos conectados.", "Fondos de pantalla");
-        }, "No se pudo reenviar la galería");
-    }
-
     private async void SaveDetail()
     {
         if (Current is not { } wallpaper) return;
@@ -878,45 +745,8 @@ public sealed class WallpapersView : UserControl, IRefreshable
     private WallpaperDto? Current
         => _selectedId is int id ? _wallpapers.FirstOrDefault(w => w.Id == id) : null;
 
-    private WallpaperMode SelectedMode()
-        => _modeCombo.SelectedItem is Option<WallpaperMode> option ? option.Value : WallpaperMode.None;
-
-    private int? ParseSeconds()
-    {
-        if (!int.TryParse(_secondsBox.Text.Trim(), out var seconds))
-        {
-            Ui.Error($"Indique un número de segundos entre {WallpaperSettings.MinRotationSeconds} y " +
-                     $"{WallpaperSettings.MaxRotationSeconds}.");
-            return null;
-        }
-
-        if (seconds < WallpaperSettings.MinRotationSeconds || seconds > WallpaperSettings.MaxRotationSeconds)
-        {
-            Ui.Error($"La rotación debe estar entre {WallpaperSettings.MinRotationSeconds} y " +
-                     $"{WallpaperSettings.MaxRotationSeconds} segundos.");
-            return null;
-        }
-
-        _secondsBox.Text = seconds.ToString();
-        return seconds;
-    }
-
-    private void NormalizeSeconds()
-    {
-        if (int.TryParse(_secondsBox.Text.Trim(), out var seconds))
-            _secondsBox.Text = Math.Clamp(seconds, WallpaperSettings.MinRotationSeconds,
-                WallpaperSettings.MaxRotationSeconds).ToString();
-        else
-            _secondsBox.Text = WallpaperSettings.DefaultRotationSeconds.ToString();
-    }
-
     private string StatusText(WallpaperDto wallpaper)
-    {
-        if (!wallpaper.Active) return "OCULTO";
-        if (_playlist?.Mode == WallpaperMode.Single && _playlist.ActiveId == wallpaper.Id) return "FONDO FIJO";
-        if (_playlist?.Mode == WallpaperMode.Slideshow) return "EN ROTACIÓN";
-        return "DISPONIBLE";
-    }
+        => wallpaper.Active ? "EN ROTACIÓN" : "OCULTO";
 
     private static Brush StatusBrush(WallpaperDto wallpaper)
     {
@@ -939,4 +769,3 @@ public sealed class WallpapersView : UserControl, IRefreshable
             _ => "application/octet-stream"
         };
 }
-
