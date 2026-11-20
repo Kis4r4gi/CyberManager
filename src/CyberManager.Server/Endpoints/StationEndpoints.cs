@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Claims;
 using CyberManager.Server.Data;
+using CyberManager.Server.Hubs;
 using CyberManager.Server.Services;
 using CyberManager.Shared;
 using CyberManager.Shared.Domain;
@@ -146,6 +147,13 @@ public static class StationEndpoints
                 or AgentCommandType.Logoff or AgentCommandType.Screenshot)
             {
                 // Solo el agente (servicio de Windows) puede apagar, reiniciar o cerrar sesión.
+                // Avisar cuando no está conectado evita mostrar «orden enviada» sin efecto.
+                if (!AgentHub.IsConnected(id))
+                    throw new AppException(
+                        "El servicio CyberManagerAgent de este equipo no está conectado. " +
+                        "Actualice el agente e reinicie el servicio antes de apagar, reiniciar o cerrar sesión.",
+                        409);
+
                 await realtime.SendAgentCommandAsync(id, req.Command, req.Argument);
             }
             else if (req.Command is AgentCommandType.SetVolume or AgentCommandType.Mute

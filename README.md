@@ -1563,6 +1563,40 @@ flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
 
 ## Solución de problemas
 
+### Solucionador automático (IA en la nube)
+
+La consola incluye la vista **Sistema → Solucionador**. Combina reglas deterministas del servidor
+(estado de equipos, versiones del cliente, sesiones, paquetes y registros) con una explicación
+opcional generada por un proveedor compatible con la API de chat de OpenAI.
+
+- Endpoint: `POST /api/troubleshoot/diagnose` (rol `Admin`).
+- Cuerpo: `{ "includeLogs": true, "useAi": true }`. En la vista, **Analizar con IA** usa `true` y
+  **Solo reglas** usa `false`.
+- El diagnóstico **no ejecuta acciones**: solo informa hallazgos y sugiere pasos.
+- Antes de enviar cualquier dato se sanitizan tokens, correos, RIF, direcciones IP y números largos.
+
+Configuración en `appsettings.json` del servidor:
+
+```json
+"Troubleshoot": {
+  "OfflineThresholdSeconds": 75,
+  "MaxLogLines": 120,
+  "Ai": {
+    "Enabled": true,
+    "BaseUrl": "https://api.openai.com/v1",
+    "Model": "gpt-4o-mini",
+    "ApiKeyEnvironmentVariable": "CYBERMANAGER_AI_API_KEY",
+    "ApiKey": "",
+    "TimeoutSeconds": 20
+  }
+}
+```
+
+La clave se toma primero de la variable de entorno indicada (`CYBERMANAGER_AI_API_KEY` por defecto)
+y, si no existe, de `Troubleshoot:Ai:ApiKey`. Sin clave, el solucionador sigue funcionando con reglas
+y la vista indica que la IA no está disponible. Para otro proveedor compatible (Groq, OpenRouter,
+etc.) cambie `BaseUrl` y `Model`.
+
 **La consola no conecta con el servidor**
 
 - Verifique que el servidor esté ejecutándose (`/api/health`).
@@ -1611,6 +1645,8 @@ flotante con token de equipo), `/api/backups` (respaldos, solo rol `Admin`),
   `C:\CyberManager\Agent\appsettings.json` (script manual).
 - Verifique que el `StationId` y el `Token` coincidan con el equipo registrado.
 - El servicio debe ejecutarse con permisos suficientes para apagar o reiniciar el equipo.
+- Si el agente no está conectado, la consola muestra un error explícito al apagar, reiniciar o
+  cerrar sesión, y el **Solucionador** lo reporta como hallazgo crítico.
 
 **El control remoto no mueve el mouse ni escribe**
 

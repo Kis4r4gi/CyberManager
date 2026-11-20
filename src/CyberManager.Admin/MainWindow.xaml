@@ -164,6 +164,13 @@
                                     <TextBlock Text="Reportes" />
                                 </StackPanel>
                             </Button>
+                            <Button Style="{StaticResource NavButton}" CommandParameter="troubleshoot" Click="Nav_Click"
+                                    ToolTip="Diagnostica equipos, versiones y registros con IA en la nube.">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
+                                    <TextBlock Text="Solucionador" />
+                                </StackPanel>
+                            </Button>
                             <Button Style="{StaticResource NavButton}" CommandParameter="settings" Click="Nav_Click"
                                     ToolTip="Abre la configuración del sistema.">
                                 <StackPanel Orientation="Horizontal">

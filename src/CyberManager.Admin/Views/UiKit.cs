@@ -23,6 +23,7 @@ public static class Kit
         ["✕"] = "Quita el producto del pedido.",
         ["?"] = "Muestra la ayuda de esta pantalla.",
         ["Abonar"] = "Registra un abono a la cuenta del cliente.",
+        ["Analizar con IA"] = "Ejecuta las reglas y pide una explicación al proveedor de IA en la nube.",
         ["Abrir caja"] = "Abre la caja del turno actual.",
         ["Abrir carpeta"] = "Abre la carpeta donde se guardó el archivo.",
         ["Aceptar"] = "Guarda los datos del formulario.",
@@ -33,7 +34,9 @@ public static class Kit
         ["Actualizar lista"] = "Actualiza la lista con los datos más recientes.",
         ["Agregar"] = "Añade el elemento a la lista.",
         ["Apagar equipo"] = "Apaga el equipo.",
+        ["Apagar"] = "Apaga los equipos marcados o toda la lista, según elija en el menú.",
         ["Apagar monitor"] = "Apaga el monitor del equipo.",
+        ["Equipos marcados"] = "Aplica la acción solo a las filas marcadas en la columna «Sel.».",
         ["Aplicar y guardar ahora"] = "Aplica los cambios y los guarda de inmediato.",
         ["Bajar"] = "Mueve el elemento una posición hacia abajo.",
         ["Bloquear"] = "Bloquea el acceso del equipo.",
@@ -67,6 +70,7 @@ public static class Kit
         ["Eliminar"] = "Elimina el registro seleccionado.",
         ["Eliminar equipo"] = "Desactiva el equipo y limpia sus referencias.",
         ["Enviar mensaje"] = "Muestra un mensaje en el equipo.",
+        ["Encender"] = "Envía Wake on LAN a los equipos marcados o a toda la lista.",
         ["Encender monitor"] = "Enciende el monitor del equipo.",
         ["Enviar pedido a la estación"] = "Envía el pedido al administrador.",
         ["Entrar a la consola"] = "Inicia sesión en la consola.",
@@ -82,6 +86,8 @@ public static class Kit
         ["Iniciar sesión"] = "Inicia una sesión en el equipo.",
         ["Limpiar"] = "Limpia la búsqueda o el filtro.",
         ["Mantenimiento"] = "Pone el equipo en mantenimiento.",
+        ["Marcar visibles"] = "Marca las filas que coinciden con la búsqueda y el filtro actuales.",
+        ["Marcar en línea"] = "Marca los equipos que están reportando latido.",
         ["Mensaje"] = "Envía un mensaje al equipo.",
         ["Mi cuenta"] = "Muestra el consumo de la sesión.",
         ["Movimiento"] = "Registra un ingreso o egreso de caja.",
@@ -102,6 +108,7 @@ public static class Kit
         ["Probar conexión"] = "Comprueba la conexión con el servidor.",
         ["Quitar"] = "Quita el elemento de la lista.",
         ["Quitar mantenimiento"] = "Devuelve el equipo a servicio.",
+        ["Quitar marcas"] = "Desmarca todas las filas de la lista.",
         ["Reanudar tiempo"] = "Reanuda el tiempo de la sesión.",
         ["Recargar"] = "Recarga la información de la pantalla.",
         ["Recargar saldo"] = "Añade saldo a la cuenta del cliente.",
@@ -112,6 +119,7 @@ public static class Kit
         ["Registrar compra"] = "Registra la compra de productos.",
         ["Registrar movimiento"] = "Registra un ingreso o egreso de caja.",
         ["Registrar tasa"] = "Guarda una nueva tasa de cambio.",
+        ["Reiniciar"] = "Reinicia los equipos marcados o toda la lista, según elija en el menú.",
         ["Reiniciar equipo"] = "Reinicia el equipo.",
         ["Restablecer"] = "Restaura los valores predeterminados.",
         ["Restaurar desde archivo"] = "Restaura la base de datos desde un archivo.",
@@ -120,7 +128,9 @@ public static class Kit
         ["Subir"] = "Mueve el elemento una posición hacia arriba.",
         ["Subir imágenes"] = "Agrega imágenes a la galería.",
         ["Subir videos"] = "Agrega videos a las promociones.",
+        ["Seleccionados"] = "Aplica encendido, apagado o reinicio solo a los equipos marcados.",
         ["Sincronizar carpeta"] = "Importa las imágenes nuevas o modificadas de la carpeta de fondos.",
+        ["Solo reglas"] = "Diagnostica sin enviar datos a la IA en la nube.",
         ["Transferir a otro PC"] = "Cambia la sesión a otro equipo.",
         ["Vaciar"] = "Quita todos los productos del pedido.",
         ["Ver movimientos del producto"] = "Muestra los movimientos del producto.",
@@ -404,6 +414,23 @@ public static class Kit
         if (width > 0) column.Width = new DataGridLength(width);
         return column;
     }
+
+    /// <summary>Casilla compacta de selección múltiple enlazada a una propiedad bool de la fila.</summary>
+    public static DataGridCheckBoxColumn CheckBoxColumn(string header, string path, double width = 44)
+        => new()
+        {
+            Header = L.T(header),
+            Binding = new Binding(path)
+            {
+                Mode = BindingMode.TwoWay,
+                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            },
+            ElementStyle = Style("SmallCheckBox"),
+            EditingElementStyle = Style("SmallCheckBox"),
+            Width = width,
+            CanUserResize = false,
+            CanUserSort = false
+        };
 
     /// <summary>Columna que se ajusta al contenido para no cortar las palabras.</summary>
     public static DataGridTextColumn AutoCol(string header, string path,

@@ -82,6 +82,10 @@ public class CyberApi : ApiClient
     public Task<ClientUpdateStatusDto> ClientUpdateStatusAsync()
         => GetAsync<ClientUpdateStatusDto>("/api/client-update/status");
 
+    /// <summary>Ejecuta el solucionador de problemas con reglas y, si se pide, IA en la nube.</summary>
+    public Task<TroubleshootReportDto> DiagnoseAsync(TroubleshootRequestDto request)
+        => PostAsync<TroubleshootReportDto>("/api/troubleshoot/diagnose", request);
+
     /// <summary>Avisa a estaciones y agentes que hay un paquete de cliente nuevo.</summary>
     public Task NotifyClientUpdateAsync(int? stationId = null)
         => PostAsync(stationId is int id

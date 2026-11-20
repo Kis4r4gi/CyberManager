@@ -86,6 +86,7 @@ builder.Services.AddScoped<UpdateReminderService>();
 builder.Services.AddScoped<NetworkScanService>();
 builder.Services.AddScoped<StationDiscoveryService>();
 builder.Services.AddScoped<StationDeletionService>();
+builder.Services.AddScoped<TroubleshootService>();
 builder.Services.AddSingleton<ClientUpdateService>();
 builder.Services.AddSingleton(new DatabaseInfo(dbFile));
 builder.Services.AddSingleton<TokenService>();
@@ -249,6 +250,7 @@ app.MapBackupEndpoints();
 app.MapUpdateEndpoints();
 app.MapNetworkScanEndpoints();
 app.MapClientUpdateEndpoints();
+app.MapTroubleshootEndpoints();
 
 app.MapHub<AdminHub>("/hubs/admin");
 app.MapHub<AgentHub>("/hubs/agent");

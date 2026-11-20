@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CyberManager.Server.Data;
 using CyberManager.Server.Services;
 using CyberManager.Shared;
@@ -10,14 +11,22 @@ namespace CyberManager.Server.Hubs;
 /// <summary>Agente Windows de cada equipo. Se autentica con el token del equipo.</summary>
 public class AgentHub : Hub
 {
+    private static readonly ConcurrentDictionary<int, int> Connections = new();
+
     private readonly AppDbContext _db;
     private readonly RealtimeService _realtime;
+    private readonly ILogger<AgentHub> _log;
 
-    public AgentHub(AppDbContext db, RealtimeService realtime)
+    public AgentHub(AppDbContext db, RealtimeService realtime, ILogger<AgentHub> log)
     {
         _db = db;
         _realtime = realtime;
+        _log = log;
     }
+
+    /// <summary>Indica si algún agente está conectado para recibir órdenes de sistema.</summary>
+    public static bool IsConnected(int stationId)
+        => Connections.TryGetValue(stationId, out var count) && count > 0;
 
     public override async Task OnConnectedAsync()
     {
@@ -29,8 +38,10 @@ public class AgentHub : Hub
         }
 
         Context.Items["stationId"] = stationId.Value;
+        Connections.AddOrUpdate(stationId.Value, 1, (_, count) => count + 1);
         await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeService.AgentGroup(stationId.Value));
         await Clients.Caller.SendAsync("Ready", stationId.Value);
+        _log.LogInformation("Agente conectado: equipo {StationId}", stationId.Value);
         await _realtime.BroadcastEventAsync("AgentOnline", $"Equipo {stationId} conectado");
         await base.OnConnectedAsync();
     }
@@ -38,7 +49,11 @@ public class AgentHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         if (Context.Items.TryGetValue("stationId", out var v) && v is int id)
+        {
+            Connections.AddOrUpdate(id, 0, (_, count) => Math.Max(0, count - 1));
+            _log.LogInformation("Agente desconectado: equipo {StationId}", id);
             await _realtime.BroadcastEventAsync("AgentOffline", $"Equipo {id} desconectado");
+        }
         await base.OnDisconnectedAsync(exception);
     }
 

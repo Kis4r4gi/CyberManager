@@ -22,7 +22,7 @@ public partial class MainWindow : Window
     /// <summary>Vistas reservadas a administradores y técnicos.</summary>
     private static readonly HashSet<string> AdministrativeViews = new(StringComparer.Ordinal)
     {
-        "products", "inventory", "purchases", "stations", "media", "reports", "settings"
+        "products", "inventory", "purchases", "stations", "media", "reports", "troubleshoot", "settings"
     };
 
     private readonly Dictionary<string, UserControl> _views = new();
@@ -276,6 +276,7 @@ public partial class MainWindow : Window
                 "reservations" => new ReservationsView(),
                 "media" => new MediaView(),
                 "reports" => new ReportsView(),
+                "troubleshoot" => new TroubleshootView(),
                 "settings" => new SettingsView(),
                 _ => new DashboardView()
             };

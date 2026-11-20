@@ -2133,6 +2133,42 @@ en la base real: ya no existen las columnas `IgtfAmount`/`IgtfAmountVes` ni las 
 sin errores en el log. Tampoco aparece la cadena `IGTF` en los DLL publicados ni en `client.zip`.
 Sin commit/push ni release.
 
+### Control de equipos reorganizado y solucionador con IA (1.3.50 / 1.3.51, 2026-11-20)
+
+- Se desplegó **1.3.50** con la columna compacta «Sel.» (casilla `SmallCheckBox` de 14×14 en
+  `Dark.xaml`), selección preservada por `Id` entre refrescos, menús desplegables por acción
+  («Encender», «Apagar», «Reiniciar» y «Selección») y opciones en el menú «Acciones» de cada fila
+  para apagar o reiniciar solo ese equipo. Los botones dejaron de decir «todos»: el alcance se elige
+  dentro del menú («Equipos marcados» o «Toda la lista»). Respaldos
+  `_*-pre-1.3.50-20261120-024905`; servidor, consola y estación 11 en 1.3.50, `upToDate=1`.
+- El usuario informó que el apagado de la estación 01 no surtió efecto. El endpoint
+  `POST /api/stations/11/command` con `Shutdown` enruta la orden **solo al hub del agente**
+  (`RealtimeService.SendAgentCommandAsync`), mientras que el cliente recibe las órdenes de monitor,
+  audio y bloqueo. No hay líneas `Agente conectado: equipo 11` en el registro, y el actualizador de
+  cliente solo reemplaza la carpeta `Client`, no `Agent`: la causa probable es que el servicio
+  `CyberManagerAgent` no está conectado o quedó en una versión anterior. RPC/WinRM desde este equipo
+  hacia `192.168.1.4` están bloqueados, así que el paquete del agente debe copiarse a mano.
+- Se añadió un solucionador con reglas + explicación de **IA en la nube** (proveedor compatible con
+  OpenAI): DTO `Troubleshoot`, servicio `TroubleshootService`, endpoint Admin
+  `POST /api/troubleshoot/diagnose`, vista **Sistema → Solucionador** y configuración
+  `Troubleshoot:Ai` con clave en `CYBERMANAGER_AI_API_KEY`. Los registros se sanitizan antes de
+  enviarlos (tokens, correos, RIF, IPs y números largos). Sin clave sigue funcionando solo con reglas.
+- `AgentHub` ahora mantiene un contador de conexiones, registra conexión/desconexión y permite al
+  solucionador marcar como crítico que un equipo no tenga agente conectado, con la causa y el paso
+  concreto para corregirlo. Además, `POST /api/stations/{id}/command` devuelve 409 con un mensaje
+  claro cuando se pide apagar, reiniciar o cerrar sesión y el agente no está conectado, en lugar de
+  responder «orden enviada» sin efecto.
+- **Despliegue y verificación 1.3.51**: compilación final con 0 errores/0 advertencias; respaldos
+  `_*-pre-1.3.51-20261120-031450`; `/api/health` → `1.3.51 ok`, manifiesto `1.3.51` con SHA-256
+  coincidente en el `client.zip` instalado, sección `Troubleshoot:Ai` agregada sin sobrescribir
+  `appsettings.json`, tarea `CyberManagerServer` en `Running`. Se notificó a la estación 11: versión
+  `1.3.51`, `Available`, `upToDate=1`, `outdated=0`. Consola abierta como
+  `CyberManager · Administración · v1.3.51`; la vista **Sistema → Solucionador** se abre, ejecuta
+  reglas automáticamente y reporta como crítico «1 equipos sin agente conectado → Estacion 01», con
+  la instrucción de actualizar el agente. Sin clave de IA muestra «IA no disponible: No hay API key
+  configurada» y mantiene los hallazgos locales. Paquete `C:\CyberManager\CyberManager-Agente-1.3.51-x64.zip`
+  listo para instalar manualmente en la estación.
+
 ---
 
 ## Pendientes / siguientes pasos

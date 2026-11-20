@@ -21,6 +21,9 @@ public sealed class StationsView : UserControl, IRefreshable
     private readonly ServerAddressBar _serverAddressBar = new();
 
     private List<StationDto> _stations = new();
+    // Selección múltiple: se guarda por Id para conservarla cuando la tabla se
+    // vuelve a dibujar por el refresco automático o un cambio de filtro.
+    private readonly HashSet<int> _checkedIds = new();
     private List<ZoneDto> _zones = new();
     private List<RateDto> _rates = new();
 
@@ -61,17 +64,44 @@ public sealed class StationsView : UserControl, IRefreshable
             column.Width = DataGridLength.Auto;
         }
 
+        if (App.Session.Role == UserRole.Admin)
+            _grid.Columns.Insert(0, Kit.CheckBoxColumn("Sel.", nameof(StationRow.IsSelected)));
+
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        root.Children.Add(Kit.PageHeader("Equipos y zonas",
-            "Administre los PC del local, su tarifa por hora y las credenciales que usa el cliente.",
+        var headerActions = new List<FrameworkElement>
+        {
             Kit.Button("Escanear la red", "PrimaryButton", ScanNetwork),
             Kit.Button("Nuevo equipo", "PrimaryButton", NewStation),
-            Kit.Button("Actualizar", "GhostButton", () => _ = Ui.Run(RefreshAsync, "No se pudieron cargar los equipos"))));
+            Kit.Button("Actualizar", "GhostButton", () => _ = Ui.Run(RefreshAsync, "No se pudieron cargar los equipos"))
+        };
+
+        if (App.Session.Role == UserRole.Admin)
+        {
+            // Acciones agrupadas por operación: el desplegable elige el alcance
+            // (equipos marcados con «Sel.» o toda la lista) sin llenar la cabecera.
+            headerActions.Add(Kit.MenuButton("Encender", "SuccessButton",
+                ("Equipos marcados", () => Power(false, null)),
+                ("Toda la lista", () => Power(true, null))));
+            headerActions.Add(Kit.MenuButton("Apagar", "DangerButton",
+                ("Equipos marcados", () => Power(false, AgentCommandType.Shutdown)),
+                ("Toda la lista", () => Power(true, AgentCommandType.Shutdown))));
+            headerActions.Add(Kit.MenuButton("Reiniciar", "WarningButton",
+                ("Equipos marcados", () => Power(false, AgentCommandType.Restart)),
+                ("Toda la lista", () => Power(true, AgentCommandType.Restart))));
+            headerActions.Add(Kit.MenuButton("Selección", "GhostButton",
+                ("Marcar visibles", MarkAll),
+                ("Marcar en línea", MarkOnline),
+                ("Quitar marcas", ClearMarks)));
+        }
+
+        root.Children.Add(Kit.PageHeader("Equipos y zonas",
+            "Administre los PC del local, su tarifa por hora y las credenciales que usa el cliente.",
+            headerActions.ToArray()));
 
         // ---- Box de actualización de los clientes instalados ----
         var clientWrap = new WrapPanel
@@ -178,7 +208,10 @@ public sealed class StationsView : UserControl, IRefreshable
         root.Children.Add(content);
 
         var footer = new Grid { Margin = new Thickness(0, 10, 0, 0) };
-        var hint = Kit.Muted("Abra el menú «Acciones» de cada equipo para subir, bajar, editar, cambiar el nombre o la conexión, bloquear, enviar mensajes o eliminarlo. Cada equipo necesita su ID y token; use la IP LAN del servidor, no localhost.");
+        var hintText = "Abra el menú «Acciones» de cada equipo para subir, bajar, editar, cambiar el nombre o la conexión, bloquear, enviar mensajes o eliminarlo. Cada equipo necesita su ID y token; use la IP LAN del servidor, no localhost.";
+        if (App.Session.Role == UserRole.Admin)
+            hintText += " Marque «Sel.» para elegir equipos; los menús «Encender», «Apagar» y «Reiniciar» permiten actuar sobre los marcados o sobre toda la lista. «Selección» administra las marcas y el menú «Acciones» de cada fila apaga o reinicia solo ese equipo.";
+        var hint = Kit.Muted(hintText);
         hint.HorizontalAlignment = HorizontalAlignment.Right;
         footer.Children.Add(hint);
         Grid.SetRow(footer, 3);
@@ -315,6 +348,9 @@ public sealed class StationsView : UserControl, IRefreshable
         menu.Items.Add(StationMenuItem("Ver pantalla", ShowScreen));
         menu.Items.Add(StationMenuItem("Bloquear", LockStation));
         menu.Items.Add(StationMenuItem("Mensaje", SendMessage));
+        menu.Items.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
+        menu.Items.Add(StationMenuItem("Apagar", () => PowerStation(Selected, AgentCommandType.Shutdown), danger: true));
+        menu.Items.Add(StationMenuItem("Reiniciar", () => PowerStation(Selected, AgentCommandType.Restart)));
         menu.Items.Add(StationMenuItem("Actualizar cliente", UpdateClient));
         menu.Items.Add(StationMenuItem("Mantenimiento", ToggleMaintenance));
         menu.Items.Add(StationMenuItem("Activar / desactivar", ToggleActive));
@@ -398,7 +434,7 @@ public sealed class StationsView : UserControl, IRefreshable
             .ThenBy(s => s.Name)
             .ToList();
 
-        _grid.ItemsSource = filtered.Select(s => new StationRow(s)).ToList();
+        _grid.ItemsSource = filtered.Select(s => new StationRow(s, _checkedIds)).ToList();
 
         // La lista se refresca sola; se conserva la fila seleccionada para que el
         // menú de acciones siga apuntando al mismo equipo.
@@ -412,6 +448,103 @@ public sealed class StationsView : UserControl, IRefreshable
 
         _summaryText.Text = $"{filtered.Count} equipos visibles · {online} en línea · " +
                             $"{_stations.Count(s => s.Status == StationStatus.Paused)} en pausa";
+    }
+
+    private void MarkAll()
+    {
+        foreach (var row in _grid.Items.OfType<StationRow>()) row.IsSelected = true;
+        Render();
+    }
+
+    private void MarkOnline()
+    {
+        foreach (var row in _grid.Items.OfType<StationRow>())
+            if (StationPresence.IsOnline(row.Source.LastSeenUtc)) row.IsSelected = true;
+        Render();
+    }
+
+    private void ClearMarks()
+    {
+        _checkedIds.Clear();
+        Render();
+    }
+
+    /// <summary>Enciende, apaga o reinicia la lista completa o solo los equipos marcados.</summary>
+    private void Power(bool all, AgentCommandType? command)
+    {
+        var targets = all
+            ? _stations.ToList()
+            : _stations.Where(s => _checkedIds.Contains(s.Id)).ToList();
+
+        if (targets.Count == 0)
+        {
+            Ui.Info("Marque equipos en la columna «Sel.» o elija «Toda la lista» en el menú de la acción.", "Equipos");
+            return;
+        }
+
+        var action = command switch
+        {
+            null => "encender",
+            AgentCommandType.Shutdown => "apagar",
+            _ => "reiniciar"
+        };
+        var scope = all ? "toda la lista de equipos" : $"los {targets.Count} equipos marcados";
+        if (!Ui.Confirm($"¿Desea {action} {scope}?", "Control de equipos")) return;
+
+        _ = Ui.Run(() => SendPowerAsync(targets, command), "No se pudo enviar la orden a los equipos");
+    }
+
+    /// <summary>Apaga o reinicia un único equipo desde su menú de acciones.</summary>
+    private void PowerStation(StationDto? station, AgentCommandType command)
+    {
+        if (station is null) return;
+
+        var action = command == AgentCommandType.Shutdown ? "apagar" : "reiniciar";
+        if (!Ui.Confirm($"¿Desea {action} {station.Name}?", "Control de equipos")) return;
+
+        _ = Ui.Run(() => SendPowerAsync(new List<StationDto> { station }, command),
+            "No se pudo enviar la orden al equipo");
+    }
+
+    private async Task SendPowerAsync(List<StationDto> targets, AgentCommandType? command)
+    {
+        var sent = 0;
+        var withoutMac = 0;
+        var failures = new List<string>();
+
+        foreach (var station in targets)
+        {
+            try
+            {
+                if (command is null)
+                {
+                    if (string.IsNullOrWhiteSpace(station.MacAddress))
+                    {
+                        withoutMac++;
+                        continue;
+                    }
+                    await App.Api.WakeStationAsync(station.Id);
+                }
+                else
+                {
+                    await App.Api.CommandAsync(station.Id, command.Value);
+                }
+                sent++;
+            }
+            catch (Exception ex)
+            {
+                failures.Add($"{station.Name}: {ex.Message}");
+            }
+        }
+
+        var message = $"Órdenes enviadas: {sent} de {targets.Count}.";
+        if (withoutMac > 0)
+            message += $" {withoutMac} sin MAC (Wake on LAN no disponible).";
+        if (failures.Count > 0)
+            message += Environment.NewLine + Environment.NewLine +
+                       string.Join(Environment.NewLine, failures.Take(5));
+
+        Ui.Info(message, "Equipos");
     }
 
     /// <summary>Mueve el equipo seleccionado una posición y guarda el orden manual.</summary>
@@ -774,9 +907,14 @@ public sealed class StationsView : UserControl, IRefreshable
 
 public sealed class StationRow
 {
-    public StationRow(StationDto station)
+    private readonly HashSet<int> _checkedIds;
+    private bool _isSelected;
+
+    public StationRow(StationDto station, HashSet<int> checkedIds)
     {
         Source = station;
+        _checkedIds = checkedIds;
+        IsSelected = checkedIds.Contains(station.Id);
         Name = station.Name;
         Kind = Labels.StationKindName(station.Kind);
         Controllers = station.Kind == StationKind.Console
@@ -797,6 +935,19 @@ public sealed class StationRow
         StatusBrush = Labels.StatusColor(displayStatus);
         LastSeen = station.LastSeenUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Nunca";
         Active = station.Active ? "Sí" : "No";
+    }
+
+    /// <summary>Marca independiente de la fila; se conserva por Id entre refrescos.</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            if (value) _checkedIds.Add(Source.Id);
+            else _checkedIds.Remove(Source.Id);
+        }
     }
 
     public StationDto Source { get; }
