@@ -102,6 +102,13 @@
                                     <TextBlock Text="Caja del turno" />
                                 </StackPanel>
                             </Button>
+                            <Button Style="{StaticResource NavButton}" CommandParameter="tickets" Click="Nav_Click"
+                                    ToolTip="Busca tickets antiguos por número, cliente o producto y permite reimprimirlos.">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0" />
+                                    <TextBlock Text="Buscar tickets" />
+                                </StackPanel>
+                            </Button>
 
                             <TextBlock x:Name="CatalogLabel" Text="CATÁLOGO" Style="{StaticResource Label}" Margin="12,16,0,6" />
                             <Button Style="{StaticResource NavButton}" CommandParameter="products" Click="Nav_Click"

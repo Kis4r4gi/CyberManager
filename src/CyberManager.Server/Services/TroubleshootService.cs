@@ -288,11 +288,17 @@ public sealed class TroubleshootService
             WriteIndented = false
         });
 
-        return "Eres un técnico de soporte de CyberManager. Analiza el siguiente diagnóstico " +
-               "y responde en español, en máximo 12 líneas, sin inventar datos. " +
-               "Indica la causa más probable, los pasos concretos de verificación y una recomendación priorizando " +
-               "la seguridad de los cobros y la disponibilidad de los equipos. No propongas borrar datos ni desactivar " +
-               "la autenticación. Datos (tokens, correos, RIF, IPs y números largos ya están sanitizados):\n" +
+        return "Eres un técnico de soporte de CyberManager. El entorno es Windows: el servidor es la " +
+               "tarea programada «CyberManagerServer», la consola es WPF y cada estación ejecuta el " +
+               "servicio de Windows «CyberManagerAgent». Analiza el siguiente diagnóstico y responde en " +
+               "español, en máximo 12 líneas, sin inventar datos. Indica la causa más probable, los pasos " +
+               "concretos de verificación y una recomendación priorizando la seguridad de los cobros y la " +
+               "disponibilidad de los equipos. Usa exclusivamente herramientas de Windows: " +
+               "`Get-Service CyberManagerAgent`, `sc.exe query CyberManagerAgent`, el Visor de eventos de " +
+               "Windows, `Test-NetConnection <IP> -Port 5080` y la consola de CyberManager para publicar " +
+               "actualizaciones o reparar el agente. No menciones systemctl, /var/log ni comandos de Linux. " +
+               "No propongas borrar datos ni desactivar la autenticación. Datos (tokens, correos, RIF, IPs y " +
+               "números largos ya están sanitizados):\n" +
                json;
     }
 

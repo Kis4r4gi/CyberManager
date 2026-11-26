@@ -262,31 +262,53 @@ public class SaleService
             .FirstOrDefaultAsync(x => x.Id == saleId)
             ?? throw AppException.NotFound("Venta");
 
-        return new SaleDto(s.Id, s.Number, s.StationId, s.Station?.Name, s.SessionId,
-            s.CustomerId, s.CustomerName ?? s.Customer?.Name,
-            s.Subtotal, s.Discount, s.Tax, s.Total, s.ExchangeRate, s.TotalVes,
-            s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
-            s.Status, s.CreatedUtc, s.Notes,
-            s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,
-                i.UnitPrice, i.Discount, i.Total)).ToList());
+        return ToDto(s);
     }
 
-    public async Task<List<SaleDto>> ListAsync(DateTime from, DateTime to, int? stationId = null, int? take = 200)
+    private static SaleDto ToDto(Sale s) => new(s.Id, s.Number, s.StationId, s.Station?.Name, s.SessionId,
+        s.CustomerId, s.CustomerName ?? s.Customer?.Name, s.CustomerTaxId ?? s.Customer?.DocumentId,
+        s.Subtotal, s.Discount, s.Tax, s.Total, s.ExchangeRate, s.TotalVes,
+        s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
+        s.Status, s.CreatedUtc, s.Notes,
+        s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,
+            i.UnitPrice, i.Discount, i.Total)).ToList());
+
+    public async Task<List<SaleDto>> ListAsync(DateTime from, DateTime to, int? stationId = null,
+        int? take = 200, string? number = null, string? customer = null,
+        string? product = null, SaleStatus? status = null)
     {
         var q = _db.Sales.AsNoTracking()
             .Include(x => x.Items).Include(x => x.Station).Include(x => x.Customer)
             .Where(x => x.CreatedUtc >= from && x.CreatedUtc <= to);
 
         if (stationId is int sid) q = q.Where(x => x.StationId == sid);
+        if (status is SaleStatus st) q = q.Where(x => x.Status == st);
 
-        var list = await q.OrderByDescending(x => x.CreatedUtc).Take(take ?? 200).ToListAsync();
-        return list.Select(s => new SaleDto(s.Id, s.Number, s.StationId, s.Station?.Name, s.SessionId,
-            s.CustomerId, s.CustomerName ?? s.Customer?.Name,
-            s.Subtotal, s.Discount, s.Tax, s.Total, s.ExchangeRate, s.TotalVes,
-            s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
-            s.Status, s.CreatedUtc, s.Notes,
-            s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,
-                i.UnitPrice, i.Discount, i.Total)).ToList())).ToList();
+        if (!string.IsNullOrWhiteSpace(number))
+        {
+            var value = number.Trim();
+            q = q.Where(x => x.Number.Contains(value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(customer))
+        {
+            var value = customer.Trim();
+            q = q.Where(x =>
+                (x.CustomerName != null && x.CustomerName.Contains(value)) ||
+                (x.CustomerTaxId != null && x.CustomerTaxId.Contains(value)) ||
+                (x.Customer != null && x.Customer.Name.Contains(value)) ||
+                (x.Customer != null && x.Customer.DocumentId != null && x.Customer.DocumentId.Contains(value)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(product))
+        {
+            var value = product.Trim();
+            q = q.Where(x => x.Items.Any(i => i.Description.Contains(value)));
+        }
+
+        var limit = Math.Clamp(take ?? 200, 1, 1000);
+        var list = await q.OrderByDescending(x => x.CreatedUtc).Take(limit).ToListAsync();
+        return list.Select(ToDto).ToList();
     }
 
     public async Task<string> NextControlNumberAsync(InvoiceType type)

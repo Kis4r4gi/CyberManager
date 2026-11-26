@@ -38,7 +38,7 @@ public record CreateSaleRequest(
 public record SaleItemDto(long Id, int? ProductId, string Description, decimal Quantity, decimal UnitPrice, decimal Discount, decimal Total);
 public record SaleDto(
     long Id, string Number, int? StationId, string? StationName, int? SessionId,
-    int? CustomerId, string? CustomerName, decimal Subtotal, decimal Discount, decimal Tax,
+    int? CustomerId, string? CustomerName, string? CustomerTaxId, decimal Subtotal, decimal Discount, decimal Tax,
     decimal Total, decimal ExchangeRate, decimal TotalVes,
     decimal PaidAmount, Currency PaidCurrency, decimal Change, PaymentMethod Method,
     InvoiceType InvoiceType, string? ControlNumber, SaleStatus Status,

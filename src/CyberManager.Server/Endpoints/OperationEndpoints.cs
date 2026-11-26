@@ -66,11 +66,13 @@ public static class OperationEndpoints
         g.MapPost("/", async (CreateSaleRequest req, ClaimsPrincipal user, SaleService sales) =>
             Results.Ok(await sales.CreateAsync(req, user.UserId())));
 
-        g.MapGet("/", async (DateTime? from, DateTime? to, int? stationId, SaleService sales) =>
+        g.MapGet("/", async (DateTime? from, DateTime? to, int? stationId, int? take,
+            string? number, string? customer, string? product, SaleStatus? status,
+            SaleService sales) =>
             Results.Ok(await sales.ListAsync(
                 from ?? DateTime.Today.ToUniversalTime(),
                 to ?? DateTime.Today.AddDays(1).ToUniversalTime(),
-                stationId)));
+                stationId, take, number, customer, product, status)));
 
         g.MapGet("/{id:long}", async (long id, SaleService sales) => Results.Ok(await sales.ToDtoAsync(id)));
 

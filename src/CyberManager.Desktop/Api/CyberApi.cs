@@ -129,6 +129,20 @@ public class CyberApi : ApiClient
     public Task<SaleDto> CreateSaleAsync(CreateSaleRequest req) => PostAsync<SaleDto>("/api/sales", req);
     public Task<List<SaleDto>> SalesAsync(DateTime from, DateTime to)
         => GetAsync<List<SaleDto>>($"/api/sales?from={from:O}&to={to:O}");
+
+    /// <summary>Busca tickets antiguos por número, cliente/RIF o producto dentro de un rango.</summary>
+    public Task<List<SaleDto>> SearchSalesAsync(DateTime from, DateTime to, string? number = null,
+        string? customer = null, string? product = null, SaleStatus? status = null, int? take = null)
+    {
+        var query = new List<string> { $"from={from:O}", $"to={to:O}" };
+        if (!string.IsNullOrWhiteSpace(number)) query.Add($"number={Uri.EscapeDataString(number.Trim())}");
+        if (!string.IsNullOrWhiteSpace(customer)) query.Add($"customer={Uri.EscapeDataString(customer.Trim())}");
+        if (!string.IsNullOrWhiteSpace(product)) query.Add($"product={Uri.EscapeDataString(product.Trim())}");
+        if (status is SaleStatus value) query.Add($"status={value}");
+        if (take is int limit) query.Add($"take={limit}");
+        return GetAsync<List<SaleDto>>($"/api/sales?{string.Join('&', query)}");
+    }
+
     public Task<SaleDto> CancelSaleAsync(long id) => PostAsync<SaleDto>($"/api/sales/{id}/cancel", new { });
     public Task<InvoiceDto> InvoiceAsync(long id) => GetAsync<InvoiceDto>($"/api/sales/{id}/invoice");
 

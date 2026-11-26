@@ -2251,8 +2251,28 @@ respuesta OpenAI-compatible.
   reinició la tarea programada para que tomase la variable y el nuevo `appsettings.json`.
 - `/api/health` → `1.3.54 ok`; `POST /api/troubleshoot/diagnose` con `useAi=true` → `aiConfigured=true`,
   `aiUsed=true`, sin error. Límites del tier anónimo: ~100 respuestas/día y una petición cada 45 s; al
-  agotarse se muestran solo las reglas. No se publicó una release nueva: es un cambio de configuración,
-  no de código.
+  agotarse se muestran solo las reglas. Inicialmente era solo configuración; la nueva `BaseUrl`/`Model`
+  y el prompt corregido quedaron incluidos en la release 1.3.56.
+
+### Buscador de tickets y prompt de IA para Windows (1.3.56, 2026-11-25)
+
+El solucionador indicaba `systemctl` y `/var/log` aunque el agente es un servicio de Windows. Se
+amplió el prompt en `TroubleshootService.BuildPrompt` para declarar el entorno (tarea
+`CyberManagerServer`, consola WPF y servicio `CyberManagerAgent`) y exigir comandos de Windows
+(`Get-Service`, `sc.exe query`, Visor de eventos, `Test-NetConnection -Port 5080`), prohibiendo
+explícitamente comandos de Linux.
+
+Para localizar comprobantes ya emitidos se agregó la vista **Buscar tickets**:
+
+- `GET /api/sales` acepta `number`, `customer`, `product`, `status` y `take` (tope 1000) además de
+  `from`/`to` y `stationId`. `SaleService.ListAsync` aplica búsqueda parcial por número, nombre/RIF
+  del cliente y descripción de productos, con un único `ToDto` compartido con el detalle.
+- `SaleDto` expone ahora `CustomerTaxId` para mostrar el RIF en la lista.
+- `CyberApi.SearchSalesAsync` construye la query con escape; la consola nueva `TicketsView` filtra
+  por número, fechas, cliente/RIF, producto y estado, y ofrece **Ver** (reutiliza
+  `SaleReceiptDialog`) e **Imprimir** (reutiliza `TicketPrinter` y la configuración de impresora).
+- Botón *Buscar tickets* en Operación, disponible también para cajeros; rango inicial de un año y
+  búsqueda desde 2000 si se deja «Desde» vacío. Compilación: 0 errores, 0 advertencias.
 
 ---
 

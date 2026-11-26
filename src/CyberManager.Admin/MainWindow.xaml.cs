@@ -268,6 +268,7 @@ public partial class MainWindow : Window
             {
                 "pos" => new PosView(),
                 "cash" => new CashView(),
+                "tickets" => new TicketsView(),
                 "products" => new ProductsView(),
                 "inventory" => new InventoryView(),
                 "purchases" => new PurchasesView(),
