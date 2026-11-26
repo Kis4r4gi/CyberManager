@@ -52,11 +52,13 @@ public record CreateSupplierPaymentRequest(decimal Amount, PaymentMethod Method,
 
 public record CustomerDto(
     int Id, string Name, string? Phone, string? Email, string? DocumentId, string? Address, string? FiscalData,
-    decimal Balance, decimal CreditLimit, bool IsMember, bool Active, string? Notes, DateTime CreatedUtc);
+    decimal Balance, decimal CreditLimit, bool IsMember, bool Active, string? Notes, DateTime CreatedUtc,
+    CustomerDocumentType DocumentType = CustomerDocumentType.Personal);
 
 public record SaveCustomerRequest(
     string Name, string? Phone, string? Email, string? DocumentId, string? Address, string? FiscalData,
-    decimal CreditLimit, bool IsMember, bool Active, string? Notes);
+    decimal CreditLimit, bool IsMember, bool Active, string? Notes,
+    CustomerDocumentType DocumentType = CustomerDocumentType.Personal);
 
 public record RechargeRequest(decimal Amount, PaymentMethod Method, string? Description);
 public record CustomerTransactionDto(long Id, int CustomerId, CustomerTransactionType Type, decimal Amount,

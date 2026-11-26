@@ -20,6 +20,6 @@ public record InvoiceDto(
     decimal Subtotal, decimal Discount, decimal Tax, decimal Total,
     decimal SubtotalVes, decimal TaxVes, decimal TotalVes,
     decimal PaidAmount, Currency PaidCurrency, decimal Change, PaymentMethod Method,
-    string? CashierName, string? Footer);
+    string? CashierName, string? Footer, CustomerDocumentType? CustomerDocumentType = null);
 
 public record InvoiceLineDto(string Description, decimal Quantity, decimal UnitPrice, decimal Total);

@@ -40,7 +40,7 @@ public sealed record TicketSettings(
     public static async Task<TicketSettings> LoadAsync() => From(await App.Api.SettingsAsync());
 }
 
-/// <summary>Genera e imprime tickets de venta y cierres diarios con FlowDocument.</summary>
+/// <summary>Genera e imprime facturas y cierres diarios con FlowDocument.</summary>
 public static class TicketPrinter
 {
     private const double TicketWidth = 302; // 80 mm a 96 ppp
@@ -80,6 +80,13 @@ public static class TicketPrinter
         AddKV(doc, "Fecha", sale.CreatedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"));
         AddKV(doc, "Pago", Labels.PaymentName(sale.Method));
         if (!string.IsNullOrWhiteSpace(sale.CustomerName)) AddKV(doc, "Cliente", sale.CustomerName!);
+        if (!string.IsNullOrWhiteSpace(sale.CustomerTaxId))
+        {
+            var documentLabel = sale.CustomerDocumentType is CustomerDocumentType type
+                ? Labels.DocumentTypeName(type)
+                : L.T("Documento / RIF");
+            AddKV(doc, documentLabel, sale.CustomerTaxId!);
+        }
 
         AddDivider(doc);
 

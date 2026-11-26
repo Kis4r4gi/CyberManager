@@ -19,7 +19,7 @@ public static class Mappers
 
     public static CustomerDto ToDto(Customer c) => new(
         c.Id, c.Name, c.Phone, c.Email, c.DocumentId, c.Address, c.FiscalData,
-        c.Balance, c.CreditLimit, c.IsMember, c.Active, c.Notes, c.CreatedUtc);
+        c.Balance, c.CreditLimit, c.IsMember, c.Active, c.Notes, c.CreatedUtc, c.DocumentType);
 
     public static SaleItemDto ToDto(SaleItem i) => new(
         i.Id, i.ProductId, i.Description, i.Quantity, i.UnitPrice, i.Discount, i.Total);

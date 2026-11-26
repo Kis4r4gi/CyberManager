@@ -117,6 +117,34 @@ public class SaleService
                        ?? throw AppException.NotFound("Cliente");
         }
 
+        // El POS permite emitir la factura con nombre y documento de identidad. Si el
+        // documento ya existe se reutiliza el cliente; si no, se crea para futuras ventas.
+        var document = string.IsNullOrWhiteSpace(req.CustomerTaxId)
+            ? null
+            : req.CustomerTaxId.Trim().ToUpperInvariant();
+        if (customer is null && document is not null)
+        {
+            customer = await _db.Customers.FirstOrDefaultAsync(c =>
+                c.DocumentId != null && c.DocumentId.ToUpper() == document);
+
+            if (customer is null)
+            {
+                if (string.IsNullOrWhiteSpace(req.CustomerName))
+                    throw new AppException("Indique el nombre del cliente para guardar el documento.");
+
+                customer = new Customer
+                {
+                    Name = req.CustomerName.Trim(),
+                    DocumentId = document,
+                    DocumentType = req.CustomerDocumentType ?? CustomerDocumentType.Personal,
+                    Active = true,
+                    CreatedUtc = DateTime.UtcNow
+                };
+                _db.Customers.Add(customer);
+                await _db.SaveChangesAsync();
+            }
+        }
+
         if (req.Method == PaymentMethod.CustomerBalance)
         {
             if (customer is null) throw new AppException("Seleccione un cliente para cobrar a su cuenta.");
@@ -131,7 +159,7 @@ public class SaleService
             Number = Guid.NewGuid().ToString("N")[..12],
             CashSessionId = cash?.Id,
             UserId = userId,
-            CustomerId = req.CustomerId,
+            CustomerId = customer?.Id,
             StationId = req.StationId,
             SessionId = req.SessionId,
             Subtotal = net,
@@ -152,8 +180,9 @@ public class SaleService
             CreatedUtc = DateTime.UtcNow,
             Items = lines
         };
-        sale.CustomerName = customer?.Name;
-        sale.CustomerTaxId = req.CustomerTaxId ?? customer?.DocumentId;
+        sale.CustomerName = req.CustomerName ?? customer?.Name;
+        sale.CustomerTaxId = document ?? customer?.DocumentId;
+        sale.CustomerDocumentType = req.CustomerDocumentType ?? customer?.DocumentType;
 
         if (req.InvoiceType == InvoiceType.Factura)
             sale.ControlNumber = await NextControlNumberAsync(InvoiceType.Factura);
@@ -271,7 +300,8 @@ public class SaleService
         s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod, s.InvoiceType, s.ControlNumber,
         s.Status, s.CreatedUtc, s.Notes,
         s.Items.Select(i => new SaleItemDto(i.Id, i.ProductId, i.Description, i.Quantity,
-            i.UnitPrice, i.Discount, i.Total)).ToList());
+            i.UnitPrice, i.Discount, i.Total)).ToList(),
+        s.CustomerDocumentType ?? s.Customer?.DocumentType);
 
     public async Task<List<SaleDto>> ListAsync(DateTime from, DateTime to, int? stationId = null,
         int? take = 200, string? number = null, string? customer = null,

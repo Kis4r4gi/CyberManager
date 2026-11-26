@@ -55,35 +55,61 @@ public sealed class TicketsView : UserControl, IRefreshable
         _grid.IsReadOnly = true;
         _grid.SelectionMode = DataGridSelectionMode.Single;
 
-        var filters = Kit.HStack(8,
-            Kit.Label("N°"), _number,
-            Kit.Label("Desde"), _from,
-            Kit.Label("Hasta"), _to,
-            Kit.Label("Cliente/RIF"), _customer,
-            Kit.Label("Producto"), _product,
-            Kit.Label("Estado"), _status,
-            Kit.Button("Buscar", "BlueButton",
-                () => _ = Ui.Run(RefreshAsync, "No se pudieron buscar los tickets")),
-            Kit.Button("Limpiar", "GhostButton", Clear));
+        // PageHeader reserva la columna derecha para unas pocas acciones. Una barra de
+        // filtros completa allí exprime el subtítulo hasta hacerlo enorme y empuja la
+        // tabla fuera de la ventana; por eso los filtros van en su propia fila.
+        var filters = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+        filters.Children.Add(Filter("N°", _number));
+        filters.Children.Add(Filter("Desde", _from));
+        filters.Children.Add(Filter("Hasta", _to));
+        filters.Children.Add(Filter("Cliente/RIF", _customer));
+        filters.Children.Add(Filter("Producto", _product));
+        filters.Children.Add(Filter("Estado", _status));
+        var searchButton = Kit.Button("Buscar", "BlueButton",
+            () => _ = Ui.Run(RefreshAsync, "No se pudieron buscar los tickets"));
+        searchButton.Margin = new Thickness(0, 0, 8, 8);
+        filters.Children.Add(searchButton);
+        var clearButton = Kit.Button("Limpiar", "GhostButton", Clear);
+        clearButton.Margin = new Thickness(0, 0, 8, 8);
+        filters.Children.Add(clearButton);
 
         var footer = Kit.HStack(8, _count,
             Kit.Muted("Para tickets más antiguos, amplíe el rango de fechas. Se muestran hasta 500 resultados."));
-        footer.Margin = new Thickness(0, 8, 0, 0);
+        footer.Margin = new Thickness(0, 0, 0, 8);
 
         var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         root.Children.Add(Kit.PageHeader("Buscador de tickets",
-            "Localice comprobantes antiguos por número, cliente/RIF o producto; consulte el detalle y reimprímalos.",
-            filters));
-        Grid.SetRow(footer, 1);
+            "Localice comprobantes antiguos por número, cliente/RIF o producto; consulte el detalle y reimprímalos."));
+        Grid.SetRow(filters, 1);
+        root.Children.Add(filters);
+        Grid.SetRow(footer, 2);
         root.Children.Add(footer);
-        Grid.SetRow(_grid, 2);
+        Grid.SetRow(_grid, 3);
         root.Children.Add(_grid);
 
         Content = root;
+    }
+
+    private static FrameworkElement Filter(string label, FrameworkElement input)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 14, 8),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var caption = Kit.Label(label);
+        caption.Margin = new Thickness(0, 0, 5, 0);
+        caption.VerticalAlignment = VerticalAlignment.Center;
+        panel.Children.Add(caption);
+        input.VerticalAlignment = VerticalAlignment.Center;
+        panel.Children.Add(input);
+        return panel;
     }
 
     private void Clear()

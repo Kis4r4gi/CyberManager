@@ -25,6 +25,7 @@ dos paquetes para Windows 10/11 (x64 y x86 en un mismo instalador):
 | --- | --- | --- |
 | Servidor | `CyberManager-Servidor-<versión>.exe` | Servidor, consola de administración y lanzador |
 | Estación | `CyberManager-Estacion-<versión>.exe` | Cliente bloqueado, agente y control remoto |
+| Agente (reparación remota) | `CyberManager-Agente-<versión>-x64.zip` | Agente independiente para reinstalarlo desde la estación sin WinRM/RPC; conserva ID, token y URL del servidor |
 
 Ambos instaladores requieren permisos de administrador, detienen las aplicaciones en ejecución
 antes de actualizar y crean su propia entrada de desinstalación. También puedes compilar el
@@ -204,14 +205,21 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - Formas de pago: efectivo en bolívares, efectivo en dólares, tarjeta, transferencia,
   **Pago Móvil**, saldo del cliente, mixto y pendiente (cargado a la sesión).
 - Descuentos, devoluciones y gastos de caja.
-- **Tickets de 80 mm** para ventas y **cierre diario configurable** (ticket 80 mm, A4 o Carta),
-  con impresión automática opcional, copias y **dos impresoras configurables**: una para los
-  tickets de venta y otra para cierres, reportes y documentos de trabajo.
+- **Facturas de 80 mm** para ventas y **cierre diario configurable** (ticket 80 mm, A4 o Carta),
+  con impresión automática opcional, copias y **dos impresoras configurables**: una para las
+  facturas y otra para cierres, reportes y documentos de trabajo.
 - **Lector de códigos de barras** tipo teclado: al escanear un SKU y pulsar Enter, el producto se
   agrega al POS si coincide exactamente.
-- **Ticket compacto y editable**: las líneas del POS van sin recuadros y con poco interlineado;
+- **Factura compacta y editable**: las líneas del POS van sin recuadros y con poco interlineado;
   cada producto tiene **Editar** (cambia producto y cantidad), **✕** para eliminarlo, **Cancelar
-  ticket** para vaciarlo y **Cerrar ticket** para cobrarlo.
+  ticket** para vaciarlo y **Terminar y cobrar** para revisarlo antes de cobrarlo.
+- **Cliente por documento en el POS**: el tipo indica el prefijo (**Cédula (V-)** o **RIF (J-)**) y
+  el cajero escribe solo el número. Si el documento existe, el nombre del cliente se muestra como
+  confirmación y se asocia a la factura; si no existe, el botón **Agregar cliente nuevo** lo da de
+  alta en el sistema. El nombre del cliente no se escribe en el POS.
+- **Cobro confirmado**: al presionar *Terminar y cobrar* se muestra la factura sin registrar; la
+  venta solo se graba al tocar **Aceptar**. **Ir atrás** cierra la ventana sin tocar el ticket, para
+  seguir editando los productos o los datos del cliente.
 - **Buscador de tickets**: la vista *Buscar tickets* (disponible también para cajeros) localiza
   comprobantes antiguos por número, rango de fechas, cliente/RIF, producto y estado; muestra USD,
   Bs, equipo y forma de pago, y permite **Ver** el detalle o **Imprimir** el ticket otra vez.
@@ -753,7 +761,7 @@ En *Configuración → Ticket y scanner* puede definir:
 - **Impresión automática**: imprime el ticket al registrar una venta.
 - **Agregar al POS al escanear**: interpreta el lector como teclado.
 
-Los tickets de venta se generan como documento de **80 mm** e incluyen número, fecha, forma de pago,
+Las facturas se generan como documento de **80 mm** e incluyen número, fecha, forma de pago,
 cliente, artículos, subtotal, IVA incluido, totales en USD y Bs, tasa aplicada, recibido y cambio. El **cierre diario** usa el formato elegido en *Configuración → Ticket y operación*:
 ticket de 80 mm para impresoras térmicas, **A4** o **Carta** para hojas normales.
 

@@ -383,8 +383,8 @@ public static class CatalogEndpoints
             {
                 var term = q.Trim().ToLower();
                 query = query.Where(c => c.Name.ToLower().Contains(term)
-                    || (c.Phone != null && c.Phone.Contains(term))
-                    || (c.DocumentId != null && c.DocumentId.Contains(term)));
+                    || (c.Phone != null && c.Phone.ToLower().Contains(term))
+                    || (c.DocumentId != null && c.DocumentId.ToLower().Contains(term)));
             }
             var list = await query.OrderBy(c => c.Name).Take(500).ToListAsync();
             return Results.Ok(list.Select(Mappers.ToDto).ToList());
@@ -396,8 +396,8 @@ public static class CatalogEndpoints
             var c = new Customer
             {
                 Name = req.Name, Phone = req.Phone, Email = req.Email, DocumentId = req.DocumentId,
-                Address = req.Address, FiscalData = req.FiscalData, CreditLimit = req.CreditLimit,
-                IsMember = req.IsMember, Active = req.Active, Notes = req.Notes
+                DocumentType = req.DocumentType, Address = req.Address, FiscalData = req.FiscalData,
+                CreditLimit = req.CreditLimit, IsMember = req.IsMember, Active = req.Active, Notes = req.Notes
             };
             db.Customers.Add(c);
             await db.SaveChangesAsync();
@@ -408,6 +408,7 @@ public static class CatalogEndpoints
         {
             var c = await db.Customers.FirstOrDefaultAsync(x => x.Id == id) ?? throw AppException.NotFound("Cliente");
             c.Name = req.Name; c.Phone = req.Phone; c.Email = req.Email; c.DocumentId = req.DocumentId;
+            c.DocumentType = req.DocumentType;
             c.Address = req.Address; c.FiscalData = req.FiscalData; c.CreditLimit = req.CreditLimit;
             c.IsMember = req.IsMember; c.Active = req.Active; c.Notes = req.Notes;
             await db.SaveChangesAsync();

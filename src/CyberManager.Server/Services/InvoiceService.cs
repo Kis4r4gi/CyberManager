@@ -33,12 +33,13 @@ public class InvoiceService
             Get(SettingsKeys.BusinessAddress),
             Get(SettingsKeys.BusinessPhone),
             s.Number, s.ControlNumber, s.InvoiceType, s.CreatedUtc,
-            s.CustomerName ?? s.Customer?.Name, s.CustomerTaxId,
+            s.CustomerName ?? s.Customer?.Name, s.CustomerTaxId ?? s.Customer?.DocumentId,
             s.ExchangeRate,
             s.Items.Select(i => new InvoiceLineDto(i.Description, i.Quantity, i.UnitPrice, i.Total)).ToList(),
             s.Subtotal, s.Discount, s.Tax, s.Total,
             s.SubtotalVes, s.TaxVes, s.TotalVes,
             s.PaidAmount, s.PaidCurrency, s.Change, s.PaymentMethod,
-            cashier, Get(SettingsKeys.TicketFooter, "¡Gracias por su visita!"));
+            cashier, Get(SettingsKeys.TicketFooter, "¡Gracias por su visita!"),
+            s.CustomerDocumentType ?? s.Customer?.DocumentType);
     }
 }

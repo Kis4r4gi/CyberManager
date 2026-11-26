@@ -192,7 +192,7 @@ public sealed class CustomersView : UserControl, IRefreshable
         {
             var request = new SaveCustomerRequest(customer.Name, customer.Phone, customer.Email,
                 customer.DocumentId, customer.Address, customer.FiscalData, customer.CreditLimit,
-                customer.IsMember, enable, customer.Notes);
+                customer.IsMember, enable, customer.Notes, customer.DocumentType);
             await App.Api.SaveCustomerAsync(customer.Id, request);
             await RefreshAsync();
         }, "No se pudo actualizar el cliente");
@@ -243,7 +243,9 @@ public sealed class CustomerRow
     {
         Source = customer;
         Name = customer.Name;
-        Document = string.IsNullOrWhiteSpace(customer.DocumentId) ? "—" : customer.DocumentId!;
+        Document = string.IsNullOrWhiteSpace(customer.DocumentId)
+            ? "—"
+            : $"{Labels.DocumentTypeName(customer.DocumentType)}: {customer.DocumentId}";
         Phone = string.IsNullOrWhiteSpace(customer.Phone) ? "—" : customer.Phone!;
         Email = string.IsNullOrWhiteSpace(customer.Email) ? "—" : customer.Email!;
         Balance = customer.Balance;
@@ -269,6 +271,7 @@ public sealed class CustomerDialog : FormDialog
 {
     private readonly TextBox _name;
     private readonly TextBox _document;
+    private readonly ComboBox _documentType;
     private readonly TextBox _phone;
     private readonly TextBox _email;
     private readonly TextBox _address;
@@ -285,7 +288,13 @@ public sealed class CustomerDialog : FormDialog
             "El documento/RIF se usa en la factura. El saldo a favor se descuenta al cobrar.")
     {
         _name = Add(new TextBox { Text = customer?.Name ?? string.Empty }, "Nombre o razón social");
-        _document = Add(new TextBox { Text = customer?.DocumentId ?? string.Empty }, "Cédula o RIF");
+        _documentType = AddCombo("Tipo de documento", new[]
+        {
+            new Option<CustomerDocumentType>(CustomerDocumentType.Personal, "Cédula"),
+            new Option<CustomerDocumentType>(CustomerDocumentType.Fiscal, "RIF")
+        });
+        _documentType.SelectedIndex = customer?.DocumentType == CustomerDocumentType.Fiscal ? 1 : 0;
+        _document = Add(new TextBox { Text = customer?.DocumentId ?? string.Empty }, "Número de documento");
         _phone = Add(new TextBox { Text = customer?.Phone ?? string.Empty }, "Teléfono");
         _email = Add(new TextBox { Text = customer?.Email ?? string.Empty }, "Correo electrónico");
         _address = Add(new TextBox { Text = customer?.Address ?? string.Empty }, "Dirección fiscal");
@@ -312,7 +321,8 @@ public sealed class CustomerDialog : FormDialog
             ParseDecimal(_credit, "Límite de crédito"),
             _member.IsChecked == true,
             _active.IsChecked == true,
-            NullIfEmpty(_notes.Text));
+            NullIfEmpty(_notes.Text),
+            (_documentType.SelectedItem as Option<CustomerDocumentType>)?.Value ?? CustomerDocumentType.Personal);
 
         base.OnAccept();
     }

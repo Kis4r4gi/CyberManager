@@ -71,6 +71,8 @@ public class Sale
     public InvoiceType InvoiceType { get; set; } = InvoiceType.Ticket;
     public string? CustomerName { get; set; }
     public string? CustomerTaxId { get; set; }
+    /// <summary>Tipo del documento de identidad del cliente, copiado al emitir la venta.</summary>
+    public CustomerDocumentType? CustomerDocumentType { get; set; }
     public string? ControlNumber { get; set; }
     public SaleStatus Status { get; set; } = SaleStatus.Completed;
     public string? Notes { get; set; }

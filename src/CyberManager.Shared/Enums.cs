@@ -82,6 +82,15 @@ public enum InvoiceType
     NotaEntrega = 2
 }
 
+/// <summary>Tipo de documento de identidad del cliente en el punto de venta.</summary>
+public enum CustomerDocumentType
+{
+    /// <summary>Cédula de identidad (persona natural).</summary>
+    Personal = 0,
+    /// <summary>RIF (persona natural con registro fiscal o persona jurídica).</summary>
+    Fiscal = 1
+}
+
 public enum StockMovementType
 {
     Initial = 0,

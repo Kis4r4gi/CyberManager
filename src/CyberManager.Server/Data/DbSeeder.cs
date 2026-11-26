@@ -112,6 +112,10 @@ public static class DbSeeder
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Customers_Username\" ON \"Customers\" (\"Username\");");
 
+        // Tipo de documento de identidad capturado al emitir facturas desde el POS.
+        await AddColumnIfMissingAsync(db, "Customers", "DocumentType", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfMissingAsync(db, "Sales", "CustomerDocumentType", "INTEGER NULL");
+
         // Caja por terminal: cada consola abre y cierra su propio turno. Las cajas
         // existentes quedan en PRINCIPAL para conservar el comportamiento anterior.
         await AddColumnIfMissingAsync(db, "CashSessions", "Terminal", "TEXT NOT NULL DEFAULT 'PRINCIPAL'");

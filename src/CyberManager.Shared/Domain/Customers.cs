@@ -7,6 +7,7 @@ public class Customer
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? DocumentId { get; set; }
+    public CustomerDocumentType DocumentType { get; set; } = CustomerDocumentType.Personal;
     public string? Address { get; set; }
     public string? FiscalData { get; set; }
     public decimal Balance { get; set; }

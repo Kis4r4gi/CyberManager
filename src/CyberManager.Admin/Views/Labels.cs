@@ -64,6 +64,13 @@ public static class Labels
         _ => type.ToString()
     });
 
+    public static string DocumentTypeName(CustomerDocumentType type) => L.T(type switch
+    {
+        CustomerDocumentType.Personal => "Cédula",
+        CustomerDocumentType.Fiscal => "RIF",
+        _ => type.ToString()
+    });
+
     public static string StockName(StockMovementType type) => L.T(type switch
     {
         StockMovementType.Initial => "Inicial",

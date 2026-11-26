@@ -17,6 +17,11 @@ public sealed class PosView : UserControl, IRefreshable
     private readonly ComboBox _categoryBox = new();
     private readonly TextBox _searchBox = new();
     private readonly ComboBox _customerBox = new();
+    private readonly ComboBox _documentTypeBox = new();
+    private readonly TextBox _documentNumberBox = Kit.Input();
+    private readonly TextBlock _documentPrefix = Kit.Muted("V-");
+    private readonly TextBlock _customerConfirmation = Kit.Muted(string.Empty);
+    private readonly Button _addCustomerButton;
     private readonly ComboBox _methodBox = new();
     private readonly ComboBox _invoiceBox = new();
     private readonly TextBox _receivedBox = new();
@@ -37,6 +42,8 @@ public sealed class PosView : UserControl, IRefreshable
     private List<CustomerDto> _customers = new();
     private decimal _rate;
     private bool _suspendReceivedUpdate;
+    private bool _suspendCustomerApply;
+    private bool _suspendDocumentUpdate;
     private bool _autoReceived = true;
     private bool _scannerAutoAdd = true;
     private Dictionary<string, string> _settings = new();
@@ -103,7 +110,7 @@ public sealed class PosView : UserControl, IRefreshable
         ticket.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var ticketHeader = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-        ticketHeader.Children.Add(Kit.Heading("Ticket de venta", "H2"));
+        ticketHeader.Children.Add(Kit.Heading("Factura", "H2"));
         var ticketActions = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -114,9 +121,85 @@ public sealed class PosView : UserControl, IRefreshable
         ticketHeader.Children.Add(ticketActions);
         ticket.Children.Add(ticketHeader);
 
-        _customerBox.Margin = new Thickness(0, 0, 0, 6);
-        Grid.SetRow(_customerBox, 1);
-        ticket.Children.Add(_customerBox);
+        StackPanel SmallField(string label, FrameworkElement control)
+        {
+            var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 5) };
+            var caption = Kit.Label(label);
+            caption.Margin = new Thickness(0, 0, 0, 2);
+            panel.Children.Add(caption);
+            panel.Children.Add(control);
+            return panel;
+        }
+
+        _documentTypeBox.ItemsSource = new List<Option<CustomerDocumentType>>
+        {
+            new(CustomerDocumentType.Personal, "Cédula (V-)"),
+            new(CustomerDocumentType.Fiscal, "RIF (J-)")
+        };
+        _documentTypeBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
+        _documentTypeBox.SelectedIndex = 0;
+
+        var customerFields = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
+        customerFields.Children.Add(SmallField("Cliente", _customerBox));
+
+        _customerConfirmation.Margin = new Thickness(0, 4, 0, 4);
+        customerFields.Children.Add(_customerConfirmation);
+
+        var documentRow = new Grid();
+        documentRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(112) });
+        documentRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
+        documentRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var typeField = SmallField("Tipo", _documentTypeBox);
+        Grid.SetColumn(typeField, 0);
+        documentRow.Children.Add(typeField);
+
+        // El prefijo V-/J- es fijo: el cajero escribe solo el número y el documento
+        // completo se guarda con el formato que espera la factura.
+        var numberHost = new Grid();
+        _documentNumberBox.Padding = new Thickness(34, 0, 6, 0);
+        _documentNumberBox.ToolTip = "Escriba solo el número; el prefijo se agrega automáticamente.";
+        numberHost.Children.Add(_documentNumberBox);
+        _documentPrefix.HorizontalAlignment = HorizontalAlignment.Left;
+        _documentPrefix.VerticalAlignment = VerticalAlignment.Center;
+        _documentPrefix.Margin = new Thickness(9, 0, 0, 0);
+        _documentPrefix.FontWeight = FontWeights.SemiBold;
+        _documentPrefix.IsHitTestVisible = false;
+        numberHost.Children.Add(_documentPrefix);
+        var numberField = SmallField("Número", numberHost);
+        Grid.SetColumn(numberField, 2);
+        documentRow.Children.Add(numberField);
+        customerFields.Children.Add(documentRow);
+
+        _addCustomerButton = Kit.SmallButton("Agregar cliente nuevo", "SuccessButton", AddCustomerFromDocument);
+        _addCustomerButton.HorizontalAlignment = HorizontalAlignment.Left;
+        _addCustomerButton.Margin = new Thickness(0, 4, 0, 0);
+        _addCustomerButton.Visibility = Visibility.Collapsed;
+        customerFields.Children.Add(_addCustomerButton);
+
+        _customerBox.SelectionChanged += (_, _) =>
+        {
+            if (!_suspendCustomerApply) ApplySelectedCustomer();
+        };
+        _documentTypeBox.SelectionChanged += (_, _) =>
+        {
+            if (_suspendDocumentUpdate) return;
+            UpdateDocumentPrefix();
+            SearchCustomerByDocument();
+        };
+        _documentNumberBox.TextChanged += (_, _) =>
+        {
+            if (_suspendDocumentUpdate) return;
+            SanitizeDocumentNumber();
+            SearchCustomerByDocument();
+        };
+        _documentNumberBox.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Enter) return;
+            SearchCustomerByDocument();
+            e.Handled = true;
+        };
+        Grid.SetRow(customerFields, 1);
+        ticket.Children.Add(customerFields);
 
         _emptyCart.Children.Add(new TextBlock
         {
@@ -204,7 +287,7 @@ public sealed class PosView : UserControl, IRefreshable
         paymentRow.Children.Add(methodField);
 
         var invoiceField = new StackPanel();
-        invoiceField.Children.Add(Kit.Label("Documento"));
+        invoiceField.Children.Add(Kit.Label("Tipo de comprobante"));
         _invoiceBox.ItemsSource = new List<Option<InvoiceType>>
         {
             new(InvoiceType.Ticket, "Ticket"),
@@ -248,7 +331,7 @@ public sealed class PosView : UserControl, IRefreshable
 
         payment.Children.Add(Kit.Field("Notas del ticket", _notesBox));
 
-        _payButton = Kit.Button("Cerrar ticket", "SuccessButton", () => _ = PayAsync());
+        _payButton = Kit.Button("Terminar y cobrar", "SuccessButton", () => _ = PayAsync());
         _payButton.Padding = new Thickness(12, 9, 12, 9);
         _payButton.FontSize = 14;
         _payButton.Margin = new Thickness(0, 6, 0, 0);
@@ -346,9 +429,23 @@ public sealed class PosView : UserControl, IRefreshable
             .OrderBy(c => c.Name)
             .Select(c => new Option<int?>(c.Id, c.Name)));
 
-        _customerBox.ItemsSource = customerOptions;
-        _customerBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
-        _customerBox.SelectedIndex = Math.Max(0, customerOptions.FindIndex(o => o.Value == previousCustomer));
+        // Una actualización en segundo plano no debe borrar los datos escritos
+        // manualmente para un cliente ocasional.
+        _suspendCustomerApply = true;
+        try
+        {
+            _customerBox.ItemsSource = customerOptions;
+            _customerBox.DisplayMemberPath = nameof(Option<object>.DisplayText);
+            _customerBox.SelectedIndex = Math.Max(0, customerOptions.FindIndex(o => o.Value == previousCustomer));
+        }
+        finally
+        {
+            _suspendCustomerApply = false;
+        }
+
+        var currentCustomer = (_customerBox.SelectedItem as Option<int?>)?.Value;
+        if (currentCustomer != previousCustomer)
+            ApplySelectedCustomer();
 
         RenderProducts();
         UpdateTotals();
@@ -598,6 +695,137 @@ public sealed class PosView : UserControl, IRefreshable
             ? Math.Max(0, value)
             : 0m;
 
+    private static string? NullIfEmpty(string text)
+        => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    private CustomerDocumentType SelectedDocumentType =>
+        (_documentTypeBox.SelectedItem as Option<CustomerDocumentType>)?.Value ?? CustomerDocumentType.Personal;
+
+    private string DocumentPrefix => SelectedDocumentType == CustomerDocumentType.Fiscal ? "J-" : "V-";
+
+    private string? CurrentDocumentNumber
+    {
+        get
+        {
+            var digits = _documentNumberBox.Text.Trim();
+            return digits.Length == 0 ? null : DocumentPrefix + digits;
+        }
+    }
+
+    private void UpdateDocumentPrefix() => _documentPrefix.Text = DocumentPrefix;
+
+    private void SanitizeDocumentNumber()
+    {
+        var digits = new string(_documentNumberBox.Text.Where(char.IsDigit).ToArray());
+        if (digits == _documentNumberBox.Text) return;
+        _suspendDocumentUpdate = true;
+        try
+        {
+            _documentNumberBox.Text = digits;
+            _documentNumberBox.CaretIndex = digits.Length;
+        }
+        finally { _suspendDocumentUpdate = false; }
+    }
+
+    private void SetDocumentNumber(string? full)
+    {
+        var value = (full ?? string.Empty).Trim();
+        var type = CustomerDocumentType.Personal;
+        if (value.StartsWith("J-", StringComparison.OrdinalIgnoreCase))
+        {
+            type = CustomerDocumentType.Fiscal;
+            value = value[2..];
+        }
+        else if (value.StartsWith("V-", StringComparison.OrdinalIgnoreCase)) value = value[2..];
+
+        _suspendDocumentUpdate = true;
+        try
+        {
+            _documentTypeBox.SelectedIndex = type == CustomerDocumentType.Fiscal ? 1 : 0;
+            _documentNumberBox.Text = value;
+        }
+        finally { _suspendDocumentUpdate = false; }
+        UpdateDocumentPrefix();
+    }
+
+    private void ShowCustomerConfirmation(CustomerDto? customer, bool showAddButton)
+    {
+        if (customer is not null)
+        {
+            _customerConfirmation.Text = $"Cliente confirmado: {customer.Name}";
+            _customerConfirmation.Foreground = Kit.Brush("SuccessBrush");
+            _addCustomerButton.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (showAddButton)
+        {
+            _customerConfirmation.Text = "Cliente no registrado. Agréguelo al sistema para continuar.";
+            _customerConfirmation.Foreground = Kit.Brush("WarningBrush");
+            _addCustomerButton.Visibility = Visibility.Visible;
+            return;
+        }
+
+        _customerConfirmation.Text = string.Empty;
+        _addCustomerButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void SearchCustomerByDocument()
+    {
+        var full = CurrentDocumentNumber;
+        if (full is null || full.Length <= 3)
+        {
+            _suspendCustomerApply = true;
+            try { _customerBox.SelectedIndex = 0; } finally { _suspendCustomerApply = false; }
+            ShowCustomerConfirmation(null, false);
+            return;
+        }
+
+        var match = _customers.FirstOrDefault(c =>
+            string.Equals(c.DocumentId, full, StringComparison.OrdinalIgnoreCase));
+
+        var options = _customerBox.ItemsSource as IList<Option<int?>>;
+        var option = match is null ? null : options?.FirstOrDefault(o => o.Value == match.Id);
+        _suspendCustomerApply = true;
+        try { _customerBox.SelectedIndex = option is null ? 0 : options!.IndexOf(option); }
+        finally { _suspendCustomerApply = false; }
+
+        ShowCustomerConfirmation(match, match is null);
+    }
+
+    private void ApplySelectedCustomer()
+    {
+        if (_customerBox.SelectedItem is Option<int?> { Value: int customerId })
+        {
+            var customer = _customers.FirstOrDefault(c => c.Id == customerId);
+            if (customer is not null)
+            {
+                SetDocumentNumber(customer.DocumentId);
+                ShowCustomerConfirmation(customer, false);
+                return;
+            }
+        }
+
+        ShowCustomerConfirmation(null, false);
+    }
+
+    private void AddCustomerFromDocument()
+    {
+        var full = CurrentDocumentNumber;
+        if (full is null) return;
+
+        var dialog = new QuickCustomerDialog(full, SelectedDocumentType) { Owner = Window.GetWindow(this) };
+        if (dialog.ShowDialog() != true || dialog.Result is null) return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.SaveCustomerAsync(null, dialog.Result);
+            await RefreshAsync();
+            SetDocumentNumber(full);
+            SearchCustomerByDocument();
+        }, "No se pudo agregar el cliente");
+    }
+
     private void OnMethodChanged()
     {
         _autoReceived = true;
@@ -631,8 +859,8 @@ public sealed class PosView : UserControl, IRefreshable
         _changeText.Text = PaysUsd ? $"Cambio: $ {change:N2}" : $"Cambio: Bs {change:N2}";
 
         _payButton.Content = _cart.Count == 0
-            ? "Cerrar ticket"
-            : $"Cerrar ticket · {Due:N2} {(PaysUsd ? "USD" : "Bs")}";
+            ? "Terminar y cobrar"
+            : $"Terminar y cobrar · {Due:N2} {(PaysUsd ? "USD" : "Bs")}";
         _payButton.IsEnabled = _cart.Count > 0 && _rate > 0;
     }
 
@@ -648,6 +876,17 @@ public sealed class PosView : UserControl, IRefreshable
 
         var method = SelectedMethod;
         var customerId = (_customerBox.SelectedItem as Option<int?>)?.Value;
+        var customer = _customers.FirstOrDefault(c => c.Id == customerId);
+        var customerName = customer?.Name;
+        var documentNumber = CurrentDocumentNumber;
+        var documentType = SelectedDocumentType;
+
+        if (documentNumber is not null && customer is null)
+        {
+            Ui.Error("El documento no está registrado. Presione «Agregar cliente nuevo» antes de cobrar.",
+                "Cliente requerido");
+            return;
+        }
 
         if (method == PaymentMethod.CustomerBalance && customerId is null)
         {
@@ -662,31 +901,67 @@ public sealed class PosView : UserControl, IRefreshable
         var items = _cart.Select(l => new SaleItemRequest(
             l.Product.Id, l.Product.Name, l.Quantity, l.Product.Price, 0, l.Product.TaxRate)).ToList();
 
+        var notes = string.IsNullOrWhiteSpace(_notesBox.Text) ? null : _notesBox.Text.Trim();
         var request = new CreateSaleRequest(
             items, method, received, Discount, customerId, null, null,
-            string.IsNullOrWhiteSpace(_notesBox.Text) ? null : _notesBox.Text.Trim(),
-            invoice,
+            notes, invoice,
             PaysUsd ? Currency.Usd : Currency.Ves,
-            null, null);
+            null, documentNumber, customerName, documentType);
 
-        _payButton.IsEnabled = false;
-        _payButton.Content = "Procesando...";
+        var tax = _cart.Sum(l => Math.Round(l.Total * l.Product.TaxRate / (100m + l.Product.TaxRate), 2));
+        if (Gross > 0) tax = Math.Round(tax * GrandTotal / Gross, 2);
+
+        // Comprobante provisional: todavía no se envía nada al servidor.
+        var draft = new SaleDto(
+            0, "PENDIENTE", null, null, null,
+            customerId,
+            customerName,
+            documentNumber,
+            Gross, Discount, tax, GrandTotal, _rate, Math.Round(GrandTotal * _rate, 2),
+            received, PaysUsd ? Currency.Usd : Currency.Ves,
+            Math.Max(0, Math.Round(received - Due, 2)), method, invoice, null,
+            SaleStatus.Completed, DateTime.UtcNow, notes,
+            _cart.Select(l => new SaleItemDto(0, l.Product.Id, l.Product.Name, l.Quantity,
+                l.Product.Price, 0, l.Total)).ToList(),
+            documentType);
+
+        var ticketSettings = TicketSettings.From(_settings);
+
+        async Task RegisterAsync()
+        {
+            _payButton.IsEnabled = false;
+            _payButton.Content = "Procesando...";
+            try
+            {
+                var sale = await App.Api.CreateSaleAsync(request);
+                if (ticketSettings.AutoPrint && !string.IsNullOrWhiteSpace(ticketSettings.PrinterName))
+                {
+                    try { TicketPrinter.PrintSale(sale, ticketSettings, silent: true); }
+                    catch { /* La venta ya quedó registrada; se puede reimprimir. */ }
+                }
+            }
+            finally
+            {
+                UpdateTotals();
+            }
+        }
 
         try
         {
-            var sale = await App.Api.CreateSaleAsync(request);
-            var ticketSettings = TicketSettings.From(_settings);
-
-            if (ticketSettings.AutoPrint && !string.IsNullOrWhiteSpace(ticketSettings.PrinterName))
+            var dialog = new SaleReceiptDialog(draft, ticketSettings, RegisterAsync)
             {
-                try { TicketPrinter.PrintSale(sale, ticketSettings, silent: true); }
-                catch { /* La venta ya quedó registrada; se puede reimprimir. */ }
-            }
-
-            var dialog = new SaleReceiptDialog(sale, ticketSettings) { Owner = Window.GetWindow(this) };
+                Owner = Window.GetWindow(this)
+            };
             dialog.ShowDialog();
 
+            // «Ir atrás» deja DialogResult en null: el ticket sigue editable y no se registra.
+            if (dialog.DialogResult != true) return;
+
             _cart.Clear();
+            _suspendCustomerApply = true;
+            try { _customerBox.SelectedIndex = 0; } finally { _suspendCustomerApply = false; }
+            SetDocumentNumber(null);
+            ShowCustomerConfirmation(null, false);
             _discountBox.Text = "0,00";
             _notesBox.Text = string.Empty;
             _autoReceived = true;
@@ -702,6 +977,38 @@ public sealed class PosView : UserControl, IRefreshable
         {
             UpdateTotals();
         }
+    }
+}
+
+/// <summary>Alta rápida de cliente desde el POS, usando el documento ya escrito.</summary>
+public sealed class QuickCustomerDialog : FormDialog
+{
+    private readonly TextBox _name;
+    private readonly string _documentNumber;
+    private readonly CustomerDocumentType _documentType;
+
+    public SaveCustomerRequest? Result { get; private set; }
+
+    public QuickCustomerDialog(string documentNumber, CustomerDocumentType documentType)
+        : base("Agregar cliente nuevo", "El cliente quedará registrado y se usará en la factura.")
+    {
+        _documentNumber = documentNumber;
+        _documentType = documentType;
+        AddRow("Documento", documentNumber);
+        AddRow("Tipo", documentType == CustomerDocumentType.Fiscal ? "RIF (J-)" : "Cédula (V-)");
+        AddSeparator();
+        _name = Add(new TextBox(), "Nombre o razón social");
+    }
+
+    protected override void OnAccept()
+    {
+        if (string.IsNullOrWhiteSpace(_name.Text))
+            throw new InvalidOperationException("Indique el nombre del cliente.");
+
+        Result = new SaveCustomerRequest(
+            _name.Text.Trim(), null, null, _documentNumber, null, null,
+            0, false, true, null, _documentType);
+        base.OnAccept();
     }
 }
 
@@ -777,17 +1084,39 @@ public sealed class EditCartLineDialog : FormDialog
 
 public sealed class SaleReceiptDialog : FormDialog
 {
-    public SaleReceiptDialog(SaleDto sale, TicketSettings? ticketSettings = null)
-        : base($"Venta {sale.Number}", $"{Labels.InvoiceName(sale.InvoiceType)} · {Labels.PaymentName(sale.Method)}")
+    private readonly Func<Task>? _onAccept;
+
+    /// <summary>
+    /// Muestra el comprobante. Si se indica <paramref name="onAccept"/>, la venta no se registra
+    /// hasta que el usuario presiona «Aceptar»; «Ir atrás» cierra sin tocar el ticket.
+    /// </summary>
+    public SaleReceiptDialog(SaleDto sale, TicketSettings? ticketSettings = null, Func<Task>? onAccept = null)
+        : base(onAccept is null ? $"Venta {sale.Number}" : "Confirmar venta",
+            $"{Labels.InvoiceName(sale.InvoiceType)} · {Labels.PaymentName(sale.Method)}")
     {
+        _onAccept = onAccept;
         AcceptButton.Content = "Aceptar";
         HideCancel();
+
+        var backButton = Kit.Button("Ir atrás", "GhostButton", Close);
+        if (AcceptButton.Parent is Panel actions)
+        {
+            backButton.Margin = new Thickness(0, 0, 8, 0);
+            actions.Children.Insert(actions.Children.IndexOf(AcceptButton), backButton);
+        }
 
         AddRow("Fecha", sale.CreatedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"));
         if (!string.IsNullOrWhiteSpace(sale.ControlNumber))
             AddRow("N° de control", sale.ControlNumber!);
         if (!string.IsNullOrWhiteSpace(sale.CustomerName))
             AddRow("Cliente", sale.CustomerName!);
+        if (!string.IsNullOrWhiteSpace(sale.CustomerTaxId))
+        {
+            var documentLabel = sale.CustomerDocumentType is CustomerDocumentType type
+                ? Labels.DocumentTypeName(type)
+                : "Documento / RIF";
+            AddRow(documentLabel, sale.CustomerTaxId!);
+        }
 
         AddSeparator();
 
@@ -825,21 +1154,47 @@ public sealed class SaleReceiptDialog : FormDialog
             return false;
         }
 
-        var print = Kit.Button("Imprimir ticket", "BlueButton", () => TryPrint());
-        var printAndAccept = Kit.Button("Imprimir y aceptar", "PrimaryButton", () =>
+        if (_onAccept is null)
         {
-            if (TryPrint()) DialogResult = true;
-        });
+            var print = Kit.Button("Imprimir ticket", "BlueButton", () => TryPrint());
+            var printAndAccept = Kit.Button("Imprimir y aceptar", "PrimaryButton", () =>
+            {
+                if (TryPrint()) DialogResult = true;
+            });
 
-        var printActions = Kit.HStack(8, print, printAndAccept);
-        printActions.HorizontalAlignment = HorizontalAlignment.Left;
-        printActions.Margin = new Thickness(0, 12, 0, 0);
-        Body.Children.Add(printActions);
+            var printActions = Kit.HStack(8, print, printAndAccept);
+            printActions.HorizontalAlignment = HorizontalAlignment.Left;
+            printActions.Margin = new Thickness(0, 12, 0, 0);
+            Body.Children.Add(printActions);
+        }
 
-        AddNote(sale.Status == SaleStatus.Cancelled
-            ? "Esta venta está anulada."
-            : "Venta registrada en la caja del turno. Use «Aceptar» para cerrar el mensaje.",
-            "SuccessBrush");
+        AddNote(_onAccept is not null
+            ? "La venta se registrará al presionar «Aceptar». «Ir atrás» conserva el ticket para editarlo."
+            : sale.Status == SaleStatus.Cancelled
+                ? "Esta venta está anulada."
+                : "Venta registrada en la caja del turno. Use «Aceptar» para cerrar el mensaje.",
+            _onAccept is not null || sale.Status == SaleStatus.Cancelled ? "MutedBrush" : "SuccessBrush");
+    }
+
+    protected override async void OnAccept()
+    {
+        if (_onAccept is null)
+        {
+            base.OnAccept();
+            return;
+        }
+
+        AcceptButton.IsEnabled = false;
+        try
+        {
+            await _onAccept();
+            DialogResult = true;
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+            AcceptButton.IsEnabled = true;
+        }
     }
 }
 

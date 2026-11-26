@@ -33,7 +33,8 @@ public record CreateSaleRequest(
     List<SaleItemRequest> Items, PaymentMethod Method, decimal PaidAmount, decimal Discount,
     int? CustomerId, int? StationId, int? SessionId, string? Notes,
     InvoiceType InvoiceType = InvoiceType.Ticket, Currency? PaidCurrency = null,
-    decimal? ExchangeRate = null, string? CustomerTaxId = null);
+    decimal? ExchangeRate = null, string? CustomerTaxId = null,
+    string? CustomerName = null, CustomerDocumentType? CustomerDocumentType = null);
 
 public record SaleItemDto(long Id, int? ProductId, string Description, decimal Quantity, decimal UnitPrice, decimal Discount, decimal Total);
 public record SaleDto(
@@ -42,7 +43,8 @@ public record SaleDto(
     decimal Total, decimal ExchangeRate, decimal TotalVes,
     decimal PaidAmount, Currency PaidCurrency, decimal Change, PaymentMethod Method,
     InvoiceType InvoiceType, string? ControlNumber, SaleStatus Status,
-    DateTime CreatedUtc, string? Notes, List<SaleItemDto> Items);
+    DateTime CreatedUtc, string? Notes, List<SaleItemDto> Items,
+    CustomerDocumentType? CustomerDocumentType = null);
 
 public record CashOpenRequest(decimal OpeningAmount, decimal? ExchangeRate, string? Notes);
 public record CashCloseRequest(decimal ClosingAmount, string? Notes);

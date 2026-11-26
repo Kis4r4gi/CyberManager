@@ -1,6 +1,6 @@
 # Estado del proyecto y continuación automática
 
-> Última actualización: 2026-11-19
+> Última actualización: 2026-11-25
 > Este archivo permite retomar el trabajo exactamente donde quedó. Léalo completo antes de continuar.
 
 ## Objetivo
@@ -15,9 +15,9 @@ arquitectura (x86/x64).
 
 La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores**:
 **Servidor** y **Estación**. Cada uno incluye los payloads de x64 y x86 y selección automática de la
-arquitectura al instalar. El **servidor 1.3.48 está instalado y corriendo** (tarea programada,
+arquitectura al instalar. El **servidor 1.3.58 está instalado y corriendo** (tarea programada,
 puerto 5080) en este equipo con la ruta `C:\CyberManager\Servidor`, al igual que la consola. El
-paquete de actualización del cliente también está en 1.3.48. Tras un reinicio del equipo la IP del
+paquete de actualización del cliente también está en 1.3.58. Tras un reinicio del equipo la IP del
 servidor pasó a `192.168.1.10`; los equipos siguen reportando correctamente porque resuelven la
 dirección por descubrimiento. La estación 11 (`14:AB:C5:D4:30:F5`, IP informada `192.168.1.4`)
 estaba offline al verificar y conservaba 1.3.43; se actualizará al reconectarse.
@@ -505,7 +505,7 @@ Credenciales demo: `admin` / `admin123` y `cajero` / `cajero123`.
 - **Formato del cierre diario**: nueva clave `DailyClosingFormat` (`ticket80`, `a4`, `carta`) en
   `SettingsKeys`, `TicketSettings` y el selector de *Configuración → Negocio → Ticket y operación*.
   `TicketPrinter.NormalizeClosingFormat` valida el valor y `NewDocument` ajusta `PageWidth`,
-  márgenes y fuente (302 px / 794 px / 816 px). El ticket de venta sigue en 80 mm y el botón del
+  márgenes y fuente (302 px / 794 px / 816 px). La factura sigue en 80 mm y el botón del
   cierre pasa a **Imprimir cierre**.
 - **Guardado solo con «Aplicar y guardar»**: se eliminaron los temporizadores de autoguardado de
   negocio y apariencia. Los cambios quedan como borrador o vista previa; el botón global del
@@ -2208,7 +2208,7 @@ estación 11; registro `Agente conectado: equipo 11` a las 09:27:08; versión `1
 final quedó sin hallazgos (la advertencia transitoria «sin latido» desapareció al arrancar el
 cliente). La orden ahora sí se entrega al servicio de Windows.
 
-### Ticket de venta compacto y editable (1.3.54, 2026-11-25)
+### Factura compacta y editable (1.3.54, 2026-11-25)
 
 Las líneas del carrito del POS eran `Border` con estilo `Panel`, margen inferior de 8 px y dos
 filas por producto; eso hacía muy larga la revisión antes de emitir la factura. En
@@ -2233,7 +2233,7 @@ así que las pruebas HTTP se hicieron por `127.0.0.1`. `/api/health` → `1.3.54
 35.644.403 bytes. Se envió el aviso a la estación 11, pero sigue **Offline** desde el 23/11 y WoL
 no la despertó: permanecerá en 1.3.53 hasta que encienda y aplique el paquete 1.3.54. La consola
 1.3.54 se abrió y, vía Automatización de UI, se comprobó que la vista *Punto de venta* carga y
-muestra «Ticket de venta», «Cancelar ticket» y «Cerrar ticket».
+muestra «Factura», «Cancelar ticket» y «Terminar y cobrar».
 
 ### Explicación con IA gratuita (2026-11-25)
 
@@ -2274,6 +2274,60 @@ Para localizar comprobantes ya emitidos se agregó la vista **Buscar tickets**:
 - Botón *Buscar tickets* en Operación, disponible también para cajeros; rango inicial de un año y
   búsqueda desde 2000 si se deja «Desde» vacío. Compilación: 0 errores, 0 advertencias.
 
+### Corrección de layout del buscador (1.3.57, 2026-11-25)
+
+Al abrir *Buscar tickets* en la consola instalada el área parecía vacía. `Kit.PageHeader` coloca
+las acciones en una columna `Auto` a la derecha; la barra completa de filtros (~2000 px) reducía la
+columna del título a 13 px, por lo que el subtítulo se envolvía hasta 2035 px de alto y empujaba el
+contador y el `DataGrid` fuera de la ventana (verificado por UI Automation: `V-000004` en y=2330).
+
+La barra de filtros se movió a una fila propia con `WrapPanel` (cada etiqueta y su control agrupados
+para que no se separen al envolver) y `PageHeader` quedó solo con título y descripción. Tras el
+cambio, el subtítulo mide 1175×20 px, el contador está en y=333 y las cabeceras de la tabla en y=364,
+dentro del área visible; el filtro por número sigue funcionando. Compilación: 0 errores, 0 advertencias.
+
+### Identidad del cliente, cobro confirmado y nombre «Factura» (1.3.58, 2026-11-25)
+
+- El POS identifica al cliente por documento: el tipo muestra **Cédula (V-)** o **RIF (J-)** y el
+  campo de número lleva el prefijo fijo, así que el cajero escribe solo los dígitos. Al escribir el
+  número se busca en los clientes registrados (comparación insensible a mayúsculas); si existe,
+  se selecciona y se muestra **«Cliente confirmado: <nombre>»** para confirmación. Si no existe,
+  aparece el botón **Agregar cliente nuevo**, que abre `QuickCustomerDialog` para indicar solo el
+  nombre y guarda el cliente mediante `SaveCustomerAsync`. El cuadro de nombre se eliminó del POS;
+  el nombre y el documento del cliente registrado aparecen en el diálogo, la factura y la impresión.
+  `CustomersView` también edita el tipo de documento.
+- **La venta solo se registra al presionar «Aceptar»**: *Terminar y cobrar* abre un comprobante
+  provisional (`SaleReceiptDialog` con `onAccept`) que no llama a `POST /api/sales`. El botón
+  **Ir atrás** cierra sin guardar y conserva productos, cliente y montos; si el servidor rechaza la
+  venta (por ejemplo, stock insuficiente), el diálogo muestra el error y sigue abierto. Al aceptar
+  se graba una sola venta, se imprime según la configuración y se limpia el ticket. Si hay número
+  de documento pero el cliente no está registrado, el cobro se bloquea hasta darlo de alta.
+- El encabezado del panel del POS pasó de «Ticket de venta» a **«Factura»** y el botón de cobro de
+  «Cerrar ticket» a **«Terminar y cobrar»**; se eliminó la entrada obsoleta de localización y el
+  mismo nombre se aplicó en documentación y comentarios.
+- `PosView.RefreshAsync` ya no reaplica el cliente seleccionado cuando el conjunto de clientes se
+  recarga en segundo plano: las actualizaciones automáticas no borran el nombre ni el documento
+  escritos a mano en el ticket.
+
+**Verificación**: compilación con 0 errores y 0 advertencias. `/api/health` → `1.3.58 ok`. Por API
+se creó un cliente nuevo con RIF, se reutilizó por documento en una segunda venta y se comprobó el
+documento en la factura. Por UI Automation se comprobó el encabezado «Factura», que los campos del
+cliente sobreviven a la actualización en segundo plano, que abrir la confirmación y presionar
+*Ir atrás* dejan el ticket intacto y **no** incrementan el número de ventas, que *Aceptar* registra
+exactamente una venta con el cliente indicado y que el ticket se limpia solo después de eso.
+Además, con `ui-check-document-flow.ps1` se validó el flujo completo: al escribir un `J-` registrado
+aparece «Cliente confirmado», la confirmación muestra «RIF» y el documento, un `J-` nuevo habilita
+**Agregar cliente nuevo**, el alta rápida guarda el cliente con `documentType=Fiscal` y la segunda
+venta se registra con ese cliente. Los textos «Factura» y «Terminar y cobrar» y la ausencia del
+cuadro de nombre se comprobaron por UI Automation.
+
+**Despliegue**: se regeneraron los instaladores con el código final, se actualizaron el servidor y
+la consola de `C:\CyberManager\Servidor` conservando `appsettings.json`, `web.config` y la base de
+datos, y se copiaron `client.zip`, `agent.zip` y `manifest.json` en `ClientUpdate`. La ventana de
+comandos del servidor quedó oculta. `/api/health` → `1.3.58 ok`; `/api/client-update/manifest` y
+`/api/client-update/status` → versión de paquete 1.3.58 con hashes coincidentes y descargas HTTP
+206. La estación 11 sigue offline (1.3.43) y tomará el paquete al reconectarse.
+
 ---
 
 ## Pendientes / siguientes pasos
@@ -2313,12 +2367,12 @@ Para localizar comprobantes ya emitidos se agregó la vista **Buscar tickets**:
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.3.54**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.54>) con
-  `CyberManager-Servidor-1.3.54.exe`, `CyberManager-Estacion-1.3.54.exe` y
-  `CyberManager-Agente-1.3.54-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
-  release. La release anterior publicada es `v1.3.53`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.53>).
+- Release actual: **v1.3.58**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.58>) con
+  `CyberManager-Servidor-1.3.58.exe`, `CyberManager-Estacion-1.3.58.exe` y
+  `CyberManager-Agente-1.3.58-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
+  release. La release anterior publicada es `v1.3.56`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.56>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
