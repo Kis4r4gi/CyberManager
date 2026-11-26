@@ -2373,6 +2373,11 @@ comandos del servidor quedó oculta. `/api/health` → `1.3.58 ok`; `/api/client
   `CyberManager-Agente-1.3.58-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
   release. La release anterior publicada es `v1.3.56`
   (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.56>).
+- Publicación confirmada el 2026-11-25 con `gh release create v1.3.58 --target main` (commit
+  `f3c221f`), sin prerelease. SHA-256 publicados en las notas: servidor
+  `C61CF8C11E86957BB3EA0F715F2DFC712D2400F3FED00D275270860012ABDAC6`, estación
+  `0F495CBA656596F0368B24654DB0A7183534A4E80969D1B58E6806CB3C4C26C7` y agente
+  `321C449173515D291BFE31356C406C1DD3F3560487E7C4029E6CC8CD6F4A59E5`.
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
