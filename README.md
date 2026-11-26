@@ -1592,8 +1592,8 @@ Configuración en `appsettings.json` del servidor:
   "MaxLogLines": 120,
   "Ai": {
     "Enabled": true,
-    "BaseUrl": "https://api.openai.com/v1",
-    "Model": "gpt-4o-mini",
+    "BaseUrl": "https://text.pollinations.ai/v1",
+    "Model": "openai-fast",
     "ApiKeyEnvironmentVariable": "CYBERMANAGER_AI_API_KEY",
     "ApiKey": "",
     "TimeoutSeconds": 20
@@ -1603,8 +1603,15 @@ Configuración en `appsettings.json` del servidor:
 
 La clave se toma primero de la variable de entorno indicada (`CYBERMANAGER_AI_API_KEY` por defecto)
 y, si no existe, de `Troubleshoot:Ai:ApiKey`. Sin clave, el solucionador sigue funcionando con reglas
-y la vista indica que la IA no está disponible. Para otro proveedor compatible (Groq, OpenRouter,
-etc.) cambie `BaseUrl` y `Model`.
+y la vista indica que la IA no está disponible.
+
+**Proveedor gratuito configurado**: `text.pollinations.ai` (modelo `openai-fast`, GPT-OSS 20B) es
+compatible con `/v1/chat/completions`, no exige cuenta ni clave. El servidor sí requiere que la
+variable tenga un valor no vacío, así que se define a nivel de máquina como
+`CYBERMANAGER_AI_API_KEY=pollinations-free` (valor marcador; el proveedor anónimo lo ignora). El tier
+anónimo permite ~100 respuestas/día y una petición cada 45 s; si se agota, el solucionador muestra
+solo las reglas. Para usar otro proveedor (Groq, OpenRouter, OpenAI, etc.), cambie `BaseUrl`, `Model`
+y el valor real de la variable de entorno.
 
 **La consola no conecta con el servidor**
 

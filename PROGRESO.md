@@ -2235,6 +2235,25 @@ no la despertó: permanecerá en 1.3.53 hasta que encienda y aplique el paquete 
 1.3.54 se abrió y, vía Automatización de UI, se comprobó que la vista *Punto de venta* carga y
 muestra «Ticket de venta», «Cancelar ticket» y «Cerrar ticket».
 
+### Explicación con IA gratuita (2026-11-25)
+
+El solucionador seguía sin clave: OpenAI, Groq y OpenRouter exigen cuenta y token, que no se pueden
+crear desde aquí. Se eligió **Pollinations Classic** (`https://text.pollinations.ai/v1`, modelo
+`openai-fast` / GPT-OSS 20B): habla `/v1/chat/completions`, no pide registro y acepta la petición
+aunque se envíe un `Authorization: Bearer` marcador. La petición de prueba devolvió HTTP 200 con una
+respuesta OpenAI-compatible.
+
+- `Troubleshoot:Ai:BaseUrl` y `Model` actualizados tanto en `src\CyberManager.Server\appsettings.json`
+  como en `C:\CyberManager\Servidor\Server\appsettings.json` (el servidor en producción se editó aparte
+  porque la instalación conserva su propia configuración).
+- Variable de máquina `CYBERMANAGER_AI_API_KEY=pollinations-free` (el proveedor anónimo ignora el
+  valor; el servidor solo exige que no esté vacía). Como `CyberManagerServer` corre como `SYSTEM`, se
+  reinició la tarea programada para que tomase la variable y el nuevo `appsettings.json`.
+- `/api/health` → `1.3.54 ok`; `POST /api/troubleshoot/diagnose` con `useAi=true` → `aiConfigured=true`,
+  `aiUsed=true`, sin error. Límites del tier anónimo: ~100 respuestas/día y una petición cada 45 s; al
+  agotarse se muestran solo las reglas. No se publicó una release nueva: es un cambio de configuración,
+  no de código.
+
 ---
 
 ## Pendientes / siguientes pasos
