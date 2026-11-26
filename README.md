@@ -209,6 +209,9 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
   tickets de venta y otra para cierres, reportes y documentos de trabajo.
 - **Lector de códigos de barras** tipo teclado: al escanear un SKU y pulsar Enter, el producto se
   agrega al POS si coincide exactamente.
+- **Ticket compacto y editable**: las líneas del POS van sin recuadros y con poco interlineado;
+  cada producto tiene **Editar** (cambia producto y cantidad), **✕** para eliminarlo, **Cancelar
+  ticket** para vaciarlo y **Cerrar ticket** para cobrarlo.
 - **Cierre de ventas detallado**: el cierre diario, el ticket y el correo incluyen **todos los
   productos vendidos con sus cantidades**, no solo un resumen de los más vendidos.
 - Facturación venezolana: RIF del negocio y del cliente, IVA desglosado, numeración de facturas

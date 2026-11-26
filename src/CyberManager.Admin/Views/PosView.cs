@@ -57,7 +57,7 @@ public sealed class PosView : UserControl, IRefreshable
 
         var content = new Grid();
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(392) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         Grid.SetRow(content, 1);
         root.Children.Add(content);
 
@@ -102,14 +102,19 @@ public sealed class PosView : UserControl, IRefreshable
         ticket.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         ticket.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var ticketHeader = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        var ticketHeader = new Grid { Margin = new Thickness(0, 0, 0, 6) };
         ticketHeader.Children.Add(Kit.Heading("Ticket de venta", "H2"));
-        var clear = Kit.SmallButton("Vaciar", "GhostButton", ClearCart);
-        clear.HorizontalAlignment = HorizontalAlignment.Right;
-        ticketHeader.Children.Add(clear);
+        var ticketActions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        ticketActions.Children.Add(Kit.SmallButton("Cancelar ticket", "GhostButton", ClearCart));
+        ticketHeader.Children.Add(ticketActions);
         ticket.Children.Add(ticketHeader);
 
-        _customerBox.Margin = new Thickness(0, 0, 0, 8);
+        _customerBox.Margin = new Thickness(0, 0, 0, 6);
         Grid.SetRow(_customerBox, 1);
         ticket.Children.Add(_customerBox);
 
@@ -138,12 +143,12 @@ public sealed class PosView : UserControl, IRefreshable
         ticket.Children.Add(cartHost);
 
         // Totales
-        var totals = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
-        totals.Children.Add(new Separator());
+        var totals = new StackPanel { Margin = new Thickness(0, 5, 0, 0) };
+        totals.Children.Add(new Separator { Margin = new Thickness(0, 0, 0, 4) });
 
         Grid TotalRow(string label, FrameworkElement value)
         {
-            var row = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+            var row = new Grid { Margin = new Thickness(0, 1, 0, 1) };
             row.Children.Add(new TextBlock { Text = label, Style = Kit.Style("Muted"), VerticalAlignment = VerticalAlignment.Center });
             value.HorizontalAlignment = HorizontalAlignment.Right;
             (value as FrameworkElement)!.VerticalAlignment = VerticalAlignment.Center;
@@ -156,9 +161,9 @@ public sealed class PosView : UserControl, IRefreshable
         TotalRow("Descuento", _discountText);
         TotalRow("IVA incluido", _taxText);
 
-        totals.Children.Add(new Separator());
+        totals.Children.Add(new Separator { Margin = new Thickness(0, 4, 0, 4) });
 
-        var totalRow = new Grid { Margin = new Thickness(0, 4, 0, 0) };
+        var totalRow = new Grid { Margin = new Thickness(0, 2, 0, 0) };
         totalRow.Children.Add(new TextBlock { Text = "TOTAL", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center });
         var totalStack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right };
         totalStack.Children.Add(_totalUsdText);
@@ -166,7 +171,7 @@ public sealed class PosView : UserControl, IRefreshable
         totalRow.Children.Add(totalStack);
         totals.Children.Add(totalRow);
 
-        _changeText.Margin = new Thickness(0, 6, 0, 0);
+        _changeText.Margin = new Thickness(0, 3, 0, 0);
         _changeText.HorizontalAlignment = HorizontalAlignment.Right;
         totals.Children.Add(_changeText);
 
@@ -174,7 +179,7 @@ public sealed class PosView : UserControl, IRefreshable
         ticket.Children.Add(totals);
 
         // Pago
-        var payment = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+        var payment = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
 
         var paymentRow = new Grid();
         paymentRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -214,7 +219,7 @@ public sealed class PosView : UserControl, IRefreshable
 
         payment.Children.Add(paymentRow);
 
-        var amountRow = new Grid { Margin = new Thickness(0, 8, 0, 0) };
+        var amountRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
         amountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         amountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
         amountRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -243,16 +248,16 @@ public sealed class PosView : UserControl, IRefreshable
 
         payment.Children.Add(Kit.Field("Notas del ticket", _notesBox));
 
-        _payButton = Kit.Button("Cobrar", "SuccessButton", () => _ = PayAsync());
-        _payButton.Padding = new Thickness(14, 12, 14, 12);
+        _payButton = Kit.Button("Cerrar ticket", "SuccessButton", () => _ = PayAsync());
+        _payButton.Padding = new Thickness(12, 9, 12, 9);
         _payButton.FontSize = 14;
-        _payButton.Margin = new Thickness(0, 4, 0, 0);
+        _payButton.Margin = new Thickness(0, 6, 0, 0);
         payment.Children.Add(_payButton);
 
         Grid.SetRow(payment, 4);
         ticket.Children.Add(payment);
 
-        var ticketCard = Kit.Card(ticket, 16);
+        var ticketCard = Kit.Card(ticket, 12);
         Grid.SetColumn(ticketCard, 1);
         content.Children.Add(ticketCard);
 
@@ -489,105 +494,79 @@ public sealed class PosView : UserControl, IRefreshable
 
         foreach (var line in _cart.ToList())
         {
-            var panel = new Border
-            {
-                Style = Kit.Style("Panel"),
-                Padding = new Thickness(10),
-                Margin = new Thickness(0, 0, 0, 8)
-            };
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 3) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            grid.Children.Add(new TextBlock
+            row.Children.Add(new TextBlock
             {
-                Text = line.Product.Name,
+                Text = $"{line.Quantity:0.##} × {line.Product.Name}",
+                FontSize = 13,
                 FontWeight = FontWeights.SemiBold,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                Margin = new Thickness(0, 0, 8, 0)
+                ToolTip = $"{line.Product.Name} · $ {line.Product.Price:N2} c/u",
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
             });
 
             var total = new TextBlock
             {
                 Text = $"$ {line.Total:N2}",
+                FontSize = 13,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = Kit.Brush("AccentBrush"),
-                HorizontalAlignment = HorizontalAlignment.Right
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 6, 0)
             };
             Grid.SetColumn(total, 1);
-            grid.Children.Add(total);
+            row.Children.Add(total);
 
-            var controls = new StackPanel
+            var actions = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 8, 0, 0)
+                VerticalAlignment = VerticalAlignment.Center
             };
-            controls.Children.Add(new TextBlock
-            {
-                Text = $"$ {line.Product.Price:N2} c/u",
-                Style = Kit.Style("Muted"),
-                FontSize = 11,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 8, 0)
-            });
 
-            var minus = Kit.SmallButton("−", "IconButton", () => ChangeQuantity(line, -1));
-            minus.Width = 26;
-            minus.Height = 26;
-            minus.Padding = new Thickness(0);
-            controls.Children.Add(minus);
+            var edit = Kit.SmallButton("Editar", "GhostButton", () => EditLine(line));
+            edit.FontSize = 11;
+            edit.Padding = new Thickness(5, 2, 5, 2);
+            edit.Margin = new Thickness(0, 0, 2, 0);
+            actions.Children.Add(edit);
 
-            controls.Children.Add(new TextBlock
-            {
-                Text = line.Quantity.ToString("0.##"),
-                Width = 38,
-                TextAlignment = TextAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                FontWeight = FontWeights.SemiBold
-            });
-
-            var plus = Kit.SmallButton("+", "IconButton", () => ChangeQuantity(line, 1));
-            plus.Width = 26;
-            plus.Height = 26;
-            plus.Padding = new Thickness(0);
-            controls.Children.Add(plus);
-
-            var remove = Kit.SmallButton("✕", "IconButton", () =>
-            {
-                _cart.Remove(line);
-                RenderCart();
-                UpdateTotals();
-            });
+            var remove = Kit.SmallButton("✕", "IconButton", () => RemoveLine(line));
             remove.Foreground = Kit.Brush("DangerBrush");
-            remove.Width = 26;
-            remove.Height = 26;
+            remove.Width = 22;
+            remove.Height = 22;
             remove.Padding = new Thickness(0);
-            remove.Margin = new Thickness(6, 0, 0, 0);
-            controls.Children.Add(remove);
+            remove.ToolTip = $"Eliminar {line.Product.Name} del ticket";
+            actions.Children.Add(remove);
 
-            Grid.SetRow(controls, 1);
-            Grid.SetColumnSpan(controls, 2);
-            grid.Children.Add(controls);
-
-            panel.Child = grid;
-            _cartPanel.Children.Add(panel);
+            Grid.SetColumn(actions, 2);
+            row.Children.Add(actions);
+            _cartPanel.Children.Add(row);
         }
     }
 
-    private void ChangeQuantity(PosLine line, int delta)
+    private void RemoveLine(PosLine line)
     {
-        if (delta > 0 && !line.Product.IsService && line.Quantity + 1 > line.Product.Stock)
+        _cart.Remove(line);
+        RenderCart();
+        UpdateTotals();
+    }
+
+    private void EditLine(PosLine line)
+    {
+        var usedIds = _cart.Where(l => l != line).Select(l => l.Product.Id).ToHashSet();
+        var dialog = new EditCartLineDialog(_products, line.Product, line.Quantity, usedIds)
         {
-            Ui.Info($"Solo hay {line.Product.Stock:N0} unidades de {line.Product.Name}.", "Stock insuficiente");
-            return;
-        }
+            Owner = Window.GetWindow(this)
+        };
 
-        line.Quantity += delta;
-        if (line.Quantity <= 0) _cart.Remove(line);
+        if (dialog.ShowDialog() != true) return;
 
+        line.Product = _products.First(p => p.Id == dialog.ProductId);
+        line.Quantity = dialog.Quantity;
         RenderCart();
         UpdateTotals();
     }
@@ -651,7 +630,9 @@ public sealed class PosView : UserControl, IRefreshable
         var change = Math.Max(0, Math.Round(received - Due, 2));
         _changeText.Text = PaysUsd ? $"Cambio: $ {change:N2}" : $"Cambio: Bs {change:N2}";
 
-        _payButton.Content = _cart.Count == 0 ? "Cobrar" : $"Cobrar {Due:N2} {(PaysUsd ? "USD" : "Bs")}";
+        _payButton.Content = _cart.Count == 0
+            ? "Cerrar ticket"
+            : $"Cerrar ticket · {Due:N2} {(PaysUsd ? "USD" : "Bs")}";
         _payButton.IsEnabled = _cart.Count > 0 && _rate > 0;
     }
 
@@ -727,9 +708,71 @@ public sealed class PosView : UserControl, IRefreshable
 public sealed class PosLine
 {
     public PosLine(ProductDto product) => Product = product;
-    public ProductDto Product { get; }
+    public ProductDto Product { get; set; }
     public decimal Quantity { get; set; } = 1;
     public decimal Total => Math.Round(Product.Price * Quantity, 2);
+}
+
+/// <summary>Edita el producto y la cantidad de una línea antes de emitir el ticket.</summary>
+public sealed class EditCartLineDialog : FormDialog
+{
+    private readonly ComboBox _productBox;
+    private readonly TextBox _quantityBox;
+    private readonly List<ProductDto> _products;
+
+    public int ProductId { get; private set; }
+    public decimal Quantity { get; private set; }
+
+    public EditCartLineDialog(IEnumerable<ProductDto> products, ProductDto current,
+        decimal quantity, HashSet<int> usedIds)
+        : base("Editar producto del ticket",
+            "Cambie el producto o la cantidad antes de emitir el ticket.", "Guardar", 420)
+    {
+        _products = products
+            .Where(p => p.Id == current.Id || (!usedIds.Contains(p.Id) && (p.IsService || p.Stock > 0)))
+            .OrderBy(p => p.Name)
+            .ToList();
+
+        _productBox = AddCombo("Producto", _products.Select(p => new Option<int>(p.Id, p.Name)));
+        var index = _products.FindIndex(p => p.Id == current.Id);
+        if (index >= 0) _productBox.SelectedIndex = index;
+
+        _quantityBox = new TextBox { Text = quantity.ToString("0.##", CultureInfo.CurrentCulture) };
+        Add(_quantityBox, "Cantidad");
+    }
+
+    protected override void OnAccept()
+    {
+        if (_productBox.SelectedItem is not Option<int> selected)
+        {
+            ShowError("Seleccione un producto.");
+            return;
+        }
+
+        if (!decimal.TryParse(_quantityBox.Text, NumberStyles.Any, CultureInfo.CurrentCulture,
+                out var quantity) || quantity <= 0)
+        {
+            ShowError("La cantidad debe ser mayor que cero.");
+            return;
+        }
+
+        var product = _products.FirstOrDefault(p => p.Id == selected.Value);
+        if (product is null)
+        {
+            ShowError("El producto ya no está disponible.");
+            return;
+        }
+
+        if (!product.IsService && quantity > product.Stock)
+        {
+            ShowError($"Solo hay {product.Stock:N0} unidades disponibles de {product.Name}.");
+            return;
+        }
+
+        ProductId = selected.Value;
+        Quantity = Math.Round(quantity, 2);
+        base.OnAccept();
+    }
 }
 
 public sealed class SaleReceiptDialog : FormDialog

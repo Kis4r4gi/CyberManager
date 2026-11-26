@@ -2208,6 +2208,33 @@ estación 11; registro `Agente conectado: equipo 11` a las 09:27:08; versión `1
 final quedó sin hallazgos (la advertencia transitoria «sin latido» desapareció al arrancar el
 cliente). La orden ahora sí se entrega al servicio de Windows.
 
+### Ticket de venta compacto y editable (1.3.54, 2026-11-25)
+
+Las líneas del carrito del POS eran `Border` con estilo `Panel`, margen inferior de 8 px y dos
+filas por producto; eso hacía muy larga la revisión antes de emitir la factura. En
+`src\\CyberManager.Admin\\Views\\PosView.cs` se sustituyeron por filas `Grid` sin recuadro, con una
+sola línea `cantidad × producto` a la izquierda, el total a la derecha y acciones compactas.
+
+- Cada línea tiene **Editar** y **✕**. `EditCartLineDialog` permite cambiar el producto y la
+  cantidad; valida stock, impide duplicados ya presentes en el ticket y conserva el producto actual
+  aunque esté agotado. `PosLine.Product` pasó a tener `set` para aplicar el cambio.
+- El encabezado del ticket tiene **Cancelar ticket** (antes «Vaciar», con confirmación) y el botón
+  principal pasó de «Cobrar» a **Cerrar ticket · monto**, sin alterar el registro de la venta.
+- Se redujeron márgenes e interlineados de cabecera, totales, pago y botón; la columna del ticket
+  bajó de 392 a 360 px para dar espacio al catálogo. Compilación: 0 errores, 0 advertencias.
+
+**Despliegue**: `scripts\build-installer.ps1 -Version 1.3.54 -SkipVncDownload -Clean` generó el
+servidor (441,8 MB) y la estación (143,9 MB). Respaldos
+`_*-pre-1.3.54-20261125-205034`; servidor y consola copiados, `appsettings.json` conservado.
+
+**Verificación**: la IP del equipo servidor cambió a `192.168.1.11` (ya no responde `192.168.1.10`),
+así que las pruebas HTTP se hicieron por `127.0.0.1`. `/api/health` → `1.3.54 ok`; manifiesto
+1.3.54 con hashes de cliente y agente correctos; `GET /api/client-update/agent-download` → 200 y
+35.644.403 bytes. Se envió el aviso a la estación 11, pero sigue **Offline** desde el 23/11 y WoL
+no la despertó: permanecerá en 1.3.53 hasta que encienda y aplique el paquete 1.3.54. La consola
+1.3.54 se abrió y, vía Automatización de UI, se comprobó que la vista *Punto de venta* carga y
+muestra «Ticket de venta», «Cancelar ticket» y «Cerrar ticket».
+
 ---
 
 ## Pendientes / siguientes pasos
@@ -2247,12 +2274,12 @@ cliente). La orden ahora sí se entrega al servicio de Windows.
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.3.53**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.53>) con
-  `CyberManager-Servidor-1.3.53.exe`, `CyberManager-Estacion-1.3.53.exe` y
-  `CyberManager-Agente-1.3.53-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
-  release. La release anterior publicada es `v1.3.51`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.51>).
+- Release actual: **v1.3.54**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.54>) con
+  `CyberManager-Servidor-1.3.54.exe`, `CyberManager-Estacion-1.3.54.exe` y
+  `CyberManager-Agente-1.3.54-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
+  release. La release anterior publicada es `v1.3.53`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.53>).
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).
