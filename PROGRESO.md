@@ -15,9 +15,9 @@ arquitectura (x86/x64).
 
 La solución compila con **0 errores** y **0 advertencias**. Se generan **dos instaladores**:
 **Servidor** y **Estación**. Cada uno incluye los payloads de x64 y x86 y selección automática de la
-arquitectura al instalar. El **servidor 1.3.58 está instalado y corriendo** (tarea programada,
+arquitectura al instalar. El **servidor 1.4.0 está instalado y corriendo** (tarea programada,
 puerto 5080) en este equipo con la ruta `C:\CyberManager\Servidor`, al igual que la consola. El
-paquete de actualización del cliente también está en 1.3.58. Tras un reinicio del equipo la IP del
+paquete de actualización del cliente también está en 1.4.0. Tras un reinicio del equipo la IP del
 servidor pasó a `192.168.1.10`; los equipos siguen reportando correctamente porque resuelven la
 dirección por descubrimiento. La estación 11 (`14:AB:C5:D4:30:F5`, IP informada `192.168.1.4`)
 estaba offline al verificar y conservaba 1.3.43; se actualizará al reconectarse.
@@ -2328,6 +2328,27 @@ comandos del servidor quedó oculta. `/api/health` → `1.3.58 ok`; `/api/client
 `/api/client-update/status` → versión de paquete 1.3.58 con hashes coincidentes y descargas HTTP
 206. La estación 11 sigue offline (1.3.43) y tomará el paquete al reconectarse.
 
+### Eliminación permanente de clientes y rol administrador (1.4.0, 2026-11-26)
+
+A petición del usuario, **Eliminar** en *Clientes y saldos* ya no se limita a desactivar: `DELETE
+/api/customers/{id}` borra físicamente el registro y sus movimientos de saldo. Antes de borrar,
+pasa `CustomerId` a `null` en facturas, sesiones y reservas, que conservan el nombre y el documento
+copiados (`CustomerName`, `CustomerTaxId`) para no perder el comprobante. Si el cliente tiene saldo
+a favor distinto de cero, el servidor responde 409 y la consola lo avisa antes de pedir confirmación.
+El endpoint exige el rol **Admin** y el botón solo se crea cuando `App.Session.Role == Admin`; con
+el usuario *cajero* no aparece y la llamada directa devuelve HTTP 403.
+
+`CustomersAsync` acepta ahora `includeInactive`, y la vista de clientes lo usa para mostrar también
+los inactivos (y poder reactivarlos con *Activar / desactivar*); el POS sigue usando solo activos.
+
+**Verificación**: compilación con 0 errores y 0 advertencias. Por UI Automation se comprobó que el
+botón existe para *admin*, que al confirmar la fila desaparece de la tabla y el cliente deja de
+existir incluso con `includeInactive=true`, y que el botón no existe para *cajero*. Por API se creó
+un cliente con una factura, se borró y se comprobó que la factura sigue visible con su snapshot y
+`customerId=null`. Se eliminaron los registros de prueba. `/api/health` → `1.4.0 ok`; manifiesto y
+paquetes en 1.4.0 con hashes coincidentes y descargas HTTP 206. La estación 11 continúa offline y
+tomará el paquete 1.4.0 al reconectarse.
+
 ---
 
 ## Pendientes / siguientes pasos
@@ -2367,17 +2388,17 @@ comandos del servidor quedó oculta. `/api/health` → `1.3.58 ok`; `/api/client
 - Para publicar una versión nueva: recompilar con `scripts/build-installer.ps1`, confirmar el
   cambio de `version.props` y ejecutar
   `gh release create v<versión> --target main artifacts/CyberManager-Servidor-<versión>.exe artifacts/CyberManager-Estacion-<versión>.exe`.
-- Release actual: **v1.3.58**
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.58>) con
-  `CyberManager-Servidor-1.3.58.exe`, `CyberManager-Estacion-1.3.58.exe` y
-  `CyberManager-Agente-1.3.58-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
-  release. La release anterior publicada es `v1.3.56`
-  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.56>).
-- Publicación confirmada el 2026-11-25 con `gh release create v1.3.58 --target main` (commit
-  `f3c221f`), sin prerelease. SHA-256 publicados en las notas: servidor
-  `C61CF8C11E86957BB3EA0F715F2DFC712D2400F3FED00D275270860012ABDAC6`, estación
-  `0F495CBA656596F0368B24654DB0A7183534A4E80969D1B58E6806CB3C4C26C7` y agente
-  `321C449173515D291BFE31356C406C1DD3F3560487E7C4029E6CC8CD6F4A59E5`.
+- Release actual: **v1.4.0**
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.4.0>) con
+  `CyberManager-Servidor-1.4.0.exe`, `CyberManager-Estacion-1.4.0.exe` y
+  `CyberManager-Agente-1.4.0-x64.zip`. El instalador unificado quedó fuera del proyecto y de la
+  release. La release anterior publicada es `v1.3.58`
+  (<https://github.com/Kis4r4gi/CyberManager/releases/tag/v1.3.58>).
+- Publicación confirmada el 2026-11-26 con `gh release create v1.4.0 --target main`, sin prerelease.
+  SHA-256 publicados en las notas: servidor
+  `BE42BD29732A0AB965F2D16BB8B7AEE08F7F24DF411B39C43198CD8E8B4A424B`, estación
+  `88CC656FEEC98F791FA1974E3D73454A99B4A6FFBEBAE8E9009EBC7A612471A4` y agente
+  `B53189982F4FCE3FE8032DFAA6DAA841696338EF67CA96667B18358156304E6D`.
 - La sincronización automática se registra con
   `pwsh -File .\scripts\sync-github.ps1 -InstallTask` (tarea programada `CyberManagerGitSync`,
   cada 15 minutos con la sesión del usuario).

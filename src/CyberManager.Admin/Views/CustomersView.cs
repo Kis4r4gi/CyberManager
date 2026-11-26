@@ -64,11 +64,17 @@ public sealed class CustomersView : UserControl, IRefreshable
         _searchBox.TextChanged += (_, _) => Render();
         toolbar.Children.Add(_searchBox);
 
-        var actions = Kit.HStack(8,
+        var actionButtons = new List<FrameworkElement>
+        {
             Kit.Button("Editar", "GhostButton", EditCustomer),
             Kit.Button("Recargar saldo", "SuccessButton", RechargeCustomer),
             Kit.Button("Movimientos", "BlueButton", ShowHistory),
-            Kit.Button("Activar / desactivar", "GhostButton", ToggleActive));
+            Kit.Button("Activar / desactivar", "GhostButton", ToggleActive)
+        };
+        // El endpoint de baja de clientes exige perfil administrador.
+        if (App.Session.Role == UserRole.Admin)
+            actionButtons.Add(Kit.Button("Eliminar", "DangerButton", DeleteCustomer));
+        var actions = Kit.HStack(8, actionButtons.ToArray());
         actions.HorizontalAlignment = HorizontalAlignment.Right;
         Grid.SetColumn(actions, 1);
         toolbar.Children.Add(actions);
@@ -107,7 +113,9 @@ public sealed class CustomersView : UserControl, IRefreshable
 
     public async Task RefreshAsync()
     {
-        _customers = await App.Api.CustomersAsync();
+        // Incluye inactivos para poder reactivarlos y ver el estado tras eliminarlos.
+        // La caja sigue usando CustomersAsync() y solo ve los activos.
+        _customers = await App.Api.CustomersAsync(includeInactive: true);
         Render();
     }
 
@@ -171,6 +179,38 @@ public sealed class CustomersView : UserControl, IRefreshable
             await App.Api.SaveCustomerAsync(customer.Id, dialog.Result);
             await RefreshAsync();
         }, "No se pudo guardar el cliente");
+    }
+
+    private void DeleteCustomer()
+    {
+        if (Selected is not { } customer)
+        {
+            Ui.Info("Seleccione un cliente de la lista.", "Clientes");
+            return;
+        }
+
+        if (customer.Balance != 0)
+        {
+            Ui.Error($"No se puede eliminar a {customer.Name} porque tiene un saldo a favor de " +
+                     $"{Ui.Money(customer.Balance)}. Ajuste el saldo antes de borrar el registro.",
+                "No se pudo eliminar el cliente");
+            return;
+        }
+
+        if (!Ui.Confirm(
+                $"¿Eliminar permanentemente a {customer.Name}?\n\n" +
+                "El registro desaparecerá de clientes y de la caja, junto con sus movimientos de saldo. " +
+                "Las facturas, sesiones y reservas conservan el nombre y el documento, " +
+                "pero dejan de estar vinculados a este cliente.",
+                "Eliminar cliente"))
+            return;
+
+        _ = Ui.Run(async () =>
+        {
+            await App.Api.DeleteCustomerAsync(customer.Id);
+            await RefreshAsync();
+            Ui.Info($"{customer.Name} fue eliminado permanentemente.", "Cliente eliminado");
+        }, "No se pudo eliminar el cliente");
     }
 
     private void ToggleActive()

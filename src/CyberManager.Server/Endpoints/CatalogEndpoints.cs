@@ -418,7 +418,20 @@ public static class CatalogEndpoints
         g.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
         {
             var c = await db.Customers.FirstOrDefaultAsync(x => x.Id == id) ?? throw AppException.NotFound("Cliente");
-            c.Active = false;
+            if (c.Balance != 0)
+                throw new AppException("El cliente tiene saldo a favor; ajústelo antes de eliminarlo.", 409);
+
+            // Las facturas, sesiones y reservas conservan el nombre/documento copiados,
+            // pero dejan de apuntar al registro que se elimina.
+            await db.Sales.Where(s => s.CustomerId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.CustomerId, (int?)null));
+            await db.Sessions.Where(s => s.CustomerId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.CustomerId, (int?)null));
+            await db.Reservations.Where(r => r.CustomerId == id)
+                .ExecuteUpdateAsync(r => r.SetProperty(x => x.CustomerId, (int?)null));
+            await db.CustomerTransactions.Where(t => t.CustomerId == id).ExecuteDeleteAsync();
+
+            db.Customers.Remove(c);
             await db.SaveChangesAsync();
             return Results.NoContent();
         }).RequireAuthorization("Admin");

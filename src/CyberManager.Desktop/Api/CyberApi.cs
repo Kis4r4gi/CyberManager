@@ -180,11 +180,19 @@ public class CyberApi : ApiClient
     }
 
     // ---- clientes ----
-    public Task<List<CustomerDto>> CustomersAsync(string? q = null)
-        => GetAsync<List<CustomerDto>>($"/api/customers{(string.IsNullOrWhiteSpace(q) ? string.Empty : $"?q={Uri.EscapeDataString(q)}")}");
+    public Task<List<CustomerDto>> CustomersAsync(string? q = null, bool includeInactive = false)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(q)) query.Add($"q={Uri.EscapeDataString(q)}");
+        if (includeInactive) query.Add("includeInactive=true");
+        var suffix = query.Count > 0 ? $"?{string.Join('&', query)}" : string.Empty;
+        return GetAsync<List<CustomerDto>>($"/api/customers{suffix}");
+    }
 
     public Task<CustomerDto> SaveCustomerAsync(int? id, SaveCustomerRequest req)
         => id is int cid ? PutAsync<CustomerDto>($"/api/customers/{cid}", req) : PostAsync<CustomerDto>("/api/customers", req);
+
+    public Task DeleteCustomerAsync(int id) => DeleteAsync($"/api/customers/{id}");
 
     public Task<CustomerDto> RechargeAsync(int id, RechargeRequest req) => PostAsync<CustomerDto>($"/api/customers/{id}/recharge", req);
     public Task<List<CustomerTransactionDto>> CustomerTransactionsAsync(int id) => GetAsync<List<CustomerTransactionDto>>($"/api/customers/{id}/transactions");

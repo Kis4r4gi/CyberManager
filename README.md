@@ -216,7 +216,11 @@ proyecto desde el código fuente siguiendo la sección [Compilación](#compilaci
 - **Cliente por documento en el POS**: el tipo indica el prefijo (**Cédula (V-)** o **RIF (J-)**) y
   el cajero escribe solo el número. Si el documento existe, el nombre del cliente se muestra como
   confirmación y se asocia a la factura; si no existe, el botón **Agregar cliente nuevo** lo da de
-  alta en el sistema. El nombre del cliente no se escribe en el POS.
+  alta en el sistema. El nombre del cliente no se escribe en el POS. En **Clientes y saldos**, solo
+  un **administrador** ve el botón **Eliminar**: borra el registro permanentemente (no solo lo
+  desactiva) junto con sus movimientos de saldo; las facturas, sesiones y reservas conservan el
+  nombre y el documento, pero dejan de vincularse al cliente. No se puede eliminar un cliente con
+  saldo a favor distinto de cero.
 - **Cobro confirmado**: al presionar *Terminar y cobrar* se muestra la factura sin registrar; la
   venta solo se graba al tocar **Aceptar**. **Ir atrás** cierra la ventana sin tocar el ticket, para
   seguir editando los productos o los datos del cliente.
